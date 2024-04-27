@@ -1,0 +1,142 @@
+<!--
+ (c) Copyright Ascensio System SIA 2020
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Version history</title>
+    <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+    <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+	<script src="./vendor/jquery-v2.2.2-min.js"></script>
+    <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+    <link rel="stylesheet" href="resources/css/styles.css">
+    <script type="text/javascript" src="scripts/desktop.js"></script>
+    <script type="text/javascript" src="scripts/oleHistory.js"></script>
+	<style>
+.flex{
+			display: flex;
+			flex-direction: row;
+			margin: 16px;
+			height: calc(100% - 32px);
+		}
+		.wr {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 30%;
+			width: 1px;
+			border-right: 1px solid;
+		}
+		.div_history {
+			width: calc(30% - 5px);
+			height: 100%;
+		}
+		.div_preview {
+			width: calc(70% - 11px);
+			height: calc(100% - 32px);
+			margin-left: 16px;
+		}
+		.icon_history {
+			width: 20px;
+			height: 20px;
+			background: url('./resources/images/history.svg') no-repeat center;
+			margin-right: 2px;
+		}
+		.icon_close {
+			width: 20px;
+			height: 20px;
+			background: url('./resources/images/close.svg') no-repeat center;
+		}
+		.icon_copy {
+			width: 20px;
+			height: 20px;
+			background: url('./resources/images/copy.svg') no-repeat center;
+		}
+		.versions_list {
+			margin-top: 10px;
+			height: calc(100% - 25px);
+			overflow: auto;
+		}
+		.div_version {
+			display: flex;
+			justify-content: space-between;
+			margin-right: 16px;
+			height: 37px;
+			align-items: center;
+		}
+		.div_icon_and_date{
+			display: flex;
+		}
+		.label_date {
+			height: 20px;
+			align-content: center;
+		}
+		.prompt_header {
+			display: flex;
+			justify-content: space-between;
+		}
+		.prompt_container{
+			height: 44px;
+			overflow: auto;
+			padding: 6px 8px;
+			margin: 2px 0px 14px;
+			border: 1px solid;
+			border-radius: 2px;
+		}
+		.img_preview{
+			width: 448px;
+			height: 302px;
+		}
+		.pointer {
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body class="normal_bg">
+	<div id="main_content" class="flex noslect hidden">
+		<div class="div_history noselect">
+			<label class="header i18n">Restore or delete your versions</label>
+			<div id="versions_list" class="versions_list">
+				<!-- <div class="div_version pointer">
+					<div class="div_icon_and_date">
+						<div class="icon_history pointer"></div>
+						<label class="label_date pointer">some data</label>
+					</div>
+					<div class="icon_close pointer"></div>
+				</div>
+				<div class="div_version pointer">
+					<div class="div_icon_and_date">
+						<div class="icon_history pointer"></div>
+						<label class="label_date pointer">some data</label>
+					</div>
+					<div class="icon_close pointer"></div>
+				</div> -->
+			</div>
+		</div>
+		<div class="wr wr_br"></div>
+		<div class="div_preview">
+			<div class="prompt_header">
+				<label class="header label_date i18n">Prompt</label>
+				<div id="btn_copy" class="icon_copy pointer"></div>
+			</div>
+			<div id="prompt" class="prompt_container wr_br"></div>
+			<img id="img_preview" class="img_preview">
+		</div>
+	</div>
+	<div id="loader-container" class="loader normal_bg hidden"></div>
+
+</body>
+</html>

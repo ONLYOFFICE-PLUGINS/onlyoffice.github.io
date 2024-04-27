@@ -83,6 +83,7 @@
 	border-bottom-right-radius: 0; }
   
   .select2-container--open .select2-dropdown--below {
+	margin-top: 5px;
 	border-top: none;
 	border-top-left-radius: 0;
 	border-top-right-radius: 0; }

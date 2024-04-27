@@ -27,36 +27,39 @@ limitations under the License.
 	<link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
     <link rel="stylesheet" href="./resources/css/styles.css">
 </head>
-<body style="display: flex;">
+<body style="display: flex;" class="normal_bg">
 	<div id="chat_window" class="chat_window hidden">
 		<div class="form-control messages" id="chat"></div>
-		<div id="tokens_info" class="tokens_info">
-			<div class="form-control div_title_chat hidden">
+		<div id="tokens_info" class="tokens_info noselect">
+			<div class="form-control div_title_chat noselect hidden">
 				<span class="i18n">Maximum 16000 tokens are available.</span>
 				<br>
 				<span class="i18n">For work with this model we should save chat history and sent it into a request.</span>
 				<span class="i18n">But we have a limit on the number of tokens in the request.</span>
 				<span class="i18n">That's why sometimes you should clear your chat history.</span>
 				<div class="text_align_end">
-					<button id="clear_history" style="margin-top: 5px;" class="form-control btn-text-default i18n">Clear history</button>
+					<button id="clear_history" style="margin-top: 5px;" class="form-control btn-text-default noselect i18n">Clear history</button>
 				</div>	
 			</div>
-			<div class="text_align_end">
+			<div class="text_align_end line-14" style="margin-bottom: 2px;">
 				<span class="i18n">Tokens in the request about: </span>
 				<span id="cur_tokens">0</span>
-			</div>
-			<div class="text_align_end">
+			</div style="display:flex">
+			<div class="text_align_end line-14">
 				<span class="i18n">Total tokens are used in last request: </span>
 				<span id="total_tokens">0</span>
 			</div>
 
 		</div>
-		<textarea id="message" class="form-control input_message" spellcheck="false"></textarea>
+		<div class="message_input_container">
+			<textarea id="message" class="form-control input_message" spellcheck="false" placeholder="Ask AI a question about something..."></textarea>
+			<div id="arrow_btn" class="arrow_btn form-control noselect">&rarr;</div>
+		</div>
 	</div>
-	<div id="loader-container" class="loader hidden"></div>
-	<div id="div_err" class="hidden div_error err_background">
-		<label class="lb_err i18n" style="font-weight: bold;">Error:</label>
-		<label id="lb_err" class="lb_err"></label>
+	<div id="loader-container" class="loader normal_bg hidden"></div>
+	<div id="div_err" class="hidden div_error normal_bg">
+		<label class="lb_err i18n" style="font-weight: bold;">Error</label>
+		<div id="lb_err"></div>
 	</div>
 </body>
 </html>

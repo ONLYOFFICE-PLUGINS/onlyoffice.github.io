@@ -17,29 +17,28 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>Settings</title>
+    <title>Summarization</title>
     <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
     <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
 	<script src="./vendor/jquery-v2.2.2-min.js"></script>
     <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
-    <link rel="stylesheet" href="resources/css/styles.css">
+    <link rel="stylesheet" href="resources/css/summarization.css">
     <script type="text/javascript" src="scripts/desktop.js"></script>
-    <script type="text/javascript" src="scripts/settings.js"></script>
+    <script type="text/javascript" src="scripts/summarization.js"></script>
 </head>
-<body class="settings_body">
-	<div class="info">
-		<span class="i18n">For using ChatGPT you should get an API key.</span>
-		<br>
-		<span class="i18n">Go to</span> <a target="_blank" class="text-link" href="https://beta.openai.com/account/api-keys">OpenAI API keys</a><span>.</span>
-		<span class="i18n">Create API keys and copy in this field.</span>
+<body class="normal_bg">
+	<div class="flex">
+		<div class="div_icon"></div>
+		<div class="flex column common">
+			<div class="flex column message">
+				<label class="i18n">Summarization is done!</label>
+				<label class="i18n">Please choose your next action with text.</label>
+			</div>
+			<div>
+				<button id="btn_review" class="btn-text-default i18n" style="margin-right: 11px;">Replace by Review</button>
+				<button id="btn_below" class="btn-text-default i18n">Insert below</button>
+			</div>
+		</div>
 	</div>
-	<div class="form">
-		<input id="inp_key" class="form-control inp_key" placeholder="Api key">
-	</div>
-	<div class="message-container">
-		<span id="err_message" class="err-message"></span>
-		<span id="success_message" class="success-message hidden i18n">Api key saved successfully.</span>
-	</div>
-	<div id="loader-container" class="asc-loader-container loader loader-bg hidden"></div>
 </body>
 </html>

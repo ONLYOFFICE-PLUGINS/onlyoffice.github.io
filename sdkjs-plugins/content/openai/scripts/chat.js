@@ -41,16 +41,7 @@
 			} else if (e.key === 'Enter') {
 				e.preventDefault();
 				e.stopPropagation();
-				if (document.getElementById('message').classList.contains('error_border')){
-					setError('Too many tokens in your request.');
-					return;
-				}
-				let value = e.target.value.trim();
-				if (value.length) {
-					createMessage(e.target.value.trim(), 1);
-					e.target.value = '';
-					document.getElementById('cur_tokens').innerText = 0;
-				}
+				attemptToSendMessage();
 			}
 		};
 
@@ -91,17 +82,47 @@
 			document.getElementById('total_tokens').classList.remove('err-message');
 			document.getElementById('total_tokens').innerText = 0;
 		};
+		document.getElementById('arrow_btn').onclick = function() {
+			attemptToSendMessage();
+		};
+		
 	};
+
+	function attemptToSendMessage() {
+		let field = document.getElementById('message');
+		if (field.classList.contains('error_border')){
+			setError('Too many tokens in your request.', false, false);
+			return;
+		}
+		let value = field.value.trim();
+		if (value.length) {
+			createMessage(value, 1);
+			field.value = '';
+			document.getElementById('cur_tokens').innerText = 0;
+		}
+	};
+
+	function lockMessageInput() {
+		document.getElementById('arrow_btn').setAttribute("disabled", "");
+		document.getElementById('message').setAttribute("disabled", "");
+	};
+
+	function unlockMessageInput() {
+		document.getElementById('arrow_btn').removeAttribute("disabled", "");
+		document.getElementById('message').removeAttribute("disabled");
+	}
 
 	function createMessage(text, type) {
 		let chat = document.getElementById('chat');
 		let message = type ? document.createElement('div') : document.getElementById('loading');
+		message.classList.add('div_message');
 		let textMes = document.createElement('span');
+		if (type) textMes.classList.add('user_message_bg');
 		textMes.classList.add('form-control', 'span_message');
 		textMes.innerText = text;
 		chat.scrollTop = chat.scrollHeight;
 		if (type) {
-			message.classList.add('user_message');
+			message.classList.add('user_message', 'line-14');
 			chat.appendChild(message);
 			sendMessage(text);
 		} else {
@@ -112,6 +133,7 @@
 	};
 
 	function sendMessage(text) {
+		lockMessageInput();
 		createTyping();
 		settings.messages.push({role: 'user', content: text});
 		fetch(url, {
@@ -132,15 +154,19 @@
 			let text = data.choices[0].message.content;
 			settings.messages.push({role: data.choices[0].message.role, content: text});
 			createMessage(text, 0);
-			removeTyping();
 			document.getElementById('total_tokens').innerText = data.usage.total_tokens;
 			if (data.usage.total_tokens >= maxTokens)
 				document.getElementById('total_tokens').classList.add('err-message');
 		})
 		.catch(function(error) {
+			let bQuotaErr = error.type === 'insufficient_quota';
+			setError(error.message, false, bQuotaErr);
+			settings.messages.pop();
 			console.error('Error:', error);
-			setError(error.message)
+		})
+		.finally (function(){
 			removeTyping();
+			unlockMessageInput();
 		});
 	};
 
@@ -182,14 +208,21 @@
 		loader = undefined;
 	};
 
-	function setError(error) {
-		document.getElementById('lb_err').innerHTML = window.Asc.plugin.tr(error);
+	function setError(error, bConst, bQuotaErr) {
+		if (bQuotaErr) {
+			document.getElementById('lb_err').innerHTML = '<label style="martgin-bottom:5px">' + window.Asc.plugin.tr('You exceeded your current quota, please check your plan and billing details.') + '</label>' +
+			'<p></p> <label>' + window.Asc.plugin.tr('For more information on this error, read the docs:') + '</label>' +
+			'<br> <a target="_blank" class="text-link" href="https://platform.openai.com/docs/guides/error-codes/api-errors.">https://platform.openai.com/docs/guides/error-codes/api-errors.</a>';
+		} else {
+			document.getElementById('lb_err').innerHTML = '<label>' + window.Asc.plugin.tr(error) + '</label>';
+		}
 		document.getElementById('div_err').classList.remove('hidden');
 		if (errTimeout) {
 			clearTimeout(errTimeout);
 			errTimeout = null;
 		}
-		errTimeout = setTimeout(clearError, 5000);
+		if (!bConst)
+			errTimeout = setTimeout(clearError, 5000);
 	};
 
 	function clearError() {
@@ -214,15 +247,17 @@
 	window.Asc.plugin.onThemeChanged = function(theme) {
 		bCreateLoader = false;
 		window.Asc.plugin.onThemeChangedBase(theme);
-		let rule = '\n .err_background { background: ' + theme['background-toolbar'] + ' !important; }';
+		let rule = '\n .normal_bg { background-color: ' + theme['background-normal'] + ' !important; }';
+		rule += '.text-link, .text-link:hover, .text-link:active, .text-link:visited{color: ' + theme['text-normal'] + ' !important;}';
+		rule += '\n .user_message_bg { background: ' + theme['background-toolbar'] + ' !important; }';
 		let styleTheme = document.createElement('style');
 		styleTheme.type = 'text/css';
 		styleTheme.innerHTML = rule;
 		document.getElementsByTagName('head')[0].appendChild(styleTheme);
 	};
 
-	window.Asc.plugin.attachEvent("onApiKey", function(key) {
-		apiKey = key;
+	window.Asc.plugin.attachEvent("onApiKey", function(settings) {
+		apiKey = JSON.parse(settings).apiKey;
 	});
 
 })(window, undefined);

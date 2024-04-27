@@ -1,0 +1,71 @@
+<!--
+ (c) Copyright Ascensio System SIA 2020
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ -->
+ <!DOCTYPE html>
+ <html>
+ <head>
+	 <meta charset="UTF-8" />
+	 <title>Key words</title>
+	 <script src="./vendor/jquery-v2.2.2-min.js"></script>
+	 <script src="vendor/select2-4.0.13/js/select2.js"></script>
+	 <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+	 <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+	 <script type="text/javascript" src="vendor/GPT-3-Encoder/encoder.js"></script>
+	 <script type="text/javascript" src="scripts/keyWords.js"></script>
+	 <script type="text/javascript" src="scripts/desktop.js"></script>
+	 <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+	 <link rel="stylesheet" href="vendor/select2-4.0.13/css/select2.css"/>
+	 <link rel="stylesheet" href="./resources/css/custom.css">
+ </head>
+ <!-- todo maybe delete this background -->
+ <body>
+	<div class="div_main div_content">
+		<div class="div_main">
+			<label class="header i18n noselect" style="margin-bottom: 12px;">Generate key words for your document</label>
+			<div class="div_parametr">
+				<div class="form-control div_title hidden">
+					<label class="i18n">The count of words for generation.</label>
+				</div>
+				<div class="div_lbl_params">
+					<label class="lbl_params i18n">Number of words</label>
+				</div>
+				<select id="sel_count" class="form-control" style="width: 100%;">
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+					<option value="10">10</option>
+				</select>
+			</div>
+			<button id="btn_generate" class="btn-text-default i18n" style="width: 100%; margin: 14px 0;">Generate</button>
+		</div>	
+		<div id="div_result" class="div_settings hidden">
+			<label class="header i18n noselect" style="margin-bottom: 12px;">Key words</label>
+			<div id="div_words" class="words_container noselect"></div>
+			<button id="btn_insert" class="btn-text-default i18n" style="width: 100%; margin: 14px 0;">Insert</button>
+		</div>
+	</div>
+	<div id="loader-container" class="loader gray_bg hidden"></div>
+	<div id="div_err" class="hidden div_error gray_bg">
+		<label class="lb_err i18n" style="font-weight: bold;">Error</label>
+		<div id="lb_err"></div>
+	</div>
+</body>
+</html>

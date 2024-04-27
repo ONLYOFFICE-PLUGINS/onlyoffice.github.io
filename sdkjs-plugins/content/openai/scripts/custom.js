@@ -17,7 +17,6 @@
  */
 (function (window, undefined) {
 	let loader;
-	let isDarkTheme = false;
 	let elements = {};
 	let apiKey = '';
 	let errTimeout = null;
@@ -26,40 +25,17 @@
 	let bCreateLoader = true;
 	let maxTokens = 4000;
 	let prefix = { previous: 'gpt-3.5', last: 'gpt-4'};
-	const isIE = checkInternetExplorer();
 
 	window.Asc.plugin.init = function() {
 		sendPluginMessage({type: 'onWindowReady'});
-		if (isIE) {
-			bCreateLoader = false;
-			destroyLoader();
-			document.getElementById('div_ie_error').classList.remove('hidden');
-			return;
-		} else {
-			bCreateLoader = true;
-		};
-		apiKey = localStorage.getItem('OpenAIApiKey') || null;
+		bCreateLoader = true;
 		addSlidersListeners();
 		addTitlelisteners();
 		initElements();
-		initScrolls();
-		if (apiKey) {
-			fetchModels();
-		} else {
-			bCreateLoader = false;
-			destroyLoader();
-		}
 
 		elements.inpLenSl.oninput = onSlInput;
 		elements.inpTempSl.oninput = onSlInput;
 		elements.inpTopSl.oninput = onSlInput;
-
-		elements.btnClear.onclick = function() {
-			elements.textArea.value = '';
-			elements.lbTokens.innerText = 0;
-			elements.textArea.focus();
-			checkLen();
-		};
 
 		elements.textArea.oninput = function(event) {
 			elements.textArea.classList.remove('error_border');
@@ -78,7 +54,7 @@
 
 		elements.textArea.onkeydown = function(e) {
 			if ( (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-				elements.btnSubmit.click();
+				submitHandler();
 			}
 		};
 
@@ -110,61 +86,60 @@
 		elements.labelMore.onclick = function() {
 			elements.linkMore.click();
 		};
+	};
 
-		elements.btnShowSettins.onclick = function() {
-			elements.divParams.classList.toggle('hidden');
-			elements.arrow.classList.toggle('arrow_down');
-			elements.arrow.classList.toggle('arrow_up');
-			updateScroll();
+	function submitHandler() {
+		if (!apiKey)
+			return;
+
+		let settings = getSettings();
+		if (settings.error || elements.textArea.classList.contains('error_border')) {
+			if (Number(elements.lbAvalTokens.innerText) < 0) {
+				setError('Too many tokens in your request.', false, false);
+			}
+			elements.textArea.classList.add('error_border');
+			return;
 		};
+		createLoader();
+		let url = `https://api.openai.com/v1${ (settings.isChat ? '/chat' : '') }/completions`;
+		delete settings.isChat;
 
-		elements.btnSubmit.onclick = function() {
-			let settings = getSettings();
-			if (settings.error || elements.textArea.classList.contains('error_border')) {
-				if (Number(elements.lbAvalTokens.innerText) < 0) {
-					setError('Too many tokens in your request.');
-				}
-				elements.textArea.classList.add('error_border');
-				return;
-			};
-			createLoader();
-			let url = `https://api.openai.com/v1${ (settings.isChat ? '/chat' : '') }/completions`;
-			delete settings.isChat;
+		fetch(url, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': 'Bearer ' + apiKey,
+			},
+			body: JSON.stringify(settings),
+		})
+		.then(function(response) {
+			return response.json()
+		})
+		.then(function(data) {
+			if (data.error)
+				throw data.error
 
-			fetch(url, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': 'Bearer ' + apiKey,
-				},
-				body: JSON.stringify(settings),
-			})
-			.then(function(response) {
-				return response.json()
-			})
-			.then(function(data) {
-				if (data.error)
-					throw data.error
-
-				let text = data.choices[0].text || data.choices[0].message.content;
-				if (!text.includes('</')) {
-					// it's necessary because "PasteHtml" method ignores "\n" and we are trying to replace it on "<br>" when we don't have a html code in answer
-					
-					if (text.startsWith('\n'))
-						text = text.replace('\n\n', '\n').replace('\n', '');
-					
-					text = text.replace(/\n\n/g,'\n').replace(/\n/g,'<br>');
-				}
+			let text = data.choices[0].text || data.choices[0].message.content;
+			if (!text.includes('</')) {
+				// it's necessary because "PasteHtml" method ignores "\n" and we are trying to replace it on "<br>" when we don't have a html code in answer
 				
-				sendPluginMessage({type: 'onExecuteMethod', method: 'PasteHtml', data: '<div>'+text+'</div>'});
-			})
-			.catch(function(error) {
-				setError(error.message)
-				console.error('Error:', error);
-			}).finally(function(){
-				destroyLoader();
+				if (text.startsWith('\n'))
+					text = text.replace('\n\n', '\n').replace('\n', '');
+				
+				text = text.replace(/\n\n/g,'\n').replace(/\n/g,'<br>');
+			}
+
+			window.Asc.plugin.executeMethod('PasteHtml', ['<div>' + text + '</div>'], function() {
+				window.Asc.plugin.executeMethod('CloseWindow', [window.Asc.plugin.windowID]);
 			});
-		};
+		})
+		.catch(function(error) {
+			let bQuotaErr = error.type === 'insufficient_quota';
+			setError(error.message, false, bQuotaErr);
+			console.error('Error:', error);
+		}).finally(function(){
+			destroyLoader();
+		});
 	};
 
 	function initElements() {
@@ -173,8 +148,6 @@
 		elements.inpTopSl       = document.getElementById('inp_top_sl');
 		elements.inpStop        = document.getElementById('inp_stop');
 		elements.textArea       = document.getElementById('textarea');
-		elements.btnSubmit      = document.getElementById('btn_submit');
-		elements.btnClear       = document.getElementById('btn_clear');
 		elements.divContent     = document.getElementById('div_content');
 		elements.mainError      = document.getElementById('div_err');
 		elements.mainErrorLb    = document.getElementById('lb_err');
@@ -184,15 +157,9 @@
 		elements.lbModalLen     = document.getElementById('lb_modal_length');
 		elements.labelMore      = document.getElementById('lb_more');
 		elements.linkMore       = document.getElementById('link_more');
-		elements.btnShowSettins = document.getElementById('div_show_settings');
 		elements.divParams      = document.getElementById('div_parametrs');
-		elements.arrow          = document.getElementById('arrow');
 		elements.lbAvalTokens   = document.getElementById('lbl_avliable_tokens');
 		elements.lbUsedTokens   = document.getElementById('lbl_used_tokens');
-	};
-
-	function initScrolls() {
-		PsMain = new PerfectScrollbar('#div_content', {});
 	};
 
 	function addSlidersListeners() {
@@ -207,6 +174,7 @@
 			const max = target.max;
 			const val = target.value;
 			
+			console.log('handleInputChange');
 			target.style.backgroundSize = (val - min) * 100 / (max - min) + '% 100%';
 		};
 
@@ -216,28 +184,23 @@
 	};
 
 	function addTitlelisteners() {
-		let divs = document.querySelectorAll('.div_parametr');
+		let divs = document.querySelectorAll('.icon_info');
 		divs.forEach(function(div) {
-			div.addEventListener('mouseenter', function (event) {
-				event.target.children[0].classList.remove('hidden');
-				let top = event.target.offsetTop - event.target.children[0].clientHeight - 5 + 'px;';
-				event.target.children[0].setAttribute('style', 'top:' + top);
+			div.addEventListener('click', function (event) {
+				let elem = event.target.parentElement.parentElement;
+				elem.children[0].classList.remove('hidden');
+				let top = elem.offsetTop - elem.children[0].clientHeight - 5 + 'px;';
+				elem.children[0].setAttribute('style', 'top:' + top);
 			});
 
 			div.addEventListener('mouseleave', function (event) {
-				event.target.children[0].classList.add('hidden');
-			});
-		});
-
-		let modals = document.querySelectorAll('.div_title');
-		modals.forEach(function(modal) {
-			modal.addEventListener('mouseenter', function (event) {
-				event.target.classList.add('hidden');
+				event.target.parentElement.parentElement.children[0].classList.add('hidden');
 			});
 		});
 	};
 
 	function onSlInput(e) {
+		console.log('onSlInput');
 		e.target.nextElementSibling.innerText = e.target.value;
 		if (e.target.id == elements.inpLenSl.id)
 			elements.lbModalLen.innerText = e.target.value;
@@ -276,13 +239,13 @@
 			if ($('#sel_models').find('option[value=gpt-4]').length) {
 				$('#sel_models').val('gpt-4').trigger('change');
 			}
-			localStorage.setItem('OpenAIApiKey', apiKey);
 			elements.divContent.classList.remove('hidden');
 		})
 		.catch(function(error) {
+			setError('Problem with models loading.', true, false);
+			apiKey = '';
 			console.error(error);
 		}).finally(function() {
-			updateScroll();
 			destroyLoader();
 		});
 	};
@@ -327,14 +290,21 @@
 		loader = undefined;
 	};
 
-	function setError(error) {
-		elements.mainErrorLb.innerHTML = window.Asc.plugin.tr(error);
+	function setError(error, bConst, bQuotaErr) {
+		if (bQuotaErr) {
+			elements.mainErrorLb.innerHTML = '<label style="martgin-bottom:5px">' + getTranslated('You exceeded your current quota, please check your plan and billing details.') + '</label>' +
+			'<p></p> <label>' + getTranslated('For more information on this error, read the docs:') + '</label>' +
+			'<br> <a target="_blank" class="text-link" href="https://platform.openai.com/docs/guides/error-codes/api-errors.">https://platform.openai.com/docs/guides/error-codes/api-errors.</a>';
+		} else {
+			elements.mainErrorLb.innerHTML = '<label>' + getTranslated(error) + '</label>';
+		}
 		elements.mainError.classList.remove('hidden');
 		if (errTimeout) {
 			clearTimeout(errTimeout);
 			errTimeout = null;
 		}
-		errTimeout = setTimeout(clearMainError, 5000);
+		if (!bConst)
+			errTimeout = setTimeout(clearMainError, 5000);
 	};
 
 	function clearMainError() {
@@ -344,29 +314,6 @@
 
 	function getTranslated(key) {
 		return window.Asc.plugin.tr(key);
-	};
-
-	function updateScroll() {
-		PsMain && PsMain.update();
-	};
-
-	function checkInternetExplorer() {
-		let rv = -1;
-		if (window.navigator.appName == 'Microsoft Internet Explorer') {
-			const ua = window.navigator.userAgent;
-			const re = new RegExp('MSIE ([0-9]{1,}[\.0-9]{0,})');
-			if (re.exec(ua) != null) {
-				rv = parseFloat(RegExp.$1);
-			}
-		} else if (window.navigator.appName == 'Netscape') {
-			const ua = window.navigator.userAgent;
-			const re = new RegExp('Trident/.*rv:([0-9]{1,}[\.0-9]{0,})');
-
-			if (re.exec(ua) != null) {
-				rv = parseFloat(RegExp.$1);
-			}
-		}
-		return rv !== -1;
 	};
 
 	function checkLen() {
@@ -415,28 +362,26 @@
 	};
 
 	window.Asc.plugin.onThemeChanged = function(theme) {
+		// todo в окна плагина не приходит сообщение о смене темы, пока единственный вариант - посылать это событие с темой из основного плагина (но на старте оно приходит)
 		window.Asc.plugin.onThemeChangedBase(theme);
-		if (isIE) return;
 
 		let rule = ".select2-container--default.select2-container--open .select2-selection__arrow b { border-color : " + window.Asc.plugin.theme["text-normal"] + " !important; }";
 		let sliderBG, thumbBG
 		if (theme.type.indexOf('dark') !== -1) {
-			isDarkTheme = true;
 			sliderBG = theme.Border || '#757575';
 			// for dark '#757575';
 			// for contrast dark #616161
 			thumbBG = '#fcfcfc';
 		} else {
-			isDarkTheme = false;
-			sliderBG = '#ccc';
-			thumbBG = '#444';
+			sliderBG = '#efefef';
+			thumbBG = '#c0c0c0';
 		}
+		rule += '.text-link, .text-link:hover, .text-link:active, .text-link:visited{color: ' + theme['text-normal'] + ' !important;}';
+		rule += '\n .normal_bg { background-color: ' + theme['background-normal'] + ' !important; }';
 		rule += '\n input[type="range"] { background-color: '+sliderBG+' !important; background-image: linear-gradient('+thumbBG+', '+thumbBG+') !important; }';
 		rule += '\n input[type="range"]::-webkit-slider-thumb { background: '+thumbBG+' !important; }';
 		rule += '\n input[type="range"]::-moz-range-thumb { background: '+thumbBG+' !important; }';
 		rule += '\n input[type="range"]::-ms-thumb { background: '+thumbBG+' !important; }';
-		rule += '\n .arrow { border-color : ' + theme['text-normal'] + ' !important; }';
-		rule += '\n .err_background { background: ' + theme['background-toolbar'] + ' !important; }';
 		
 		let styleTheme = document.createElement('style');
 		styleTheme.type = 'text/css';
@@ -444,13 +389,23 @@
 		document.getElementsByTagName('head')[0].appendChild(styleTheme);
 	};
 
-	window.onresize = function() {
-		updateScroll();
-		updateScroll();
-	};
-
-	window.Asc.plugin.attachEvent("onApiKey", function(key) {
-		apiKey = key;
+	window.Asc.plugin.attachEvent("onApiKey", function(settings) {
+		apiKey = JSON.parse(settings).apiKey;
+		if (apiKey) {
+			fetchModels();
+		} else {
+			bCreateLoader = false;
+			destroyLoader();
+		}
 	});
+
+	window.Asc.plugin.attachEvent("onClearBtn", function() {
+		elements.textArea.value = '';
+		elements.lbTokens.innerText = 0;
+		elements.textArea.focus();
+		checkLen();
+	});
+
+	window.Asc.plugin.attachEvent("onSubmitBtn", submitHandler);
 
 })(window, undefined);
