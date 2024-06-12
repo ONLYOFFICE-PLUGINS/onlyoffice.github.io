@@ -1,0 +1,197 @@
+<!--
+ (c) Copyright Ascensio System SIA 2020
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>ClipArt</title>
+	<link rel="stylesheet" href="resources/css/plugin_style.css">
+	<script src="./vendor/jQuery-2.2.2-min/jquery-v2.2.2-min.js"></script>
+	<script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+	<script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+	<script src="./scripts/clipart.js"></script>
+	<style>
+		#search-button-id{
+			padding: 0;
+			border: 0;
+			margin: 0;
+			background-color: rgba(0,0,0,0);
+			width: 20px;
+			height: 20px;
+			vert-align: middle;
+			display: inline-block;
+			border-image-width: 0;
+
+		}
+
+		td{
+			padding: 0;
+			border-spacing:0;
+			vertical-align: middle;
+			margin: 0;
+		}
+		#input-cell-id{
+			width: 100%;
+			padding: 0 4px;
+			height: 20px;
+			background-color: #ffffff;
+
+		}
+		#button-cell-id{
+			padding: 0px;
+			height: 20px;
+			vertical-align: bottom;
+		}
+		table{
+			border-collapse: collapse;
+			border-spacing: 0;
+		}
+		#main-container-id{
+			height: 100%;
+			overflow: hidden;
+		}
+		html, body {
+			min-height: 100% !important;
+			height: 100%;
+			overflow-y:hidden;
+		}
+
+		#preview-images-container-id{
+			width: auto;
+			margin-left: 5px;
+			margin-right: 15px;
+		}
+
+		#pagination-container-id{
+			height: 50px;
+			position: relative;
+		}
+
+		.pagination-button-div{
+			display: table-cell;
+			font-size: 11px;
+			font-family: "Arial";
+			height: 22px;
+			cursor: pointer;
+			vertical-align: middle;
+			text-align: center;
+		}
+
+		.pagination-button-div p{
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+		.noselect{
+			-khtml-user-select: none;
+			user-select: none;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+		}
+
+		.pagination-button-div:hover {
+			background-color: #d8dadc !important;
+		}
+		.pagination-button-div-selected{
+			background-color: #7d858c !important;
+		}
+		.pagination-button-div-selected:hover{
+			background-color: #7d858c !important;
+		}
+
+		.pagination-button-div-selected p{
+			color: #ffffff;
+		}
+
+		#search-button-id:focus{
+			outline: none;
+		}
+		p{
+			margin: auto;
+		}
+		
+		#search-button-image-id {
+		  background-size: 20px 20px;
+		  height: 20px;
+		  width: 20px;
+		}
+		#flex-loader-container {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 150px;
+			height: 50px;
+			border: none;
+			background-image: none;
+			background-color: rgba(68, 68, 68, 0.95);
+			color: #f1f1f1;
+			border-radius: 6px;
+		}
+		#button-search-id {
+			width: 100%;
+			margin-top: 16px;
+		}
+		.no-results {
+			font-size: 13px;
+			margin-left: 7px;
+		}
+
+	</style>
+	<link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+</head>
+<body style="width: 100%;height: 100%; margin: 0;">
+	<div id="loader-container" class="asc-plugin-loader display-none">
+		<div id="flex-loader-container">
+			<div>
+				<div class="asc-loader-image">
+					<div class="asc-loader-title"></div>
+				</div>
+				<div class="asc-loader-title i18n">Loading...</div>
+			</div>
+		</div>
+	</div>
+	<div id="main-container-id" style="display:flex; flex-direction: column">
+		<div id="main-search-container-id" style="width: calc(100% - 24px); margin: 12px;">
+			<input id="search-id" class="form-control i18n" type="text" placeholder="Enter search phrase" autocomplete="off" style="width: 100%">
+			<button onсlick="" id="button-search-id" class="btn-text-default i18n">Search</button>
+			<div class="separator horizontal" style="width: 100%; margin-top: 16px;"></div>
+		</div>
+		<div id="scrollable-container-id" style="position: relative; height: calc(100% - 100px); overflow: hidden; min-height: 200px;">
+			<div id="preview-images-container-id" style="display: block; position: absolute; margin-top: 10px;">
+			</div>
+		</div>
+		<div id="pagination-container-id" style=" display: table; width: 100%; text-align: center; ">
+			<div id="pagination-table-container-id" style="display:table-cell; vertical-align: middle; text-align: center;  ">
+				<table style="margin:auto; display: none" id="pagination-table-id">
+					<tr>
+						<td style="height: auto; vertical-align: middle">
+							<div class="pagination-button-div noselect" id="navigation-first-page-id" style="width:22px; height:22px;"><p><<</p></div>
+							<div class="pagination-button-div noselect" id="navigation-prev-page-id" style="width:22px; height:22px;"><p><</p></div>
+						</td>
+						<td style="height: auto; vertical-align: middle" id="pages-cell-id">
+
+						</td>
+						<td style="height: auto; vertical-align: middle">
+							<div class="pagination-button-div noselect" id="navigation-next-page-id" style="width:22px; height:22px;"><p>></p></div>
+							<div class="pagination-button-div noselect" id="navigation-last-page-id" style="width:22px; height:22px;"><p>>></p></div>
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
