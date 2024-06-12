@@ -1,0 +1,106 @@
+/* Element styles */
+body {
+    margin: 0;
+    background-color: #e2e2e2;
+}
+body > div {
+    margin: 0;
+    background-color: #e2e2e2;
+}
+body div div {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+body div p {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.02em;
+    color: #CBCBCB;
+  }
+  
+#previewEffect {
+    position:absolute;
+    z-index: 1;
+}
+
+/* #background-grid {
+    position:absolute;
+    display: none;
+    z-index: 0;
+} */
+  
+/* Class styles */
+
+.checkbox {
+    background: white;
+    border: 1px solid #C0C0C0;
+    border-radius: 2px;
+}
+
+
+.sliderContainer {
+    display: block;
+    margin-left: auto;
+    width: 128px;
+    height: 38px;
+}
+
+.effect-panel{
+    align-items: flex-start;
+    margin: 0 10px;
+}
+
+.effect-form{
+    padding: 0;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.effect-form .value-text {
+    font-weight: 400;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.02em;
+    padding: 0 5px;
+    width: 2em;
+}
+
+.effect-form p{
+    color: #444444;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.02em;
+}  
+/* Id styles */
+#main-content {
+    margin-top: 20px;
+}
+canvas{
+    top:0;
+    left: 0;
+}
+#drop-area {
+    position: relative;
+}
+#drop-area > div {
+    height: 373px;
+    width: 373px;
+    background-color: white;
+}
+  
+#effects-content {
+    align-items: flex-start;
+    flex-direction: row;
+}
+#effects-content > div {
+    flex-direction: column;
+}
+/* Typography */
+p {
+    font-family: "Arial";
+    font-style: normal;
+    font-weight: 700;
+}

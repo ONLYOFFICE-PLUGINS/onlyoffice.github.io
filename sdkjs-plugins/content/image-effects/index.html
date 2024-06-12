@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>test</title>
+ 	<script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+	<script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+	<link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+	<link rel="stylesheet" href="effects-core/test/styles.css">
+</head>
+	<body style="background-color: #e2e2e2;">
+        <div id="Image-Effects" style="margin: 0; padding: 0;">
+            <div id="main-content">
+                <div id="drop-area">
+                    <div id="no-image"><p id="no-image-text" class="onTranslate">Please, select an image</p></div>
+                    <canvas id="previewEffect" width="663" height="373" style="display: none;"></canvas>
+                </div>
+            </div>
+            <div id="effects-content" style="display: none;">
+                <div class="effect-panel">
+                    <div class="effect-form" id="sepia">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Sepia</p>
+                    </div>
+                    <div class="effect-form" id="brightness">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Brightness</p>
+                        <div class="sliderContainer">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                    <div class="effect-form" id="saturation">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Saturation</p>
+                        <div class="sliderContainer">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                    <div class="effect-form" id="hue">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Hue</p>
+                        <div class="sliderContainer" min="0" max="360">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                    <div class="effect-form" id="transparency">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Transparency</p>
+                        <div class="sliderContainer" min="0" max="100">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                </div>
+                <div class="effect-panel">
+                    <div class="effect-form" id="shades_of_gray">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">B&W</p>
+                    </div>
+                    <div class="effect-form" id="lighting">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Lighting</p>
+                        <div class="sliderContainer">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                    <div class="effect-form" id="intension_red">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Intension red</p>
+                        <div class="sliderContainer">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                    <div class="effect-form" id="intension_green">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Intension green</p>
+                        <div class="sliderContainer">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                    <div class="effect-form" id="intension_blue">
+                        <input type="checkbox" class="checkbox" disabled>
+                        <p class="onTranslate">Intension blue</p>
+                        <div class="sliderContainer">
+                        </div>
+                        <p class="value-text">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript" src="effects-core/deploy/effects.js"></script>
+        <script type="text/javascript" src="effects-core/test/background.js"></script>
+        <script type="text/javascript" src="effects-core/test/slider.js"></script>
+        <script type="text/javascript" src="effects-core/test/main.js"></script>
+	</body>
+</html>
