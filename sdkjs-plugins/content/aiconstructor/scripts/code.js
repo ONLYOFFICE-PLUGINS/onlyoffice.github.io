@@ -87,6 +87,25 @@ renameModal.addEventListener('after:open', function () {
 const countSlotsInTimeline = 4;
 let snippetItemActiveModal = null;
 let codeEditor = null;
+const draggedState = {
+	start: {
+		type: '',
+		element: null
+	},
+	end: {
+		type: '',
+		element: null
+	},
+	data: null,
+
+	clear: function() {
+		this.start.type = '';
+		this.start.element = null;
+		this.end.type = '';
+		this.end.element = null;
+		this.data = null;
+	}
+};
 
 function handlerClickModalSubmit() {
 	// TODO: Add validation for input
@@ -124,10 +143,25 @@ const snippetsList = {
 	_createHandlers: function() {
 		const me = this;
 		const elements = document.getElementsByClassName('snippet-item');
-		let draggedState = {
-			start: null,
-			end: null,
-		};
+		const deleteContainerEl = document.getElementById('delete-timeline-item-container');
+
+		deleteContainerEl.addEventListener('dragenter', function (e) {
+			if(draggedState.start.type !== 'timeline') return;
+
+			deleteContainerEl.classList.add('selected');
+			draggedState.end.type = 'delete';
+			draggedState.end.element = deleteContainerEl;
+		});
+
+		deleteContainerEl.addEventListener('dragleave', function (e) {
+			if(draggedState.start.type !== 'timeline') return;
+
+			setTimeout(function () {
+				deleteContainerEl.classList.remove('selected');
+				draggedState.end.type = '';
+				draggedState.end.element = null;
+			}, 1);
+		});
 
 		Array.from(elements).forEach(function(el) {
 			const guid = el.getAttribute('data-guid');
@@ -135,6 +169,29 @@ const snippetsList = {
 				const item = me._list.find(function(item) { return item.guid === guid; });
 				snippetContextMenu.show(item, x, y);
 			};
+
+			el.addEventListener('dragstart', function (e) {
+				const target = e.target;
+				const guid = target.getAttribute('data-guid');
+				const item = me._list.find(function (item) { return item.guid == guid; });
+
+				me.selectItem(item.guid);
+				draggedState.start.type = 'snippet';
+				draggedState.start.element = target;
+				draggedState.data = item;
+
+				target.classList.add('dragging');
+			});
+			el.addEventListener('dragend', function (e) {
+				const target = e.target;
+				target.classList.remove('dragging');
+
+				if(draggedState.end.type === 'timeline') {
+					const indexSlot = draggedState.end.element.getAttribute('data-slot');
+					timelineList.addItem(indexSlot, draggedState.data);
+				}
+				draggedState.clear();
+			});
 
 			el.addEventListener('click', function(e) {
 				me.selectItem(guid);
@@ -149,58 +206,6 @@ const snippetsList = {
 				const targetElement = e.target;
 				const rect = targetElement.getBoundingClientRect();
 				handlerOpenMenu(rect.left, rect.bottom);
-			});
-
-			// Drag and drop
-			el.addEventListener('dragstart', function () {
-				draggedState.start = el;
-				me.selectItem(el.getAttribute('data-guid'));
-				el.classList.add('dragging');
-			});
-			el.addEventListener('dragend', function () {
-				if(draggedState.end) {
-					const numSlot = draggedState.end.getAttribute('data-slot');
-					const guid = draggedState.start.getAttribute('data-guid');
-					const item = me._list.find(function(item) { return item.guid == guid });
-					if(item) {
-						timelineList.addItem(numSlot, item);
-					}
-				}
-
-				draggedState.start.classList.remove('dragging');
-				draggedState.start = null;
-				draggedState.end = null;
-
-				const oldDragHovered = document.getElementsByClassName('drag-hovered');
-				Array.from(oldDragHovered).forEach(function (item) {
-					item.classList.remove('drag-hovered')
-				});
-			});
-			el.addEventListener('drag', function (e) {
-				if(e.clientX === 0 && e.clientY === 0) return;
-				const cursorPosition = {x: e.clientX, y: e.clientY};
-				const prevDraggedItemEnd = draggedState.end;
-
-				// If the cursor is inside the timeline container, then select the closest item.
-				// Else deselect end item
-				if(isPointInsideContainer(cursorPosition, document.getElementById('timeline-container')) === true) {
-					draggedState.end = getClosestElementToCursor(
-						cursorPosition,
-						document.getElementsByClassName('timeline-item')
-					);
-				} else {
-					draggedState.end = null;
-				}
-
-				if(prevDraggedItemEnd && prevDraggedItemEnd !== draggedState.end) {
-					const oldDragHovered = document.getElementsByClassName('drag-hovered');
-					Array.from(oldDragHovered).forEach(function (item) {
-						item.classList.remove('drag-hovered')
-					});
-				}
-				if(draggedState.end) {
-					draggedState.end.classList.add('drag-hovered');
-				}
 			});
 		});
 	},
@@ -339,14 +344,73 @@ const timelineList = {
 	_createHandlers: function() {
 		const me = this;
 		const elements = document.querySelectorAll('.timeline-item:not(.empty)');
-		let draggedState = {
-			start: null,
-			end: null,
-			deleted: false
-		};
+		const containerEl = document.getElementById('timeline-container');
+
+		containerEl.addEventListener('dragleave', function (e) {
+			if(containerEl.contains(e.relatedTarget) || draggedState.end.type !== 'timeline') {
+				return;
+			}
+			setTimeout(function () {
+				draggedState.end.element && draggedState.end.element.classList.remove('drag-hovered');
+				draggedState.end.type = '';
+				draggedState.end.element = null;
+			}, 1);
+		});
+		containerEl.addEventListener('dragover', function (e) {
+			const cursorPosition = {
+				x: e.clientX,
+				y: e.clientY
+			};
+
+			let closestElement = getClosestElementToCursor(
+				cursorPosition,
+				document.getElementsByClassName('timeline-item')
+			);
+			if(draggedState.start.type === 'timeline' && draggedState.start.element === closestElement) {
+				closestElement = null;
+			}
+			draggedState.end.element && draggedState.end.element.classList.remove('drag-hovered');
+
+			if(closestElement) {
+				draggedState.end.type = 'timeline';
+				draggedState.end.element = closestElement;
+				closestElement.classList.add('drag-hovered');
+			} else {
+				draggedState.end.type = '';
+				draggedState.end.element = null;
+			}
+		});
+
 
 		Array.from(elements).forEach(function(el) {
 			const numSlot = el.getAttribute('data-slot');
+
+			el.addEventListener('dragstart', function (e) {
+				const target = e.target;
+				const indexSlot = target.getAttribute('data-slot');
+
+				draggedState.start.type = 'timeline';
+				draggedState.start.element = target;
+				draggedState.data = me._list[indexSlot];
+
+				target.classList.add('dragging');
+				document.getElementById('delete-timeline-item-container').classList.add('show');
+			});
+			el.addEventListener('dragend', function (e) {
+				const target = e.target;
+				const indexSlotStart = draggedState.start.element.getAttribute('data-slot');
+
+				target.classList.remove('dragging');
+				document.getElementById('delete-timeline-item-container').classList.remove('show');
+
+				if(draggedState.end.type === 'timeline') {
+					const indexSlotEnd = draggedState.end.element.getAttribute('data-slot');
+					timelineList._swapItems(indexSlotStart, indexSlotEnd);
+				} else if(draggedState.end.type === 'delete') {
+					timelineList.deleteItem(indexSlotStart);
+				}
+				draggedState.clear();
+			});
 
 			el.addEventListener('contextmenu', function(e) {
 				const item = me._list[numSlot];
@@ -365,78 +429,6 @@ const timelineList = {
 			el.addEventListener('dblclick', function () {
 				const item = me._list[el.getAttribute('data-slot')].guid;
 				snippetsList.selectItem(item, true);
-			});
-
-
-			// Drag and drop
-			el.addEventListener('dragstart', function () {
-				draggedState.start = el;
-				el.classList.add('dragging');
-				document.getElementById('delete-timeline-item-container').classList.add('show');
-			});
-			el.addEventListener('dragend', function () {
-				if(draggedState.start) {
-					draggedState.start.classList.remove('dragging');
-				}
-				if(draggedState.end) {
-					const draggedEnd = draggedState.end;
-					setTimeout(function() {
-						draggedEnd.classList.remove('drag-hovered');
-					}, 20);
-				}
-				if(draggedState.start && draggedState.end) {
-					me._swapItems(
-						+draggedState.start.getAttribute('data-slot'),
-						+draggedState.end.getAttribute('data-slot')
-					);
-				}
-
-				if(draggedState.deleted) {
-					me.deleteItem(+draggedState.start.getAttribute('data-slot'));
-					document.getElementById('delete-timeline-item-container').classList.remove('selected');
-				}
-				document.getElementById('delete-timeline-item-container').classList.remove('show');
-
-
-				draggedState.start = null;
-				draggedState.end = null;
-				draggedState.deleted = false;
-			});
-			el.addEventListener('drag', function (e) {
-				if(e.clientX === 0 && e.clientY === 0) return;
-
-				const cursorPosition = {x: e.clientX, y: e.clientY};
-				const prevDraggedItemEnd = draggedState.end;
-				let closestElement = null;
-
-				// If the cursor is inside the timeline container, then select the closest item.
-				// Else deselect end item
-				if(isPointInsideContainer(cursorPosition, document.getElementById('timeline-container'))) {
-					closestElement = getClosestElementToCursor(
-						cursorPosition,
-						document.getElementsByClassName('timeline-item')
-					);
-					if(closestElement === el) {
-						closestElement = null;
-					}
-				} else {
-					draggedState.end = null;
-				}
-				if(closestElement) {
-					draggedState.end = closestElement;
-					closestElement.classList.add('drag-hovered');
-				}
-				if(prevDraggedItemEnd && prevDraggedItemEnd !== closestElement) {
-					prevDraggedItemEnd.classList.remove('drag-hovered');
-				}
-
-				if(isPointInsideContainer(cursorPosition, document.getElementById('snippets-container'))) {
-					draggedState.deleted = true;
-					document.getElementById('delete-timeline-item-container').classList.add('selected');
-				} else {
-					draggedState.deleted = false;
-					document.getElementById('delete-timeline-item-container').classList.remove('selected');
-				}
 			});
 		});
 	},
