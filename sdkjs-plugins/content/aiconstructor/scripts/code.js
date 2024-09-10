@@ -1,0 +1,573 @@
+/**
+ *
+ * (c) Copyright Ascensio System SIA 2020
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+const snippetContextMenu = new ContextMenu([
+	{
+		label: 'Rename',
+		handler: function(item) {
+			snippetItemActiveModal = item;
+			renameModal.show();
+		}
+	},
+	{
+		label: 'Delete',
+		handler: function(item) {
+			snippetsList.deleteItem(item.guid);
+		}
+	},
+	{
+		label: 'Copy',
+		handler: function(item) {
+			snippetsList.copyItem(item.guid);
+		}
+	}
+]);
+
+const timelineContextMenu = new ContextMenu([
+	{
+		label: 'Select',
+		handler: function(item) {
+			snippetsList.selectItem(item.guid, true);
+		}
+	},
+	{
+		label: 'Delete',
+		handler: function(item) {
+			timelineList.deleteItem(item.slot);
+		}
+	},
+]);
+
+const renameModal = new Modal({
+	options: {
+		size: {
+			width: 300,
+		},
+		footerStyles: 'padding: 10px',
+		rerenderAfterOpen: true,
+	},
+	content: '<input type="text" class="form-control textSelect" id="rename-input">',
+	buttons: [
+		{
+			text: 'OK',
+			primary: true,
+			autoClose: true,
+			handler: handlerClickModalSubmit,
+		},
+		{
+			text: 'Close',
+			autoClose: true
+		},
+	],
+});
+
+renameModal.addEventListener('after:open', function () {
+	const inputEl = renameModal.$el().querySelector('#rename-input');
+	inputEl.value = snippetItemActiveModal.name;
+	inputEl.focus();
+	inputEl.select();
+});
+
+
+const countSlotsInTimeline = 4;
+let snippetItemActiveModal = null;
+let codeEditor = null;
+
+function handlerClickModalSubmit() {
+	// TODO: Add validation for input
+	const inputEl = renameModal.$el().querySelector('#rename-input');
+	snippetsList.changeNameItem(snippetItemActiveModal.guid, inputEl.value);
+}
+
+const snippetsList = {
+	_list: [],
+	_selectedItem: null,
+
+	_renderList: function() {
+		const me = this;
+		const listEl = document.getElementById("snippets-list");
+		const contentNewBtn = '<div class="new-snippet">Add new snippet</div>';
+		let content = '';
+
+		this._list.forEach(function(item) {
+			const classes = 'snippet-item' + (me._selectedItem && item.guid === me._selectedItem.guid ? ' selected' : '');
+			content += '<div class="' + classes + '" draggable="true" data-guid="' + item.guid + '">' +
+				'<div class="label">' + item.name + '</div>' +
+				'<div class="dots"></div>' +
+				'</div>';
+		});
+
+		listEl.innerHTML = content + contentNewBtn;
+
+		//Create event handlers
+		listEl.querySelector('.new-snippet').addEventListener('click', function () {
+			me.createItem();
+			me.selectItem(me._list[me._list.length - 1].guid);
+		});
+		this._createHandlers();
+	},
+	_createHandlers: function() {
+		const me = this;
+		const elements = document.getElementsByClassName('snippet-item');
+		let draggedState = {
+			start: null,
+			end: null,
+		};
+
+		Array.from(elements).forEach(function(el) {
+			const guid = el.getAttribute('data-guid');
+			const handlerOpenMenu = function(x, y) {
+				const item = me._list.find(function(item) { return item.guid === guid; });
+				snippetContextMenu.show(item, x, y);
+			};
+
+			el.addEventListener('click', function(e) {
+				me.selectItem(guid);
+			});
+			el.addEventListener('contextmenu', function(e) {
+				me.selectItem(guid);
+				handlerOpenMenu(e.clientX, e.clientY);
+			});
+			el.getElementsByClassName('dots')[0].addEventListener('click', function (e) {
+				e.stopPropagation();
+
+				const targetElement = e.target;
+				const rect = targetElement.getBoundingClientRect();
+				handlerOpenMenu(rect.left, rect.bottom);
+			});
+
+			// Drag and drop
+			el.addEventListener('dragstart', function () {
+				draggedState.start = el;
+				me.selectItem(el.getAttribute('data-guid'));
+				el.classList.add('dragging');
+			});
+			el.addEventListener('dragend', function () {
+				if(draggedState.end) {
+					const numSlot = draggedState.end.getAttribute('data-slot');
+					const guid = draggedState.start.getAttribute('data-guid');
+					const item = me._list.find(function(item) { return item.guid == guid });
+					if(item) {
+						timelineList.addItem(numSlot, item);
+					}
+				}
+
+				draggedState.start.classList.remove('dragging');
+				draggedState.start = null;
+				draggedState.end = null;
+
+				const oldDragHovered = document.getElementsByClassName('drag-hovered');
+				Array.from(oldDragHovered).forEach(function (item) {
+					item.classList.remove('drag-hovered')
+				});
+			});
+			el.addEventListener('drag', function (e) {
+				if(e.clientX === 0 && e.clientY === 0) return;
+				const cursorPosition = {x: e.clientX, y: e.clientY};
+				const prevDraggedItemEnd = draggedState.end;
+
+				// If the cursor is inside the timeline container, then select the closest item.
+				// Else deselect end item
+				if(isPointInsideContainer(cursorPosition, document.getElementById('timeline-container')) === true) {
+					draggedState.end = getClosestElementToCursor(
+						cursorPosition,
+						document.getElementsByClassName('timeline-item')
+					);
+				} else {
+					draggedState.end = null;
+				}
+
+				if(prevDraggedItemEnd && prevDraggedItemEnd !== draggedState.end) {
+					const oldDragHovered = document.getElementsByClassName('drag-hovered');
+					Array.from(oldDragHovered).forEach(function (item) {
+						item.classList.remove('drag-hovered')
+					});
+				}
+				if(draggedState.end) {
+					draggedState.end.classList.add('drag-hovered');
+				}
+			});
+		});
+	},
+
+	getItems: function () {
+		return this._list;
+	},
+	addItems: function (items) {
+		const me = this;
+		items.forEach(function (item) {
+			me._list.push(item);
+		});
+		this._renderList();
+		storage.save();
+	},
+	copyItem: function (guid) {
+		const item = this._list.find(function(item) {return item.guid === guid});
+		if(item) {
+			const newItem = {};
+			Object.assign(newItem, item);
+			newItem.guid = createGuid();
+			newItem.name += '_copy';
+			this._list.push(newItem);
+			this._renderList();
+			this.selectItem(newItem.guid, true);
+			storage.save();
+		}
+	},
+	createItem: function () {
+		const addedItem = {
+			guid: createGuid(),
+			name: 'Snippet ' + Number(this._list.length + 1),
+			code: '(function()\n' +
+				'{\n' +
+				'})();'
+		};
+		this._list.push(addedItem);
+		this._renderList();
+		storage.save();
+		return addedItem;
+	},
+	selectItem: function (guid, scrollTo = false) {
+		const newSelectedItem = this._list.find(function(item) {
+			return item.guid === guid;
+		});
+		if(newSelectedItem) {
+			if(this._selectedItem) {
+				document.querySelector(
+					'.snippet-item[data-guid="' + this._selectedItem.guid + '"]'
+				).classList.remove('selected');
+
+				if(this._selectedItem.code !== codeEditor.getValue()) {
+					this.changeCodeItem(this._selectedItem.guid, codeEditor.getValue());
+				}
+			}
+			this._selectedItem = newSelectedItem;
+			if(this._selectedItem) {
+				document.querySelector(
+					'.snippet-item[data-guid="' + this._selectedItem.guid + '"]'
+				).classList.add('selected');
+				codeEditor.setValue(this._selectedItem.code,  1);
+				codeEditor.focus();
+
+				if(scrollTo) {
+					scrollToElementCenter(
+						document.getElementById('snippets-container'),
+						document.querySelector(
+							'.snippet-item[data-guid="' + this._selectedItem.guid + '"]'
+						)
+					);
+				}
+			}
+		}
+	},
+	changeNameItem(guid, name) {
+		const item = this._list.find(function(item) { return item.guid === guid; });
+		if(item) {
+			document.querySelector(
+				'.snippet-item[data-guid="' + guid + '"] .label'
+			).innerHTML = name;
+			item.name = name;
+			storage.save();
+		}
+	},
+	changeCodeItem(guid, code) {
+		const item = this._list.find(function(item) { return item.guid === guid; });
+		if(item) {
+			item.code = code;
+			storage.save();
+		}
+	},
+	deleteItem: function (guid) {
+		let deletedIndex = 0;
+		this._list = this._list.filter(function (el, index) {
+			if(el.guid == guid) {
+				deletedIndex = index;
+				return false;
+			}
+			return true;
+		});
+		if(this._selectedItem && this._selectedItem.guid === guid) {
+			if(this._list[deletedIndex]) {
+				this.selectItem(this._list[deletedIndex].guid);
+			} else if(this._list[deletedIndex - 1]) {
+				this.selectItem(this._list[deletedIndex - 1].guid);
+			} else {
+				this._selectedItem = null;
+			}
+		}
+		this._renderList();
+		storage.save();
+	},
+}
+
+const timelineList = {
+	_list: new Array(countSlotsInTimeline).fill(null),
+
+	_renderList: function() {
+		const listEl = document.getElementById("timeline-list");
+		let content = '';
+
+		this._list.forEach(function(item, index) {
+			const classes = 'timeline-item' + (!item ? ' empty' : '');
+			const name = (item ? item.name : 'Free slot ' + Number(index + 1));
+			content +=
+				'<div class="' + classes + '" data-slot="' + index + '" draggable="' + !!item + '">' + name + '</div>\n' +
+				(index < countSlotsInTimeline - 1 ? '<img src="./resources/img/arrow.png" width="16" height="16" draggable="false"/>' : '');
+		});
+
+		listEl.innerHTML = content;
+
+
+		//Register event handlers
+		this._createHandlers();
+	},
+	_createHandlers: function() {
+		const me = this;
+		const elements = document.querySelectorAll('.timeline-item:not(.empty)');
+		let draggedState = {
+			start: null,
+			end: null,
+			deleted: false
+		};
+
+		Array.from(elements).forEach(function(el) {
+			const numSlot = el.getAttribute('data-slot');
+
+			el.addEventListener('contextmenu', function(e) {
+				const item = me._list[numSlot];
+				if(item) {
+					const propItem = {};
+					for (const key in item) {
+						if (item.hasOwnProperty(key)) {
+							propItem[key] = item[key];
+						}
+					}
+					propItem.slot = +numSlot;
+					timelineContextMenu.show(propItem, e.clientX, e.clientY);
+				}
+			});
+
+			el.addEventListener('dblclick', function () {
+				const item = me._list[el.getAttribute('data-slot')].guid;
+				snippetsList.selectItem(item, true);
+			});
+
+
+			// Drag and drop
+			el.addEventListener('dragstart', function () {
+				draggedState.start = el;
+				el.classList.add('dragging');
+				document.getElementById('delete-timeline-item-container').classList.add('show');
+			});
+			el.addEventListener('dragend', function () {
+				if(draggedState.start) {
+					draggedState.start.classList.remove('dragging');
+				}
+				if(draggedState.end) {
+					const draggedEnd = draggedState.end;
+					setTimeout(function() {
+						draggedEnd.classList.remove('drag-hovered');
+					}, 20);
+				}
+				if(draggedState.start && draggedState.end) {
+					me._swapItems(
+						+draggedState.start.getAttribute('data-slot'),
+						+draggedState.end.getAttribute('data-slot')
+					);
+				}
+
+				if(draggedState.deleted) {
+					me.deleteItem(+draggedState.start.getAttribute('data-slot'));
+					document.getElementById('delete-timeline-item-container').classList.remove('selected');
+				}
+				document.getElementById('delete-timeline-item-container').classList.remove('show');
+
+
+				draggedState.start = null;
+				draggedState.end = null;
+				draggedState.deleted = false;
+			});
+			el.addEventListener('drag', function (e) {
+				if(e.clientX === 0 && e.clientY === 0) return;
+
+				const cursorPosition = {x: e.clientX, y: e.clientY};
+				const prevDraggedItemEnd = draggedState.end;
+				let closestElement = null;
+
+				// If the cursor is inside the timeline container, then select the closest item.
+				// Else deselect end item
+				if(isPointInsideContainer(cursorPosition, document.getElementById('timeline-container'))) {
+					closestElement = getClosestElementToCursor(
+						cursorPosition,
+						document.getElementsByClassName('timeline-item')
+					);
+					if(closestElement === el) {
+						closestElement = null;
+					}
+				} else {
+					draggedState.end = null;
+				}
+				if(closestElement) {
+					draggedState.end = closestElement;
+					closestElement.classList.add('drag-hovered');
+				}
+				if(prevDraggedItemEnd && prevDraggedItemEnd !== closestElement) {
+					prevDraggedItemEnd.classList.remove('drag-hovered');
+				}
+
+				if(isPointInsideContainer(cursorPosition, document.getElementById('snippets-container'))) {
+					draggedState.deleted = true;
+					document.getElementById('delete-timeline-item-container').classList.add('selected');
+				} else {
+					draggedState.deleted = false;
+					document.getElementById('delete-timeline-item-container').classList.remove('selected');
+				}
+			});
+		});
+	},
+	_swapItems: function (firstIndex, secondIndex) {
+		const buffer = this._list[firstIndex];
+		this._list[firstIndex] = this._list[secondIndex];
+		this._list[secondIndex] = buffer;
+		this._renderList();
+	},
+
+	addItem: function (index, item) {
+		this._list[index] = item;
+		this._renderList();
+	},
+	deleteItem: function (index) {
+		this._list[index] = null;
+		this._renderList();
+	},
+	getItems: function () {
+		return this._list;
+	}
+};
+
+const storage = {
+	_key: 'asc_plugin_ai-constructor',
+
+	save: function() {
+		localStorage.setItem(
+			this._key,
+			JSON.stringify({
+				snippetList: snippetsList.getItems()
+			})
+		);
+	},
+	load: function () {
+		const jsonValue = localStorage.getItem(this._key) || '{}';
+		const storage = JSON.parse(jsonValue);
+
+		snippetsList.addItems(storage.snippetList || []);
+	},
+}
+
+
+window.Asc.plugin.init = function() {
+	// Ace editor
+	codeEditor = ace.edit("code-editor");
+	codeEditor.session.setMode("ace/mode/javascript");
+	codeEditor.container.style.lineHeight = "20px";
+	codeEditor.setValue('');
+
+	codeEditor.getSession().setUseWrapMode(true);
+	codeEditor.getSession().setWrapLimitRange(null, null);
+	codeEditor.setShowPrintMargin(false);
+	codeEditor.$blockScrolling = Infinity;
+
+
+	storage.load();
+	let firstSnippetItem = snippetsList.getItems()[0];
+	if(!firstSnippetItem) {
+		firstSnippetItem = snippetsList.createItem();
+	}
+
+	snippetsList.selectItem(firstSnippetItem.guid);
+	timelineList._renderList();
+}
+
+
+document.addEventListener("DOMContentLoaded", function(e) {
+	window.addEventListener("contextmenu", function(e) {
+		e.preventDefault();
+	});
+
+	document.getElementById('submit-btn').addEventListener('click', function(e) {
+		const result = timelineList.getItems()
+			.filter(function (item) { return item })
+			.map(function(item) {
+				return item.code;
+			});
+		console.log(result);
+	});
+});
+
+
+// Helpers
+function createGuid (a,b){
+	for(b=a='';a++<36;b+=a*51&52?(a^15?8^Math.random()*(a^20?16:4):4).toString(16):'');
+	return b
+};
+
+function isPointInsideContainer(cursorPosition, container) {
+	const containerCoord = container.getBoundingClientRect();
+	return (
+		cursorPosition.x >= containerCoord.left &&
+		cursorPosition.x <= containerCoord.right &&
+		cursorPosition.y >= containerCoord.top &&
+		cursorPosition.y <= containerCoord.bottom
+	);
+}
+
+function getDistanceBetweenCursorAndElement(cursorPosition, element) {
+	const elementCoord = element.getBoundingClientRect();
+	const elementCenter = {
+		x: elementCoord.x + elementCoord.width * 0.45,
+		y: elementCoord.y + elementCoord.height * 0.45
+	};
+	return Math.sqrt(Math.pow(cursorPosition.x - elementCenter.x, 2) + Math.pow(cursorPosition.y - elementCenter.y, 2) )
+}
+
+function getClosestElementToCursor(cursorPosition, elements) {
+	let candidate = {
+		el: null,
+		distance: 0
+	};
+	Array.from(elements).forEach(function (el) {
+		const distance = getDistanceBetweenCursorAndElement(cursorPosition, el);
+
+		if(!candidate.el || distance < candidate.distance) {
+			candidate.el = el;
+			candidate.distance = distance;
+		}
+	});
+	return candidate.el;
+}
+
+function scrollToElementCenter(container, element) {
+	const containerHeight = container.clientHeight;
+	const elementHeight = element.clientHeight;
+	const elementOffsetTop = element.offsetTop;
+	const scrollPosition = elementOffsetTop - (containerHeight / 2) + (elementHeight / 2);
+	container.scrollTo({
+		top: scrollPosition,
+		behavior: 'smooth'
+	});
+}

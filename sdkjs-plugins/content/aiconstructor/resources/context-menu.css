@@ -1,0 +1,30 @@
+.context-menu {
+    width: 180px;
+    background: transparent;
+    position: absolute;
+    z-index: 100;
+    display: none;
+}
+
+.context-menu-options {
+    list-style: none;
+    background-color: #FFFFFF;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 5px 0;
+    margin: 2px 0 0;
+}
+
+.context-menu-option {
+    font-weight: normal;
+    padding: 5px 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.context-menu-option:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
