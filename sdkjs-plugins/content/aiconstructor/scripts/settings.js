@@ -566,6 +566,7 @@ function insertCodeEditor() {
 
 	setStyles();
 	on_init_server(2);
+	codeEditor.setTheme("ace/theme/vs-light");
 }
 
 window.Asc.plugin.init = function() {
@@ -600,16 +601,6 @@ document.addEventListener("DOMContentLoaded", function(e) {
 function createGuid (a,b){
 	for(b=a='';a++<36;b+=a*51&52?(a^15?8^Math.random()*(a^20?16:4):4).toString(16):'');
 	return b
-};
-
-function isPointInsideContainer(cursorPosition, container) {
-	const containerCoord = container.getBoundingClientRect();
-	return (
-		cursorPosition.x >= containerCoord.left &&
-		cursorPosition.x <= containerCoord.right &&
-		cursorPosition.y >= containerCoord.top &&
-		cursorPosition.y <= containerCoord.bottom
-	);
 }
 
 function getDistanceBetweenCursorAndElement(cursorPosition, element) {

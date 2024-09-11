@@ -190,9 +190,17 @@ body {
 
 /*Ace editor*/
 .ace_active-line, .ace_gutter-active-line {
-    border-color: #eee !important;
+    border-top: 1px solid #eee !important;
+    border-bottom: 1px solid #eee !important;
     background-color: #fff !important;
 }
 .ace_gutter {
     background-color: #fff !important;
+}
+.ace_active-line.oo_highlight {
+    background-color: #eee !important;
+}
+.Ace-Tern-tooltip, .Ace-Tern-jsdoc-param-description {
+    color: #444;
+    background-color: #f1f1f1;
 }
