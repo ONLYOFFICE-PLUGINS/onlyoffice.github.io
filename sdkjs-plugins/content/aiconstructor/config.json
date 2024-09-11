@@ -50,16 +50,17 @@
 				}
 			],
 
-			"isViewer"            : true,
+			"isViewer"            : false,
 			"EditorsSupport"      : ["word", "cell", "slide"],
-			"isVisual"            : true,
-			"isModal"             : true,
+			"isVisual"            : false,
+			"isModal"             : false,
 			"isInsideMode"        : false,
+			"type"                : "background",
 			"isSystem"            : false,
 			"initDataType"        : "none",
 			"isUpdateOleOnResize" : false,
-			"size"                : [800, 600],
-			"buttons"             : []
+			"buttons"             : [],
+			"events"			  : ["onToolbarMenuClick"]
 		}
     ]
 }
