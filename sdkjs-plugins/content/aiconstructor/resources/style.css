@@ -44,7 +44,7 @@ body {
     text-decoration: underline;
 }
 
-.code-container {
+#code-container {
     flex: 1;
     padding: 12px 0;
 }

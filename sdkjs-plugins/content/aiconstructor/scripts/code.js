@@ -84,6 +84,7 @@ renameModal.addEventListener('after:open', function () {
 });
 
 
+window.initCounter = 0;
 const countSlotsInTimeline = 4;
 let snippetItemActiveModal = null;
 let codeEditor = null;
@@ -471,20 +472,104 @@ const storage = {
 	},
 }
 
+function insertCodeEditor() {
+	function on_init_server(type)
+	{
+		if (type === (window.initCounter & type))
+			return;
+		window.initCounter |= type;
+		if (window.initCounter === 3)
+		{
+			load_library("onlyoffice", "./libs/" + Asc.plugin.info.editorType + "/api.js");
+		}
+	}
 
-window.Asc.plugin.init = function() {
-	// Ace editor
+	function load_library(name, url)
+	{
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET", url, true);
+		xhr.onreadystatechange = function()
+		{
+			if (xhr.readyState == 4)
+			{
+				var EditSession = ace.require("ace/edit_session").EditSession;
+				var editDoc = new EditSession(xhr.responseText, "ace/mode/javascript");
+				codeEditor.ternServer.addDoc(name, editDoc);
+			}
+		};
+		xhr.send();
+	}
+
+	function setStyles() {
+		var styleTheme = document.createElement('style');
+		styleTheme.type = 'text/css';
+
+		// TODO: Refactoring. Calculate width, height and position
+		window.lockTooltipsPosition = true;
+		var editor_elem = document.getElementById("code-container");
+		var rules = ".Ace-Tern-tooltip {\
+				box-sizing: border-box;\
+				max-width: " + 476 + "px !important;\
+				min-width: " + 476 + "px !important;\
+				box-shadow: none !important;\
+				border-radius: 0px !important;\
+				left: " + 323 + "px !important;\
+				bottom: 80px !important;\
+				}";
+		// bottom: " + parseInt(document.getElementsByClassName("divHeader")[0].offsetHeight) + "px !important;\
+
+		styleTheme.innerHTML = rules;
+		document.getElementsByTagName('head')[0].appendChild(styleTheme);
+	}
+
 	codeEditor = ace.edit("code-editor");
 	codeEditor.session.setMode("ace/mode/javascript");
 	codeEditor.container.style.lineHeight = "20px";
-	codeEditor.setValue('');
+	codeEditor.setValue("");
 
 	codeEditor.getSession().setUseWrapMode(true);
 	codeEditor.getSession().setWrapLimitRange(null, null);
 	codeEditor.setShowPrintMargin(false);
 	codeEditor.$blockScrolling = Infinity;
 
+	ace.config.loadModule('ace/ext/tern', function () {
+		codeEditor.setOptions({
+			enableTern: {
+				defs: ['browser', 'ecma5'],
+				plugins: { doc_comment: { fullDocs: true } },
+				useWorker: !!window.Worker,
+				switchToDoc: function (name, start) {},
+				startedCb: function () {
+					on_init_server(1);
+				},
+			},
+			enableSnippets: false
+		});
+	});
 
+	if (!window.isIE) {
+		ace.config.loadModule('ace/ext/language_tools', function () {
+			codeEditor.setOptions({
+				enableBasicAutocompletion: false,
+				enableLiveAutocompletion: true
+			});
+		});
+	}
+
+	ace.config.loadModule('ace/ext/html_beautify', function (beautify) {
+		codeEditor.setOptions({
+			autoBeautify: true,
+			htmlBeautify: true,
+		});
+		window.beautifyOptions = beautify.options;
+	});
+
+	setStyles();
+	on_init_server(2);
+}
+
+window.Asc.plugin.init = function() {
+	insertCodeEditor();
 	storage.load();
 	let firstSnippetItem = snippetsList.getItems()[0];
 	if(!firstSnippetItem) {

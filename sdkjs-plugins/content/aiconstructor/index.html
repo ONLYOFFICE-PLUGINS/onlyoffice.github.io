@@ -42,11 +42,6 @@
 		<link rel="stylesheet" href="./resources/context-menu.css">
 		<link rel="stylesheet" href="./resources/modal.css">
 		<link rel="stylesheet" href="./resources/style.css">
-		<script type="text/javascript" src="vendor/ace/src/ace.js"></script>
-		<script type="text/javascript" src="vendor/ace/src/ext-language_tools.js"></script>
-		<script type="text/javascript" src="scripts/contextMenu.js"></script>
-		<script type="text/javascript" src="scripts/modal.js"></script>
-		<script type="text/javascript" src="scripts/code.js"></script>
     </head>
     <body class="noselect">
 		<div class="top-block">
@@ -57,7 +52,7 @@
 					<!--new snippet button-->
 				</div>
 			</div>
-			<div class="code-container">
+			<div id="code-container">
 				<div id="code-editor"></div>
 			</div>
 		</div>
@@ -67,5 +62,11 @@
 			</div>
 			<img src="./resources/img/play.svg" id="submit-btn" draggable="false" class="btn-text-default"/>
 		</div>
+
+		<script type="text/javascript" src="vendor/ace/src/ace.js"></script>
+		<script type="text/javascript" src="vendor/ace/src/ext-language_tools.js"></script>
+		<script type="text/javascript" src="scripts/contextMenu.js"></script>
+		<script type="text/javascript" src="scripts/modal.js"></script>
+		<script type="text/javascript" src="scripts/code.js"></script>
     </body>
 </html>
