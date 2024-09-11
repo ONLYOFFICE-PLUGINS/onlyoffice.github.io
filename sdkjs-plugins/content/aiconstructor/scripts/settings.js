@@ -239,9 +239,8 @@ const snippetsList = {
 		const addedItem = {
 			guid: createGuid(),
 			name: 'Snippet ' + Number(this._list.length + 1),
-			code: '(function()\n' +
-				'{\n' +
-				'})();'
+			code: '(async () => {\n\n' +
+				'})(entryPoint);'
 		};
 		this._list.push(addedItem);
 		this._renderList();
@@ -592,7 +591,7 @@ document.addEventListener("DOMContentLoaded", function(e) {
 			.map(function(item) {
 				return item.code;
 			});
-		console.log(result);
+		addButtonByTimeline(result);
 	});
 });
 
@@ -638,3 +637,10 @@ function scrollToElementCenter(container, element) {
 		behavior: 'smooth'
 	});
 }
+
+function addButtonByTimeline(data)
+{
+	Asc.plugin.sendToPlugin("onAddButton", {
+		data : data ? JSON.stringify(data) : "[]"
+	});
+};

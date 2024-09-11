@@ -1,30 +1,12 @@
 let settingsWindow = null;
+var buttonCounter = 0;
 
 window.Asc.plugin.init = function() {
-    insertTabInToolbar();
-};
-
-function insertTabInToolbar() {
-    const toolbarMenuItem = {
-        "id": "aiconstructor-settings",
-        "type": "button",
-        "text": "Settings",
-        "hint": "Settings",
-        "icons": "resources/light/icon.png"
-    };
-    const toolbarMenuTab = {
-        "id": "aiconstructor",
-        "text": "AI Constructor",
-        "items": [toolbarMenuItem]
-    };
-    const toolbarMenuMainItem = {
-        "guid": "asc.{89643394-0F74-4297-9E0B-541A67F1E98C}",
-        "tabs": [toolbarMenuTab]
-    };
     window.Asc.plugin.executeMethod ("AddToolbarMenuItem", [toolbarMenuMainItem]);
     window.Asc.plugin.attachToolbarMenuClickEvent('aiconstructor-settings', onClickSettings);
-}
 
+    window.Asc.plugin.attachToolbarMenuClickEvent("button-constructor", onButtonConstructor);
+};
 
 function onClickSettings() {
     let location  = window.location;
@@ -44,11 +26,33 @@ function onClickSettings() {
 
     if (!settingsWindow) {
         settingsWindow = new window.Asc.PluginWindow();
-        settingsWindow.attachEvent("onWindowMessage", function(message) {
-            console.log(message);
+        settingsWindow.attachEvent("onAddButton", function(info) {
+            buttonCounter++;
+            toolbarMenuMainItem["tabs"][0]["items"].push({ 
+                id: "button-constructor",
+                type: "big-button",
+                text: "Button" + buttonCounter,
+                hint: "Button" + buttonCounter,
+                data: info.data,
+                lockInViewMode: true,
+                enableToggle: false,
+                separator: false
+            });
+            Asc.plugin.executeMethod("AddToolbarMenuItem", [toolbarMenuMainItem]);
         });
     }
     settingsWindow.show(variation);
+}
+
+async function onButtonConstructor(data)
+{
+    let arrFunctions = JSON.parse(data);
+
+    let entryPoint = undefined;
+    for (let i = 0; i < arrFunctions.length; i++)
+    {
+        entryPoint = await eval(arrFunctions[i]);
+    }
 }
 
 window.Asc.plugin.button = function(id, windowId) {
