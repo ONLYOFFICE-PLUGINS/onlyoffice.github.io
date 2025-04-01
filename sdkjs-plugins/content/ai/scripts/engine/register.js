@@ -466,6 +466,17 @@
 	{
 		let button1 = new Asc.ButtonToolbar(buttonMainToolbar);
 		button1.separator = true;
+		button1.text = "Flow";
+		button1.icons = getToolBarButtonIcons("settings");
+		button1.attachOnClick(function(data){
+			onOpenFlowEditModal();
+		});
+	}
+
+	if (true)
+	{
+		let button1 = new Asc.ButtonToolbar(buttonMainToolbar);
+		button1.separator = true;
 		button1.text = "Ask AI";
 		button1.icons = getToolBarButtonIcons("ask-ai");
 		button1.attachOnClick(function(data){

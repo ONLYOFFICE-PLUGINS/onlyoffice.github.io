@@ -4,6 +4,7 @@ let aiModelEditWindow = null;
 let customProvidersWindow = null;
 let summarizationWindow = null;
 let translateSettingsWindow = null;
+let flowEditWindow = null;
 
 let initCounter = 0;
 function initWithTranslate() {
@@ -78,6 +79,7 @@ window.Asc.plugin.onThemeChanged = function(theme) {
 	summarizationWindow && summarizationWindow.command('onThemeChanged', theme);
 	translateSettingsWindow && translateSettingsWindow.command('onThemeChanged', theme);
 	customProvidersWindow && customProvidersWindow.command('onThemeChanged', theme);
+	flowEditWindow && flowEditWindow.command('onThemeChanged', theme);
 };
 
 /**
@@ -339,4 +341,30 @@ function onOpenSummarizationModal() {
 	});	
 
 	summarizationWindow.show(variation);
+}
+
+/**
+ * FLOW ADD/EDIT WINDOW
+ */
+function onOpenFlowEditModal(data) {
+	let variation = {
+		url : 'flowEdit.html',
+		description : window.Asc.plugin.tr('New Flow'),
+		isVisual : true,
+		buttons : [ 
+			{ text: window.Asc.plugin.tr('Create'), primary: true },
+			{ text: window.Asc.plugin.tr('Back'), primary: false },
+		],
+		isModal : false,
+		EditorsSupport : ["word", "slide", "cell"],
+		size : [1060, 500]
+	};
+
+	if (!flowEditWindow) {
+		flowEditWindow = new window.Asc.PluginWindow();
+		flowEditWindow.attachEvent("onInit", function() {
+			Asc.Editor.callMethod("ResizeWindow", [flowEditWindow.id, [1060, 500], [700, 500], [0, 0]]);
+		});
+	}
+	flowEditWindow.show(variation);
 }

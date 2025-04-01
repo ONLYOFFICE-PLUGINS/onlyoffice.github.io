@@ -116,5 +116,11 @@
 	"Enter the configuration for the AI model API in JS format. Provide the model name, endpoint URLs, and headers.": "Enter the configuration for the AI model API in JS format. Provide the model name, endpoint URLs, and headers.",
 	"Download template": "Download template",
 	"Invalid file format, please upload the .js file": "Invalid file format, please upload the .js file",
-	"Error adding provider from file, please try again": "Error adding provider from file, please try again"
+	"Error adding provider from file, please try again": "Error adding provider from file, please try again",
+
+	"New Flow": "New Flow",
+	"Create": "Create",
+	"Constructor": "Constructor",
+	"Drag components to canvas to create a flow. Press run or run&debug to check the flow.": "Drag components to canvas to create a flow. Press run or run&debug to check the flow.",
+	"Inputs": "Inputs"
 }

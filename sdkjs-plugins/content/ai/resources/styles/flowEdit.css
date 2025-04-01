@@ -1,0 +1,137 @@
+body {
+    display: flex;
+    justify-content: space-between;
+    padding: 0;
+}
+
+#left-panel {
+    width: 210px;
+    border-right: 1px solid var(--border-divider);
+    display: flex;
+    flex-direction: column;
+}
+
+#left-panel-header {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-divider);
+}
+
+#left-panel-header-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+}
+
+#left-panel-header-btns {
+    display: flex;
+}
+
+#left-panel-header-btns button:last-child {
+    margin-left: 6px;
+}
+
+#left-panel-header-description {
+    margin-top: 6px;
+    color: var(--text-tertiary);
+}
+
+
+#left-panel-search {
+    padding: 8px 12px;
+}
+
+#search-input {
+    width: 100%;
+}
+
+#left-panel-groups-list {
+    position: relative;
+    flex: 1;
+    padding: 0 12px 12px 12px;
+}
+
+#left-panel-groups-list .ps__rail-y {
+    opacity: 0;
+    transition: 0.2s opacity;
+}
+
+#left-panel-groups-list:hover .ps__rail-y {
+    opacity: 1;
+}
+
+#left-panel-groups-list .group {
+    overflow: hidden;
+}
+
+#left-panel-groups-list .group:not(:first-child) {
+    margin-top: 6px;
+}
+
+#left-panel-groups-list .group .header {
+    padding: 6px 0;
+}
+
+#left-panel-groups-list .group .header label {
+    line-height: 16px;
+    font-weight: 700;
+    margin-left: 8px;
+}
+
+#left-panel-groups-list .group .header .label-icon {
+    width: 20px;
+    height: 20px;
+}
+
+
+#left-panel-groups-list .group .header .collapse-btn img{
+    transition: 0.15s transform;
+    transform: rotate(90deg);
+}
+#left-panel-groups-list .group.collapsed .header .collapse-btn img{
+    transform: rotate(0deg);
+}
+
+#left-panel-groups-list .group .components-list {
+    transition: 0.15s height;
+}
+
+#left-panel-groups-list .group .components-list .item {
+    padding: 8px 12px;
+    border: 1px solid var(--border-regular-control);
+    border-radius: 2px;
+}
+
+#left-panel-groups-list .group .components-list .item:not(:first-child) {
+    margin-top: 4px;
+}
+
+
+#flowdesk {
+    flex: 1;
+}
+
+#flowdesk iframe {
+    border: none;
+}
+
+.not-border-btn {
+    padding: 0;
+    border: none !important;
+    height: 20px;
+}
+
+.not-border-btn img {
+    width: 20px;
+    height: 20px;
+}
+
+.label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.align-center {
+    display: flex;
+    align-items: center;
+}
