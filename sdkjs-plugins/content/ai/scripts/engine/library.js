@@ -460,6 +460,55 @@
 		return this.trimResult(data);
 	};
 
+	Library.prototype.AddContentControlWithType = async function(type)
+	{
+		return await Editor.callMethod("AddContentControl", [type, {Text : true}]);
+	};
+
+	Library.prototype.SelectContentControl = async function(sId)
+	{
+		return await Editor.callMethod("SelectContentControl", [sId]);
+	};
+
+	Library.prototype.ClearContentControl = async function(sId)
+	{
+		return await Editor.callMethod("ClearContentControl ", [sId]);
+	};
+
+	Library.prototype.AddContentControl = async function(type, prompt, isTextGeneration, result) {
+		Asc.scope.prompt = prompt.replace(/(\r\n|\n|\r)/gm, "").trim();
+		Asc.scope.text_gen = !!(isTextGeneration);
+		Asc.scope.result = result.trim();
+		await this.AddContentControlWithType(type);
+
+		await Editor.callCommand(function () {
+			let doc = Api.GetDocument();
+			let contentControl = doc.GetCurrentContentControl();
+			let xmlManager = doc.GetCustomXmlParts();
+			let defaultText = contentControl.GetDataForXmlMapping();
+
+			contentControl.RemoveAllElements();
+			contentControl.AddText(Asc.scope.result);
+			let currentContent = contentControl.GetDataForXmlMapping();
+
+			let xml = xmlManager.Add(`<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+			<ooAI text-generation="${Asc.scope.text_gen}" xmlns="onlyoffice:ai-content-control">
+				<prompt>${Asc.scope.prompt}</prompt>
+				<currentContent>${currentContent}</currentContent>
+				<defaultContent>${defaultText}</defaultContent>
+			</ooAI>`);
+			let xmlId = xml.GetId();
+
+			contentControl.SetDataBinding({
+				prefixMapping:	"onlyoffice:ai-content-control",
+				storeItemID:	xmlId,
+				xpath:			'/ooAI/currentContent'
+			});
+
+			contentControl.Select();
+		});
+	};
+
 	exports.Asc = exports.Asc || {};
 	exports.Asc.Library = new Library();
 

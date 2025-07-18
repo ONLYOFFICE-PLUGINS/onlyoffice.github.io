@@ -43,6 +43,11 @@ function registerButtons(window, undefined)
 		return "resources/icons/%theme-type%(light|dark)/" + icon + "%scale%(default).png";
 	}
 
+	const SdtType = {
+		BlockLevel: 1,
+		InlineLevel: 2
+	};
+
 	// register contextmenu buttons
 	let buttonMain = new Asc.ButtonContextMenu();
 	buttonMain.text = "AI";
@@ -203,7 +208,7 @@ function registerButtons(window, undefined)
 			if (!result) return;
 
 			result = result.replace(/\n\n/g, '\n');
-			await Asc.Library.PasteText(result);
+			await Asc.Library.AddContentControl(SdtType.InlineLevel, prompt, true, result);
 		});
 
 		let button4 = new Asc.ButtonContextMenu(button1);
@@ -611,6 +616,199 @@ function registerButtons(window, undefined)
 			button2.icons = getToolBarButtonIcons("ocr");
 			button2.attachOnClick(on_click_ocr);
 		}
+	}
+
+	// register content control buttons
+	if (true)
+	{
+		function getChecker(isAttribute)
+		{
+			return async function() {
+				Asc.scope.isAttribute = isAttribute;
+				return await Asc.Editor.callCommand(function() {
+
+					let doc = Api.GetDocument();
+					let xmlManager = doc.GetCustomXmlParts();
+					let contentControl = doc.GetCurrentContentControl();
+					if (!contentControl)
+						return false;
+
+					let dataBinding = contentControl.GetDataBinding();
+					if (!dataBinding)
+						return false;
+
+					let id = dataBinding.storeItemID;
+					let xPath = dataBinding.xpath;
+					let xml = xmlManager.GetById(id);
+					if (!xml)
+						return false;
+
+					let currentContentNode;
+					let currentContentNodes = xml.GetNodes(xPath);
+					if (!currentContentNodes.length)
+						return false;
+
+					currentContentNode = currentContentNodes[0];
+					let currentNodeName = currentContentNode.GetNodeName();
+					if (currentNodeName !== 'currentContent')
+						return false;
+
+					let parentNode = currentContentNode.GetParent();
+					let parentNodeName = parentNode.GetNodeName();
+					if (parentNodeName !== 'ooAI')
+						return false;
+
+					if (Asc.scope.isAttribute)
+						return parentNode.GetAttribute('text-generation') === "true";
+
+					return true;
+				})
+			};
+		}
+
+		let button = new Asc.ButtonContentControl();
+		button.icons = '/resources/icons/light/btn-update.png';
+		button.attachOnClick(async function(){
+			let stringifyData = await Asc.Editor.callCommand(function() {
+				let doc	= Api.GetDocument();
+				let contentControl = doc.GetCurrentContentControl();
+				let contentControlId = contentControl.GetInternalId();
+				let dataBinding = contentControl.GetDataBinding();
+				let xmlId = dataBinding.storeItemID;
+
+				let xmlManager = doc.GetCustomXmlParts();
+				let xml = xmlManager.GetById(xmlId);
+				let promptNode = xml.GetNodes('/ooAI/prompt')[0];
+				let prompt = promptNode.GetText();
+				let isPicture = contentControl.IsPicture();
+
+				return JSON.stringify({
+					isPicture: isPicture,
+					id: contentControlId,
+					xmlId: xmlId,
+					prompt: prompt,
+					ccType: contentControl.GetClassType()
+				});
+			});
+
+			if (!stringifyData)
+				return;
+
+			let data = JSON.parse(stringifyData);
+			let isPicture = data.isPicture;
+			let id = data.id;
+			let xmlId = data.xmlId;
+			let prompt = data.prompt;
+			let ccType = data.ccType;
+
+			await Asc.Library.SelectContentControl(id);
+
+			let requestEngine = AI.Request.create(AI.ActionType.TextAnalyze);
+			if (!requestEngine)
+				return;
+			let result = await requestEngine.chatRequest(prompt);
+			if (!result)
+				return;
+
+			if (isPicture)
+			{
+				let urls = [
+					"https://hips.hearstapps.com/hmg-prod/images/cha-teau-de-chenonceau-1603148808.jpg",
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Panor%C3%A1mica_Oto%C3%B1o_Alc%C3%A1zar_de_Segovia.jpg/1024px-Panor%C3%A1mica_Oto%C3%B1o_Alc%C3%A1zar_de_Segovia.jpg",
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Bodiam-castle-10My8-1197.jpg/1280px-Bodiam-castle-10My8-1197.jpg",
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Windsor_Castle_at_Sunset_-_Nov_2006.jpg/1280px-Windsor_Castle_at_Sunset_-_Nov_2006.jpg",
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Baba_Vida_Klearchos_1.jpg/1920px-Baba_Vida_Klearchos_1.jpg",
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Raseborg_06042008_Innenhof_01.JPG/1024px-Raseborg_06042008_Innenhof_01.JPG",
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Hunyad_Castle_TB1.jpg/1280px-Hunyad_Castle_TB1.jpg"
+				];
+				let i = Math.floor(Math.random() * urls.length);
+				let r = urls[i];
+
+				Asc.scope.url = r;
+				Asc.scope.id = id;
+				await Asc.Editor.callCommand(function() {
+					let doc	= Api.GetDocument();
+					let contentControl = doc.GetCurrentContentControl()
+					contentControl.SetPicture(Asc.scope.url);
+				});
+			}
+			else
+			{
+				await Asc.Library.ClearContentControl(id);
+
+				if (ccType === "inlineLvlSdt")
+					result = result.replace(/(\r\n|\n|\r)/gm, "").trim();
+
+				await Asc.Library.PasteText(result);
+			}
+		});
+		button.addChecker(getChecker(true));
+
+		button = new Asc.ButtonContentControl();
+		button.icons = '/resources/icons/light/chevron-down.png';
+		button.attachOnClick(async function(){
+			Asc.plugin.callCommand(function () {
+				debugger
+				let doc		= Api.GetDocument();
+				let oCCPr	= Api.asc_GetContentControlProperties();
+				let id		= oCCPr.InternalId;
+
+				let xmlManager = doc.GetCustomXmlParts();
+				let contentControl = doc.GetCurrentContentControl()
+
+				let dataBinding = contentControl.GetDataBinding();
+				let xmlid = dataBinding.storeItemID;
+
+				let xml = xmlManager.GetById(xmlid);
+				if (!xml)
+					return;
+
+				xml.Delete();
+				Api.asc_RemoveContentControlWrapper(id);
+			});
+		});
+		//button.addChecker(getChecker());
+
+		button = new Asc.ButtonContentControl();
+		button.icons = '/resources/icons/light/close.png';
+		button.attachOnClick(async function(){
+			await Asc.Editor.callCommand(function () {
+				let doc		= Api.GetDocument();
+				let oCCPr	= Api.asc_GetContentControlProperties();
+				let id		= oCCPr.InternalId;
+
+				let xmlManager = doc.GetCustomXmlParts();
+				let contentControl = doc.GetCurrentContentControl();
+
+				let dataBinding = contentControl.GetDataBinding();
+
+				if (!dataBinding)
+					return false;
+
+				let xmlid = dataBinding.storeItemID;
+
+				let xml = xmlManager.GetById(xmlid);
+				if (!xml)
+					return;
+
+				let nodeDefault = xml.GetNodes('/ooAI/defaultContent')[0];
+				let defaultText = nodeDefault.GetText();
+				let nodeCurrent = xml.GetNodes('/ooAI/currentContent')[0];
+				nodeCurrent.SetText(defaultText);
+
+				contentControl.UpdateFromXmlMapping();
+				xml.Delete();
+				Api.asc_RemoveContentControlWrapper(id);
+			});
+		});
+		//button.addChecker(getChecker());
+
+		button = new Asc.ButtonContentControl();
+		button.icons = '/resources/icons/light/error.png';
+		button.attachOnClick(async function(){
+			onOpenPromptChangeModal();
+		});
+		//button.addChecker(getChecker());
 	}
 
 	// register actions

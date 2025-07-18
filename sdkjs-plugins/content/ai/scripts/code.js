@@ -546,6 +546,51 @@ function onTranslateSettingsModal() {
 	translateSettingsWindow.show(variation);
 }
 
+function onOpenPromptChangeModal() {
+	let variation = {
+		url : 'promptChange.html',
+		description : window.Asc.plugin.tr('Edit prompt'),
+		isVisual : true,
+		buttons : [
+			//{ text: window.Asc.plugin.tr('OK'), primary: true }
+		],
+		isModal : true,
+		EditorsSupport : ["word", "slide", "cell", "pdf"],
+		size : [720, 310]
+	};
+	promptChangeWindow = new window.Asc.PluginWindow();
+	promptChangeWindow.attachEvent("onInit", async function() {
+		let prompt = await Asc.Editor.callCommand(function () {
+			debugger
+			let doc	= Api.GetDocument();
+			let xmlManager = doc.GetCustomXmlParts();
+			let contentControl = doc.GetCurrentContentControl();
+			let dataBinding = contentControl.GetDataBinding();
+			let id = dataBinding.storeItemID;
+			let xml = xmlManager.GetById(id);
+			let currentNode = xml.GetNodes('/ooAI/prompt')[0];
+			return currentNode.GetText();
+		});
+		promptChangeWindow && promptChangeWindow.command("onGetPrompt", prompt);
+	});
+
+	promptChangeWindow.attachEvent("onChangePrompt", async function(data) {
+		Asc.scope.prompt = data;
+		await Asc.Editor.callCommand(function () {
+			let doc	= Api.GetDocument();
+			let xmlManager = doc.GetCustomXmlParts();
+			let contentControl = doc.GetCurrentContentControl();
+			let dataBinding = contentControl.GetDataBinding();
+			let id = dataBinding.storeItemID;
+			let xml = xmlManager.GetById(id);
+			let currentNode = xml.GetNodes('/ooAI/prompt')[0];
+			currentNode.SetText(Asc.scope.prompt);
+		});
+		promptChangeWindow.close();
+	});
+	promptChangeWindow.show(variation);
+}
+
 /**
  * MODELS WINDOW
  */
