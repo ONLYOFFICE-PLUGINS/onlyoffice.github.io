@@ -16,3 +16,7 @@
 ## 1.0.3
 
 * Add "pdf" to the supported editors.
+
+## 1.0.4
+
+* Fixed the issue of exiting when connecting to a conference.
