@@ -58,11 +58,12 @@
 					}
 				};
 				api = new JitsiMeetExternalAPI(domain, options);
-				api.addEventListeners({
-					videoConferenceLeft: function () {
-						this._parentNode.ownerDocument.getElementById("btn_stop").onclick();
-					}
-				});				
+				// Temporary fix (hotfix 9.0.4) for bug #69636
+				// api.addEventListeners({
+				// 	videoConferenceLeft: function () {
+				// 		this._parentNode.ownerDocument.getElementById("btn_stop").onclick();
+				// 	}
+				// });
 				iframe = api.getIFrame();
 				toogleClass();
 			}
