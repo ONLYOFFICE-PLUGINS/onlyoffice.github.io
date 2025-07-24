@@ -89,7 +89,10 @@ function getCellFunctions() {
             "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"field\": null}",
 
             "To clear filter from specific column, respond:" +
-            "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"field\": 1, \"criteria1\": null}"
+            "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"field\": 1, \"criteria1\": null}",
+            
+            "To filter range A1:D8 by yellow color, respond:" +
+            "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D8\", \"fieldName\": \"color\", \"criteria1\": {\"r\": 255, \"g\": 255, \"b\": 0}, \"operator\": \"xlFilterCellColor\"}"
         ];
 
         func.call = async function(params) {
@@ -248,43 +251,49 @@ function getCellFunctions() {
                     return;
                 }
 
+                if (Asc.scope.header === "xlYes") {
+                    if (Asc.scope.orientation === "xlSortRows") {
+                        range.SetOffset(0, 1);
+                    } else {
+                        range.SetOffset(1, 0);
+                    }
+                }
+
                 let key1 = null, key2 = null, key3 = null;
 
-                if (Asc.scope.key1) {
-                    if (typeof Asc.scope.key1 === 'string') {
+                function adjustSortKey(keyValue) {
+                    if (!keyValue) return null;
+
+                    if (typeof keyValue === 'string') {
                         try {
-                            key1 = ws.GetRange(Asc.scope.key1) || Asc.scope.key1;
+                            let keyRange = ws.GetRange(keyValue);
+                            if (keyRange && Asc.scope.header === "xlYes") {
+                                if (Asc.scope.orientation === "xlSortRows") {
+                                    keyRange.SetOffset(0, 1);
+                                } else {
+                                    keyRange.SetOffset(1, 0);
+                                }
+                                return keyRange;
+                            }
+                            return keyRange || keyValue;
                         } catch {
-                            key1 = Asc.scope.key1;
+                            return keyValue;
                         }
                     } else {
-                        key1 = Asc.scope.key1;
+                        if (keyValue && Asc.scope.header === "xlYes") {
+                            if (Asc.scope.orientation === "xlSortRows") {
+                                keyValue.SetOffset(0, 1);
+                            } else {
+                                keyValue.SetOffset(1, 0);
+                            }
+                        }
+                        return keyValue;
                     }
                 }
 
-                if (Asc.scope.key2) {
-                    if (typeof Asc.scope.key2 === 'string') {
-                        try {
-                            key2 = ws.GetRange(Asc.scope.key2) || Asc.scope.key2;
-                        } catch {
-                            key2 = Asc.scope.key2;
-                        }
-                    } else {
-                        key2 = Asc.scope.key2;
-                    }
-                }
-
-                if (Asc.scope.key3) {
-                    if (typeof Asc.scope.key3 === 'string') {
-                        try {
-                            key3 = ws.GetRange(Asc.scope.key3) || Asc.scope.key3;
-                        } catch {
-                            key3 = Asc.scope.key3;
-                        }
-                    } else {
-                        key3 = Asc.scope.key3;
-                    }
-                }
+                key1 = adjustSortKey(Asc.scope.key1);
+                key2 = adjustSortKey(Asc.scope.key2);
+                key3 = adjustSortKey(Asc.scope.key3);
 
                 range.SetSort(
                     key1,
