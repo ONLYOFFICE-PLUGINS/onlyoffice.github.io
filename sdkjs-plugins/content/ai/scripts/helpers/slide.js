@@ -44,27 +44,31 @@ function getSlideFunctions() {
 			await Asc.Editor.callCommand(function () {
 				let presentation = Api.GetPresentation();
 				let currentSlide = presentation.GetCurrentSlide();
-				if (!currentSlide) {
+				let master;
+				if (currentSlide) {
 					currentSlide = presentation.GetSlideByIndex(0);
+					let curLayout = currentSlide.GetLayout();
+					master = curLayout.GetMaster();
+				}
+				else {
+					master = presentation.GetMasterByIndex(0);
 				}
 
-				let curLayout = currentSlide.GetLayout();
 				let master = curLayout.GetMaster();
-				let layoutsCount = master.GetLayoutsCount();
-
-				let layoutIndex = 1;
-				if (layoutsCount <= 1) {
-					layoutIndex = 0;
-				}
 
 				let layout = master.GetLayoutByType("obj");
-				if (!layout && layoutsCount > 0) {
-					layout = master.GetLayout(0);
+				if (!layout) {
+					let layoutsCount = master.GetLayoutsCount();
+					if (layoutsCount > 0) {
+						layout = master.GetLayout(0);
+					}
 				}
 
+				if (!layout)
+					return;
 				let newSlide = Api.CreateSlide();
 
-				if (layout && newSlide.ApplyLayout) {
+				if (layout) {
 					newSlide.ApplyLayout(layout);
 				}
 
