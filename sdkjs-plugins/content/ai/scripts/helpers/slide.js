@@ -110,7 +110,7 @@ function getSlideFunctions() {
 				let x = (slideWidth - width) / 2;
 				let y = (slideHeight - height) / 2;
 
-				let fill = Api.CreateSolidFill(Api.CreateSchemeColor(91, 155, 213));
+				let fill = Api.CreateSolidFill(Api.CreateSchemeColor("accent1"));
 				let stroke = Api.CreateStroke(12700, Api.CreateSolidFill(Api.CreateRGBColor(51, 51, 51)));
 
 				let shape = Api.CreateShape(shapeType, width, height, fill, stroke);
