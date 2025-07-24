@@ -328,16 +328,19 @@ function getSlideFunctions() {
 					table.SetSize(tableWidth, tableHeight);
 					let rowHeight = tableHeight / rows;
 					if (data && Array.isArray(data)) {
-						for (let row = 0; row < Math.min(data.length, rows); row++) {
-							if (Array.isArray(data[row])) {
-								for (let col = 0; col < Math.min(data[row].length, columns); col++) {
-									let cell = table.GetCell(row, col);
-									if (cell && cell.GetContent) {
+						let rowCount = Math.min(data.length, rows);
+						for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+							let row = table.GetRow(rowIdx);
+							if (Array.isArray(data[rowIdx])) {
+								let cellCount = Math.min(data[rowIdx].length, columns);
+								for (let col = 0; col < cellCount; col++) {
+									let cell = row.GetCell(col);
+									if (cell) {
 										let cellContent = cell.GetContent();
 										if (cellContent) {
 											cellContent.RemoveAllElements();
 											let paragraph = Api.CreateParagraph();
-											let value = data[row][col];
+											let value = data[rowIdx][col];
 											if (value !== null && value !== undefined) {
 												paragraph.AddText(value);
 												cellContent.Push(paragraph);
