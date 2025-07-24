@@ -53,8 +53,9 @@ function getSlideFunctions() {
 				else {
 					master = presentation.GetMasterByIndex(0);
 				}
-
-				let master = curLayout.GetMaster();
+				if (!master) {
+					return;
+				}
 
 				let layout = master.GetLayoutByType("obj");
 				if (!layout) {
@@ -110,12 +111,11 @@ function getSlideFunctions() {
 				let x = (slideWidth - width) / 2;
 				let y = (slideHeight - height) / 2;
 
-				let fill = Api.CreateSolidFill(Api.CreateRGBColor(91, 155, 213));
+				let fill = Api.CreateSolidFill(Api.CreateSchemeColor(91, 155, 213));
 				let stroke = Api.CreateStroke(12700, Api.CreateSolidFill(Api.CreateRGBColor(51, 51, 51)));
 
 				let shape = Api.CreateShape(shapeType, width, height, fill, stroke);
 				shape.SetPosition(x, y);
-
 
 				if (Asc.scope.params.text) {
 					let docContent = shape.GetDocContent();
@@ -124,15 +124,10 @@ function getSlideFunctions() {
 						let paragraph = Api.CreateParagraph();
 						paragraph.SetJc("center");
 						let run = paragraph.AddText(Asc.scope.params.text);
-						run.SetFontSize(32);
-						run.SetBold(true);
-						run.SetFill(Api.CreateSolidFill(Api.CreateRGBColor(255, 255, 255)));
 						docContent.Push(paragraph);
-
 						shape.SetVerticalTextAlign("center");
 					}
 				}
-
 				slide.AddObject(shape);
 			});
 		};
@@ -141,13 +136,23 @@ function getSlideFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "changeSlideBackground";
-		func.params = ["slideNumber (number): the slide number to change background", "backgroundType (string): type of background - 'solid', 'gradient', 'image'", "color (string): hex color for solid background (e.g., '#FF5733')", "imageUrl (string): URL for image background", "gradientColors (array): array of hex colors for gradient"];
-		func.examples = ["if you need to set blue background on slide 1, respond with:\n" + "[functionCalling (changeSlideBackground)]: {\"slideNumber\": 1, \"backgroundType\": \"solid\", \"color\": \"#0066CC\"}", "if you need to set gradient background, respond with:\n" + "[functionCalling (changeSlideBackground)]: {\"slideNumber\": 2, \"backgroundType\": \"gradient\", \"gradientColors\": [\"#FF0000\", \"#0000FF\"]}"];
+		func.params = [
+			"slideNumber (number): the slide number to change background",
+			"backgroundType (string): type of background - 'solid', 'gradient'",
+			"color (string): hex color for solid background (e.g., '#FF5733')",
+			"gradientColors (array): array of hex colors for gradient"
+		];
+		func.examples = [
+			"if you need to set blue background on slide 1, respond with:\n" +
+			"[functionCalling (changeSlideBackground)]: {\"slideNumber\": 1, \"backgroundType\": \"solid\", \"color\": \"#0066CC\"}",
+			"if you need to set gradient background, respond with:\n" +
+			"[functionCalling (changeSlideBackground)]: {\"slideNumber\": 2, \"backgroundType\": \"gradient\", \"gradientColors\": [\"#FF0000\", \"#0000FF\"]}"
+		];
 
-		func.call = async function (params) {
+		func.call = async function(params) {
 			Asc.scope.params = params;
 
-			await Asc.Editor.callCommand(function () {
+			await Asc.Editor.callCommand(function() {
 				let presentation = Api.GetPresentation();
 				let slide = presentation.GetSlideByIndex(Asc.scope.params.slideNumber - 1);
 				if (!slide) return;
@@ -170,22 +175,17 @@ function getSlideFunctions() {
 							let stops = [];
 							let step = 100000 / (Asc.scope.params.gradientColors.length - 1);
 
-							Asc.scope.params.gradientColors.forEach((color, index) => {
+							for (let i = 0; i < Asc.scope.params.gradientColors.length; i++) {
+								let color = Asc.scope.params.gradientColors[i];
 								let rgb = parseInt(color.slice(1), 16);
 								let r = (rgb >> 16) & 255;
 								let g = (rgb >> 8) & 255;
 								let b = rgb & 255;
-								let stop = Api.CreateGradientStop(Api.CreateRGBColor(r, g, b), index * step);
+								let stop = Api.CreateGradientStop(Api.CreateRGBColor(r, g, b), i * step);
 								stops.push(stop);
-							});
+							}
 
 							fill = Api.CreateLinearGradientFill(stops, 5400000);
-						}
-						break;
-
-					case "image":
-						if (Asc.scope.params.imageUrl) {
-							fill = Api.CreateBlipFill(Asc.scope.params.imageUrl, "stretch");
 						}
 						break;
 				}
@@ -201,45 +201,80 @@ function getSlideFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "addImageByDescription";
-		func.params = ["slideNumber (number): the slide number to add generated image to", "description (string): text description of the image to generate", "x (number, optional): horizontal position in mm (default: 25)", "y (number, optional): vertical position in mm (default: 25)", "width (number, optional): image width in mm (default: 150)", "height (number, optional): image height in mm (default: 100)", "style (string, optional): image style (realistic, cartoon, abstract, etc.)"];
-		func.examples = ["if you need to add an image of a sunset over mountains to slide 1, respond with:\n" + "[functionCalling (addImageByDescription)]: {\"slideNumber\": 1, \"description\": \"beautiful sunset over mountain range with orange and purple sky\"}", "if you need to add a cartoon style image of office workers, respond with:\n" + "[functionCalling (addImageByDescription)]: {\"slideNumber\": 2, \"description\": \"team of diverse office workers collaborating around a table\", \"style\": \"cartoon\", \"x\": 50, \"y\": 30}"];
+		func.params = [
+			"slideNumber (number): the slide number to add generated image to",
+			"description (string): text description of the image to generate",
+			"width (number, optional): image width in mm (default: 150)",
+			"height (number, optional): image height in mm (default: 100)",
+			"style (string, optional): image style (realistic, cartoon, abstract, etc.)"
+		];
+		func.examples = [
+			"if you need to add an image of a sunset over mountains to slide 1, respond with:\n" +
+			"[functionCalling (addImageByDescription)]: {\"slideNumber\": 1, \"description\": \"beautiful sunset over mountain range with orange and purple sky\"}",
+			"if you need to add a cartoon style image of office workers with custom size, respond with:\n" +
+			"[functionCalling (addImageByDescription)]: {\"slideNumber\": 2, \"description\": \"team of diverse office workers collaborating around a table\", \"style\": \"cartoon\", \"width\": 180, \"height\": 120}"
+		];
 
-		func.call = async function (params) {
+		func.call = async function(params) {
 			Asc.scope.slideNum = params.slideNumber - 1;
 			Asc.scope.description = params.description;
-			Asc.scope.x = (params.x || 25) * 36000;
-			Asc.scope.y = (params.y || 25) * 36000;
 			Asc.scope.width = (params.width || 150) * 36000;
 			Asc.scope.height = (params.height || 100) * 36000;
 			Asc.scope.style = params.style || "realistic";
 
-			let requestEngine = AI.Request.create(AI.ActionType.ImageGeneration);
+			let requestEngine = null;
+			requestEngine = AI.Request.create(AI.ActionType.ImageGeneration);
 			if (!requestEngine) {
-				console.error("Image generation is not available");
 				return;
 			}
 
-			// Формируем промпт с учетом стиля
 			let fullPrompt = Asc.scope.description;
 			if (Asc.scope.style && Asc.scope.style !== "realistic") {
 				fullPrompt = Asc.scope.style + " style, " + fullPrompt;
 			}
 
-			let imageUrl = await requestEngine.imageGenerationRequest(fullPrompt);
-			debugger;
-			if (imageUrl) {
-				// Вставляем сгенерированное изображение на слайд
-				Asc.scope.imageUrl = imageUrl;
-				await Asc.Editor.callCommand(function () {
-					let oPresentation = Api.GetPresentation();
-					let oSlide = oPresentation.GetSlideByIndex(Asc.scope.slideNum);
-					if (!oSlide) return;
-
-					let oImage = Api.CreateImage(Asc.scope.imageUrl, Asc.scope.width, Asc.scope.height);
-					oImage.SetPosition(Asc.scope.x, Asc.scope.y);
-					oSlide.AddObject(oImage);
-				});
+			let isSendedEndLongAction = false;
+			async function checkEndAction() {
+				if (!isSendedEndLongAction) {
+					let actionName = "AI (" + requestEngine.modelUI.name + ")";
+					await Asc.Editor.callMethod("EndAction", ["Block", actionName]);
+					isSendedEndLongAction = true;
+				}
 			}
+
+			let actionName = "AI (" + requestEngine.modelUI.name + ")";
+			await Asc.Editor.callMethod("StartAction", ["Block", actionName]);
+			await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+			try {
+				let imageUrl;
+				imageUrl = await requestEngine.imageGenerationRequest(fullPrompt);
+
+				await checkEndAction();
+
+				if (imageUrl) {
+					Asc.scope.imageUrl = imageUrl;
+					await Asc.Editor.callCommand(function() {
+						let oPresentation = Api.GetPresentation();
+						let oSlide = oPresentation.GetSlideByIndex(Asc.scope.slideNum);
+						if (!oSlide) return;
+
+						let slideWidth = oPresentation.GetWidth();
+						let slideHeight = oPresentation.GetHeight();
+
+						let x = (slideWidth - Asc.scope.width) / 2;
+						let y = (slideHeight - Asc.scope.height) / 2;
+
+						let oImage = Api.CreateImage(Asc.scope.imageUrl, Asc.scope.width, Asc.scope.height);
+						oImage.SetPosition(x, y);
+						oSlide.AddObject(oImage);
+					});
+				}
+			} catch (error) {
+				await checkEndAction();
+			}
+
+			await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
 		};
 		funcs.push(func);
 	}
