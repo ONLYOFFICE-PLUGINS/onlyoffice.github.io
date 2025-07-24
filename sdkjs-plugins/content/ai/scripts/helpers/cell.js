@@ -101,6 +101,52 @@ function getCellFunctions() {
             Asc.scope.criteria2 = params.criteria2;
             Asc.scope.visibleDropDown = params.visibleDropDown;
 
+            if (Asc.scope.fieldName && !Asc.scope.field) {
+                let insertRes = await Asc.Editor.callCommand(function(){
+                    let ws = Api.GetActiveSheet();
+                    let _range;
+
+                    if (!Asc.scope.range) {
+                        _range = Api.GetSelection();
+                    } else {
+                        _range = ws.GetRange(Asc.scope.range);
+                    }
+
+                    return _range.GetValue2();
+                });
+
+                let parText = insertRes.map(function(item){
+                    return item.join('\t');
+                }).join('\n');
+
+                let argPromt = "Find column index for header '" + Asc.scope.fieldName + "' in the following data. Return only the column number (starting from 1) that matches the header name:\n" + parText;
+
+                let requestEngine = AI.Request.create(AI.ActionType.Chat);
+                if (!requestEngine)
+                    return;
+
+                let isSendedEndLongAction = false;
+                async function checkEndAction() {
+                    if (!isSendedEndLongAction) {
+                        await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+                        isSendedEndLongAction = true
+                    }
+                }
+
+                await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+                await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+                let result = await requestEngine.chatRequest(argPromt, false, async function(data) {
+                    if (!data)
+                        return;
+                    await checkEndAction();
+                });
+
+                await checkEndAction();
+                await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+                Asc.scope.field = result;
+            }
+
             await Asc.Editor.callCommand(function(){
                 let ws = Api.GetActiveSheet();
                 let range;
@@ -116,22 +162,6 @@ function getCellFunctions() {
                 }
 
                 let field = Asc.scope.field;
-                
-                if (Asc.scope.fieldName && !field) {
-                    let rangeValues = range.GetValue();
-                    if (Array.isArray(rangeValues) && rangeValues.length > 0) {
-                        let headerRow = rangeValues[0];
-                        if (Array.isArray(headerRow)) {
-                            for (let i = 0; i < headerRow.length; i++) {
-                                if (headerRow[i] && headerRow[i].toString().toLowerCase() === Asc.scope.fieldName.toLowerCase()) {
-                                    field = i + 1;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
                 if (!field) {
                     field = 1;
                 }
