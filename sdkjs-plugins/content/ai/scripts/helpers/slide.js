@@ -399,78 +399,127 @@ function getSlideFunctions() {
 		};
 		funcs.push(func);
 	}
-
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "addChartToSlide";
-		func.params = ["slideNumber (number): slide number to add chart to (optional, defaults to current)", "chartType (string): type of chart - bar, barStacked, barStackedPercent, bar3D, barStacked3D, barStackedPercent3D, barStackedPercent3DPerspective, horizontalBar, horizontalBarStacked, horizontalBarStackedPercent, horizontalBar3D, horizontalBarStacked3D, horizontalBarStackedPercent3D, lineNormal, lineStacked, lineStackedPercent, line3D, pie, pie3D, doughnut, scatter, stock, area, areaStacked, areaStackedPercent, comboBarLine, comboBarLineSecondary, comboCustom", "data (array): 2D array of numeric data values - all sub-arrays must have same length, number of arrays must match series count", "series (array): array of series names - must have same length as data arrays count", "categories (array): array of category names - must have same length as each data array", "x (number): x position in EMUs (optional, defaults to center)", "y (number): y position in EMUs (optional, defaults to center)", "width (number): width in EMUs (optional, defaults to 5472000 = 152mm)", "height (number): height in EMUs (optional, defaults to 3204000 = 89mm)", "prompt (string): description of what kind of data to generate for the chart (optional)"];
-		func.examples = ["if you need to add a bar chart showing sales data on slide 2, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"slideNumber\": 2, \"chartType\": \"bar3D\", \"data\": [[100, 120, 140], [90, 110, 130]], \"series\": [\"Product A\", \"Product B\"], \"categories\": [\"Q1\", \"Q2\", \"Q3\"]}", "if you need to add a pie chart on current slide, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"chartType\": \"pie\", \"data\": [[30, 25, 20, 15, 10]], \"series\": [\"Market Share\"], \"categories\": [\"Company A\", \"Company B\", \"Company C\", \"Company D\", \"Others\"]}", "if you need to add a line chart with 3 series and 4 data points, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"chartType\": \"lineNormal\", \"data\": [[10, 20, 30, 40], [15, 25, 35, 45], [12, 22, 32, 42]], \"series\": [\"Series 1\", \"Series 2\", \"Series 3\"], \"categories\": [\"Jan\", \"Feb\", \"Mar\", \"Apr\"]}", "if you need AI to generate chart data, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"slideNumber\": 3, \"chartType\": \"lineNormal\", \"prompt\": \"Create monthly revenue data for 2024 showing steady growth from $50k to $120k\"}"];
+		func.description = "Adds a chart to the slide (152x89mm, centered)";
+		func.params = [
+			"slideNumber (number): slide number to add chart to (optional, defaults to current)",
+			"chartType (string): type of chart - bar, barStacked, barStackedPercent, bar3D, barStacked3D, barStackedPercent3D, barStackedPercent3DPerspective, horizontalBar, horizontalBarStacked, horizontalBarStackedPercent, horizontalBar3D, horizontalBarStacked3D, horizontalBarStackedPercent3D, lineNormal, lineStacked, lineStackedPercent, line3D, pie, pie3D, doughnut, scatter, stock, area, areaStacked, areaStackedPercent, comboBarLine, comboBarLineSecondary, comboCustom",
+			"data (array): 2D array of numeric data values - all sub-arrays must have same length, number of arrays must match series count",
+			"series (array): array of series names - must have same length as data arrays count",
+			"categories (array): array of category names - must have same length as each data array",
+			"prompt (string): description of what kind of data to generate for the chart (optional)"
+		];
+		func.examples = [
+			"if you need to add a bar chart showing sales data on slide 2, respond with:\n" +
+			"[functionCalling (addChartToSlide)]: {\"slideNumber\": 2, \"chartType\": \"bar3D\", \"data\": [[100, 120, 140], [90, 110, 130]], \"series\": [\"Product A\", \"Product B\"], \"categories\": [\"Q1\", \"Q2\", \"Q3\"]}",
+			"if you need to add a pie chart on current slide, respond with:\n" +
+			"[functionCalling (addChartToSlide)]: {\"chartType\": \"pie\", \"data\": [[30, 25, 20, 15, 10]], \"series\": [\"Market Share\"], \"categories\": [\"Company A\", \"Company B\", \"Company C\", \"Company D\", \"Others\"]}",
+			"if you need to add a line chart with 3 series and 4 data points, respond with:\n" +
+			"[functionCalling (addChartToSlide)]: {\"chartType\": \"lineNormal\", \"data\": [[10, 20, 30, 40], [15, 25, 35, 45], [12, 22, 32, 42]], \"series\": [\"Series 1\", \"Series 2\", \"Series 3\"], \"categories\": [\"Jan\", \"Feb\", \"Mar\", \"Apr\"]}",
+			"if you need AI to generate chart data, respond with:\n" +
+			"[functionCalling (addChartToSlide)]: {\"slideNumber\": 3, \"chartType\": \"lineNormal\", \"prompt\": \"Create monthly revenue data for 2024 showing steady growth from $50k to $120k\"}"
+		];
 
-		func.call = async function (params) {
+		func.call = async function(params) {
 			Asc.scope.params = params;
 
 			if (params.prompt && !params.data) {
 				let requestEngine = AI.Request.create(AI.ActionType.Chat);
 				if (!requestEngine) return;
 
-				let chartPrompt = "Generate chart data for the following request: " + params.prompt + "\n\nReturn ONLY a JSON object in this exact format (no other text):\n" + "{\n" + "  \"data\": [[number, number, ...], [number, number, ...]],\n" + "  \"series\": [\"Series1\", \"Series2\", ...],\n" + "  \"categories\": [\"Category1\", \"Category2\", ...]\n" + "}\n\n" + "IMPORTANT RULES:\n" + "1. The number of arrays in 'data' MUST equal the number of items in 'series'\n" + "2. ALL arrays in 'data' MUST have exactly the same length\n" + "3. The number of items in 'categories' MUST equal the length of each data array\n" + "Example: if data=[[10,20,30],[40,50,60]], then series must have 2 names and categories must have 3 names";
+				let isSendedEndLongAction = false;
+				async function checkEndAction() {
+					if (!isSendedEndLongAction) {
+						let actionName = "AI" + (requestEngine.modelUI && requestEngine.modelUI.name ? " (" + requestEngine.modelUI.name + ")" : " (Chart Generation)");
+						await Asc.Editor.callMethod("EndAction", ["Block", actionName]);
+						isSendedEndLongAction = true;
+					}
+				}
 
-				let generatedData = await requestEngine.chatRequest(chartPrompt, false);
+				let actionName = "AI" + (requestEngine.modelUI && requestEngine.modelUI.name ? " (" + requestEngine.modelUI.name + ")" : " (Chart Generation)");
+				await Asc.Editor.callMethod("StartAction", ["Block", actionName]);
+				await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
 
 				try {
-					let parsedData = JSON.parse(generatedData);
-					Asc.scope.params.data = parsedData.data;
-					Asc.scope.params.series = parsedData.series;
-					Asc.scope.params.categories = parsedData.categories;
+					let chartPrompt = "Generate chart data for the following request: " + params.prompt +
+						"\n\nReturn ONLY a JSON object in this exact format (no other text):\n" +
+						"{\n" +
+						"  \"data\": [[number, number, ...], [number, number, ...]],\n" +
+						"  \"series\": [\"Series1\", \"Series2\", ...],\n" +
+						"  \"categories\": [\"Category1\", \"Category2\", ...]\n" +
+						"}\n\n" +
+						"IMPORTANT RULES:\n" +
+						"1. The number of arrays in 'data' MUST equal the number of items in 'series'\n" +
+						"2. ALL arrays in 'data' MUST have exactly the same length\n" +
+						"3. The number of items in 'categories' MUST equal the length of each data array\n" +
+						"Example: if data=[[10,20,30],[40,50,60]], then series must have 2 names and categories must have 3 names";
 
-					let dataLength = Asc.scope.params.data.length;
-					let seriesLength = Asc.scope.params.series.length;
-					let pointsLength = Asc.scope.params.data[0] ? Asc.scope.params.data[0].length : 0;
-					let categoriesLength = Asc.scope.params.categories.length;
+					let generatedData = await requestEngine.chatRequest(chartPrompt, false);
 
-					for (let i = 1; i < Asc.scope.params.data.length; i++) {
-						if (Asc.scope.params.data[i].length !== pointsLength) {
-							while (Asc.scope.params.data[i].length < pointsLength) {
-								Asc.scope.params.data[i].push(0);
+					await checkEndAction();
+
+					try {
+						let parsedData = JSON.parse(generatedData);
+						Asc.scope.params.data = parsedData.data;
+						Asc.scope.params.series = parsedData.series;
+						Asc.scope.params.categories = parsedData.categories;
+
+						let dataLength = Asc.scope.params.data.length;
+						let seriesLength = Asc.scope.params.series.length;
+						let pointsLength = Asc.scope.params.data[0] ? Asc.scope.params.data[0].length : 0;
+						let categoriesLength = Asc.scope.params.categories.length;
+
+						for (let i = 1; i < Asc.scope.params.data.length; i++) {
+							if (Asc.scope.params.data[i].length !== pointsLength) {
+								while (Asc.scope.params.data[i].length < pointsLength) {
+									Asc.scope.params.data[i].push(0);
+								}
+								Asc.scope.params.data[i] = Asc.scope.params.data[i].slice(0, pointsLength);
 							}
-							Asc.scope.params.data[i] = Asc.scope.params.data[i].slice(0, pointsLength);
 						}
-					}
 
-					if (dataLength !== seriesLength) {
-						while (Asc.scope.params.series.length < dataLength) {
-							Asc.scope.params.series.push("Series " + (Asc.scope.params.series.length + 1));
+						if (dataLength !== seriesLength) {
+							while (Asc.scope.params.series.length < dataLength) {
+								Asc.scope.params.series.push("Series " + (Asc.scope.params.series.length + 1));
+							}
+							Asc.scope.params.series = Asc.scope.params.series.slice(0, dataLength);
 						}
-						Asc.scope.params.series = Asc.scope.params.series.slice(0, dataLength);
-					}
 
-					if (pointsLength !== categoriesLength) {
-						while (Asc.scope.params.categories.length < pointsLength) {
-							Asc.scope.params.categories.push("Cat " + (Asc.scope.params.categories.length + 1));
+						if (pointsLength !== categoriesLength) {
+							while (Asc.scope.params.categories.length < pointsLength) {
+								Asc.scope.params.categories.push("Cat " + (Asc.scope.params.categories.length + 1));
+							}
+							Asc.scope.params.categories = Asc.scope.params.categories.slice(0, pointsLength);
 						}
-						Asc.scope.params.categories = Asc.scope.params.categories.slice(0, pointsLength);
+					} catch (e) {
+						Asc.scope.params.data = [[100, 120, 140], [90, 110, 130]];
+						Asc.scope.params.series = ["Series 1", "Series 2"];
+						Asc.scope.params.categories = ["Cat 1", "Cat 2", "Cat 3"];
 					}
-				} catch (e) {
+				} catch (error) {
+					await checkEndAction();
 					Asc.scope.params.data = [[100, 120, 140], [90, 110, 130]];
 					Asc.scope.params.series = ["Series 1", "Series 2"];
 					Asc.scope.params.categories = ["Cat 1", "Cat 2", "Cat 3"];
 				}
+
+				await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
 			}
 
-			await Asc.Editor.callCommand(function () {
+			await Asc.Editor.callCommand(function() {
 				let presentation = Api.GetPresentation();
 				let slide;
 
 				if (Asc.scope.params.slideNumber) {
 					slide = presentation.GetSlideByIndex(Asc.scope.params.slideNumber - 1);
-				}
-				else {
+				} else {
 					slide = presentation.GetCurrentSlide();
 				}
 
 				if (!slide) return;
 
-				// Значения по умолчанию
 				let chartType = Asc.scope.params.chartType || "bar3D";
 				let data = Asc.scope.params.data || [[100, 120, 140], [90, 110, 130]];
 				let series = Asc.scope.params.series || ["Series 1", "Series 2"];
@@ -510,27 +559,19 @@ function getSlideFunctions() {
 					}
 				}
 
-				// Размеры диаграммы: 152x89 мм (в EMU: 1мм = 36000 EMU)
-
 				let slideWidth = presentation.GetWidth();
 				let slideHeight = presentation.GetHeight();
-				let width = Asc.scope.params.width || 5472000;  // 152 мм
-				let height = Asc.scope.params.height || 3204000; // 89 мм
+				let width = 5472000;
+				let height = 3204000;
 
-				// Центрирование на слайде
-				let x = Asc.scope.params.x || (slideWidth - width) / 2;   // центр по горизонтали
-				let y = Asc.scope.params.y || (slideHeight - height) / 2; // центр по вертикали
+				let x = (slideWidth - width) / 2;
+				let y = (slideHeight - height) / 2;
 
-				// Создаем диаграмму
 				let chart = Api.CreateChart(chartType, data, series, categories, width, height, 24);
 
 				if (chart) {
-					// Устанавливаем позицию
 					chart.SetPosition(x, y);
-
-					// Добавляем диаграмму на слайд
 					slide.AddObject(chart);
-
 				}
 			});
 		};
