@@ -34,13 +34,14 @@ function getCellFunctions() {
 
     let funcs = [];
 
-    if (true)
+   if (true)
     {
         let func = new RegisteredFunction();
         func.name = "setAutoFilter";
         func.params = [
             "range (string, optional): cell range to apply autofilter (e.g., 'A1:D10'). If omitted, uses active/selected range",
             "field (number, optional): field number for filtering (starting from 1, left-most field)",
+            "fieldName (string, optional): column name/header for filtering (e.g., 'Name', 'Age'). Will automatically find the column number",
             "criteria1 (string|array|object, optional): filter criteria - string for operators (e.g., '>10'), array for multiple values (e.g., [1,2,3]), ApiColor object for color filters, or dynamic filter constant",
             "operator (string, optional): filter operator - 'xlAnd', 'xlOr', 'xlFilterValues', 'xlTop10Items', 'xlTop10Percent', 'xlBottom10Items', 'xlBottom10Percent', 'xlFilterCellColor', 'xlFilterFontColor', 'xlFilterDynamic'",
             "criteria2 (string, optional): second criteria for compound filters (used with xlAnd/xlOr operators)",
@@ -56,6 +57,12 @@ function getCellFunctions() {
 
             "To filter column 1 for values greater than 10, respond:" +
             "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"field\": 1, \"criteria1\": \">10\"}",
+
+            "To filter by column name 'Name' for specific values, respond:" +
+            "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"fieldName\": \"Name\", \"criteria1\": [\"John\", \"Jane\"], \"operator\": \"xlFilterValues\"}",
+
+            "To filter by column header 'Age' for values greater than 18, respond:" +
+            "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"fieldName\": \"Age\", \"criteria1\": \">18\"}",
 
             "To filter column 2 for specific values [2,5,8], respond:" +
             "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"field\": 2, \"criteria1\": [2,5,8], \"operator\": \"xlFilterValues\"}",
@@ -75,6 +82,9 @@ function getCellFunctions() {
             "To filter active range for values greater than 5, respond:" +
             "[functionCalling (setAutoFilter)]: {\"field\": 1, \"criteria1\": \">5\"}",
 
+            "To filter active range by column name 'Price' for values less than 100, respond:" +
+            "[functionCalling (setAutoFilter)]: {\"fieldName\": \"Price\", \"criteria1\": \"<100\"}",
+
             "To remove autofilter from range, respond:" +
             "[functionCalling (setAutoFilter)]: {\"range\": \"A1:D10\", \"field\": null}",
 
@@ -85,6 +95,7 @@ function getCellFunctions() {
         func.call = async function(params) {
             Asc.scope.range = params.range;
             Asc.scope.field = params.field;
+            Asc.scope.fieldName = params.fieldName;
             Asc.scope.criteria1 = params.criteria1;
             Asc.scope.operator = params.operator;
             Asc.scope.criteria2 = params.criteria2;
@@ -104,6 +115,27 @@ function getCellFunctions() {
                     return;
                 }
 
+                let field = Asc.scope.field;
+                
+                if (Asc.scope.fieldName && !field) {
+                    let rangeValues = range.GetValue();
+                    if (Array.isArray(rangeValues) && rangeValues.length > 0) {
+                        let headerRow = rangeValues[0];
+                        if (Array.isArray(headerRow)) {
+                            for (let i = 0; i < headerRow.length; i++) {
+                                if (headerRow[i] && headerRow[i].toString().toLowerCase() === Asc.scope.fieldName.toLowerCase()) {
+                                    field = i + 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!field) {
+                    field = 1;
+                }
+
                 let criteria1 = Asc.scope.criteria1;
                 if (Asc.scope.operator === "xlFilterCellColor" || Asc.scope.operator === "xlFilterFontColor") {
                     if (criteria1 && typeof criteria1 === 'object' && criteria1.r !== undefined && criteria1.g !== undefined && criteria1.b !== undefined) {
@@ -112,7 +144,7 @@ function getCellFunctions() {
                 }
 
                 range.SetAutoFilter(
-                    Asc.scope.field,
+                    field,
                     criteria1,
                     Asc.scope.operator,
                     Asc.scope.criteria2,
