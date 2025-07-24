@@ -191,11 +191,14 @@ function getSlideFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "addImageByDescription";
-		func.params = ["slideNumber (number): the slide number to add generated image to", "description (string): text description of the image to generate", "width (number, optional): image width in mm (default: 100)", "height (number, optional): image height in mm (default: 100)", "style (string, optional): image style (realistic, cartoon, abstract, etc.)"];
+		func.params = ["slideNumber (number): the slide number to add generated image to (optional, defaults to current)", "description (string): text description of the image to generate", "width (number, optional): image width in mm (default: 100)", "height (number, optional): image height in mm (default: 100)", "style (string, optional): image style (realistic, cartoon, abstract, etc.)"];
 		func.examples = ["if you need to add an image of a sunset over mountains to slide 1, respond with:\n" + "[functionCalling (addImageByDescription)]: {\"slideNumber\": 1, \"description\": \"beautiful sunset over mountain range with orange and purple sky\"}", "if you need to add a cartoon style image of office workers with custom size, respond with:\n" + "[functionCalling (addImageByDescription)]: {\"slideNumber\": 2, \"description\": \"team of diverse office workers collaborating around a table\", \"style\": \"cartoon\", \"width\": 180, \"height\": 120}"];
 
 		func.call = async function (params) {
-			Asc.scope.slideNum = params.slideNumber - 1;
+
+
+
+
 			Asc.scope.description = params.description;
 
 			let widthMm = params.width || 100;
@@ -255,7 +258,13 @@ function getSlideFunctions() {
 					Asc.scope.imageUrl = imageUrl;
 					await Asc.Editor.callCommand(function () {
 						let oPresentation = Api.GetPresentation();
-						let oSlide = oPresentation.GetSlideByIndex(Asc.scope.slideNum);
+						let oSlide;
+						if (params.slideNumber !== undefined && params.slideNumber !== null) {
+							oSlide = oPresentation.GetSlideByIndex(params.slideNum - 1);
+						}
+						else {
+							oSlide = oPresentation.GetCurrentSlide();
+						}
 						if (!oSlide) return;
 
 						let slideWidth = oPresentation.GetWidth();
@@ -391,8 +400,7 @@ function getSlideFunctions() {
 				let presentation = Api.GetPresentation();
 				let slide = presentation.GetSlideByIndex(Asc.scope.slideNum - 1);
 				if (slide) {
-					let newSlide = slide.Duplicate();
-					presentation.AddSlide(newSlide, Asc.scope.slideNum);
+					let newSlide = slide.Duplicate(Asc.scope.slideNum);
 				}
 			});
 		};
