@@ -124,5 +124,121 @@ function getCellFunctions() {
         funcs.push(func);
     }
 
+    if (true)
+    {
+        let func = new RegisteredFunction();
+        func.name = "setSort";
+        func.params = [
+            "range (string, optional): cell range to sort (e.g., 'A1:D10'). If omitted, uses active/selected range",
+            "key1 (string|ApiRange, optional): first sort field - range or named range reference",
+            "sortOrder1 (string, optional): sort order for key1 - 'xlAscending' or 'xlDescending' (default: 'xlAscending')",
+            "key2 (string|ApiRange, optional): second sort field - range or named range reference",
+            "sortOrder2 (string, optional): sort order for key2 - 'xlAscending' or 'xlDescending'",
+            "header (string, optional): specifies if first row contains headers - 'xlYes' or 'xlNo' (default: 'xlNo')",
+            "orientation (string, optional): sort orientation - 'xlSortColumns' (by rows) or 'xlSortRows' (by columns) (default: 'xlSortColumns')"
+        ];
+
+        func.examples = [
+            "To sort range A1:D10 by first column in ascending order, respond:" +
+            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"sortOrder1\": \"xlAscending\"}",
+
+            "To sort active range by first column with headers, respond:" +
+            "[functionCalling (setSort)]: {\"key1\": \"A1\", \"header\": \"xlYes\"}",
+
+            "To sort range by multiple columns (first ascending, second descending), respond:" +
+            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"sortOrder1\": \"xlAscending\", \"key2\": \"B1\", \"sortOrder2\": \"xlDescending\"}",
+
+            "To sort range by three columns, respond:" +
+            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"sortOrder1\": \"xlAscending\", \"key2\": \"B1\", \"sortOrder2\": \"xlDescending\", \"key3\": \"C1\", \"sortOrder3\": \"xlAscending\"}",
+
+            "To sort range by rows instead of columns, respond:" +
+            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"orientation\": \"xlSortRows\"}",
+
+            "To sort range with headers by second column descending, respond:" +
+            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"B1\", \"sortOrder1\": \"xlDescending\", \"header\": \"xlYes\"}",
+
+            "To sort active range by named range key, respond:" +
+            "[functionCalling (setSort)]: {\"key1\": \"MyRange\", \"sortOrder1\": \"xlAscending\"}"
+        ];
+
+        func.call = async function(params) {
+            Asc.scope.range = params.range;
+            Asc.scope.key1 = params.key1;
+            Asc.scope.sortOrder1 = params.sortOrder1 || "xlAscending";
+            Asc.scope.key2 = params.key2;
+            Asc.scope.sortOrder2 = params.sortOrder2;
+            Asc.scope.key3 = params.key3;
+            Asc.scope.sortOrder3 = params.sortOrder3;
+            Asc.scope.header = params.header || "xlNo";
+            Asc.scope.orientation = params.orientation || "xlSortColumns";
+
+            await Asc.Editor.callCommand(function(){
+                let ws = Api.GetActiveSheet();
+                let range;
+
+                if (!Asc.scope.range) {
+                    range = Api.GetSelection();
+                } else {
+                    range = ws.GetRange(Asc.scope.range);
+                }
+
+                if (!range) {
+                    return;
+                }
+
+                let key1 = null, key2 = null, key3 = null;
+
+                if (Asc.scope.key1) {
+                    if (typeof Asc.scope.key1 === 'string') {
+                        try {
+                            key1 = ws.GetRange(Asc.scope.key1) || Asc.scope.key1;
+                        } catch {
+                            key1 = Asc.scope.key1;
+                        }
+                    } else {
+                        key1 = Asc.scope.key1;
+                    }
+                }
+
+                if (Asc.scope.key2) {
+                    if (typeof Asc.scope.key2 === 'string') {
+                        try {
+                            key2 = ws.GetRange(Asc.scope.key2) || Asc.scope.key2;
+                        } catch {
+                            key2 = Asc.scope.key2;
+                        }
+                    } else {
+                        key2 = Asc.scope.key2;
+                    }
+                }
+
+                if (Asc.scope.key3) {
+                    if (typeof Asc.scope.key3 === 'string') {
+                        try {
+                            key3 = ws.GetRange(Asc.scope.key3) || Asc.scope.key3;
+                        } catch {
+                            key3 = Asc.scope.key3;
+                        }
+                    } else {
+                        key3 = Asc.scope.key3;
+                    }
+                }
+
+                range.SetSort(
+                    key1,
+                    Asc.scope.sortOrder1,
+                    key2,
+                    Asc.scope.sortOrder2,
+                    key3,
+                    Asc.scope.sortOrder3,
+                    Asc.scope.header,
+                    Asc.scope.orientation
+                );
+            });
+        };
+
+        funcs.push(func);
+    }
+
     return funcs;
 }
