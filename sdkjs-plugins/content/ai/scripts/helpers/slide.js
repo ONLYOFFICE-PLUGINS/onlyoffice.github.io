@@ -65,8 +65,7 @@ function getSlideFunctions() {
 					}
 				}
 
-				if (!layout)
-					return;
+				if (!layout) return;
 				let newSlide = Api.CreateSlide();
 
 				if (layout) {
@@ -133,26 +132,17 @@ function getSlideFunctions() {
 		};
 		funcs.push(func);
 	}
+
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "changeSlideBackground";
-		func.params = [
-			"slideNumber (number): the slide number to change background",
-			"backgroundType (string): type of background - 'solid', 'gradient'",
-			"color (string): hex color for solid background (e.g., '#FF5733')",
-			"gradientColors (array): array of hex colors for gradient"
-		];
-		func.examples = [
-			"if you need to set blue background on slide 1, respond with:\n" +
-			"[functionCalling (changeSlideBackground)]: {\"slideNumber\": 1, \"backgroundType\": \"solid\", \"color\": \"#0066CC\"}",
-			"if you need to set gradient background, respond with:\n" +
-			"[functionCalling (changeSlideBackground)]: {\"slideNumber\": 2, \"backgroundType\": \"gradient\", \"gradientColors\": [\"#FF0000\", \"#0000FF\"]}"
-		];
+		func.params = ["slideNumber (number): the slide number to change background", "backgroundType (string): type of background - 'solid', 'gradient'", "color (string): hex color for solid background (e.g., '#FF5733')", "gradientColors (array): array of hex colors for gradient"];
+		func.examples = ["if you need to set blue background on slide 1, respond with:\n" + "[functionCalling (changeSlideBackground)]: {\"slideNumber\": 1, \"backgroundType\": \"solid\", \"color\": \"#0066CC\"}", "if you need to set gradient background, respond with:\n" + "[functionCalling (changeSlideBackground)]: {\"slideNumber\": 2, \"backgroundType\": \"gradient\", \"gradientColors\": [\"#FF0000\", \"#0000FF\"]}"];
 
-		func.call = async function(params) {
+		func.call = async function (params) {
 			Asc.scope.params = params;
 
-			await Asc.Editor.callCommand(function() {
+			await Asc.Editor.callCommand(function () {
 				let presentation = Api.GetPresentation();
 				let slide = presentation.GetSlideByIndex(Asc.scope.params.slideNumber - 1);
 				if (!slide) return;
@@ -201,26 +191,21 @@ function getSlideFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "addImageByDescription";
-		func.params = [
-			"slideNumber (number): the slide number to add generated image to",
-			"description (string): text description of the image to generate",
-			"width (number, optional): image width in mm (default: 150)",
-			"height (number, optional): image height in mm (default: 100)",
-			"style (string, optional): image style (realistic, cartoon, abstract, etc.)"
-		];
-		func.examples = [
-			"if you need to add an image of a sunset over mountains to slide 1, respond with:\n" +
-			"[functionCalling (addImageByDescription)]: {\"slideNumber\": 1, \"description\": \"beautiful sunset over mountain range with orange and purple sky\"}",
-			"if you need to add a cartoon style image of office workers with custom size, respond with:\n" +
-			"[functionCalling (addImageByDescription)]: {\"slideNumber\": 2, \"description\": \"team of diverse office workers collaborating around a table\", \"style\": \"cartoon\", \"width\": 180, \"height\": 120}"
-		];
+		func.params = ["slideNumber (number): the slide number to add generated image to", "description (string): text description of the image to generate", "width (number, optional): image width in mm (default: 100)", "height (number, optional): image height in mm (default: 100)", "style (string, optional): image style (realistic, cartoon, abstract, etc.)"];
+		func.examples = ["if you need to add an image of a sunset over mountains to slide 1, respond with:\n" + "[functionCalling (addImageByDescription)]: {\"slideNumber\": 1, \"description\": \"beautiful sunset over mountain range with orange and purple sky\"}", "if you need to add a cartoon style image of office workers with custom size, respond with:\n" + "[functionCalling (addImageByDescription)]: {\"slideNumber\": 2, \"description\": \"team of diverse office workers collaborating around a table\", \"style\": \"cartoon\", \"width\": 180, \"height\": 120}"];
 
-		func.call = async function(params) {
+		func.call = async function (params) {
 			Asc.scope.slideNum = params.slideNumber - 1;
 			Asc.scope.description = params.description;
-			Asc.scope.width = (params.width || 150) * 36000;
-			Asc.scope.height = (params.height || 100) * 36000;
+
+			let widthMm = params.width || 100;
+			let heightMm = params.height || 100;
+			Asc.scope.width = widthMm * 36000;
+			Asc.scope.height = heightMm * 36000;
 			Asc.scope.style = params.style || "realistic";
+
+			let widthPx = Math.round((widthMm / 25.4) * 96);
+			let heightPx = Math.round((heightMm / 25.4) * 96);
 
 			let requestEngine = null;
 			requestEngine = AI.Request.create(AI.ActionType.ImageGeneration);
@@ -233,7 +218,21 @@ function getSlideFunctions() {
 				fullPrompt = Asc.scope.style + " style, " + fullPrompt;
 			}
 
+			fullPrompt += ", image size " + widthPx + "x" + heightPx + " pixels";
+
+			let aspectRatio = widthPx / heightPx;
+			if (aspectRatio > 1.8) {
+				fullPrompt += ", wide panoramic format";
+			}
+			else if (aspectRatio < 0.6) {
+				fullPrompt += ", tall vertical format";
+			}
+			else if (aspectRatio > 0.9 && aspectRatio < 1.1) {
+				fullPrompt += ", square format";
+			}
+
 			let isSendedEndLongAction = false;
+
 			async function checkEndAction() {
 				if (!isSendedEndLongAction) {
 					let actionName = "AI (" + requestEngine.modelUI.name + ")";
@@ -254,7 +253,7 @@ function getSlideFunctions() {
 
 				if (imageUrl) {
 					Asc.scope.imageUrl = imageUrl;
-					await Asc.Editor.callCommand(function() {
+					await Asc.Editor.callCommand(function () {
 						let oPresentation = Api.GetPresentation();
 						let oSlide = oPresentation.GetSlideByIndex(Asc.scope.slideNum);
 						if (!oSlide) return;
@@ -403,26 +402,10 @@ function getSlideFunctions() {
 		let func = new RegisteredFunction();
 		func.name = "addChartToSlide";
 		func.description = "Adds a chart to the slide (152x89mm, centered)";
-		func.params = [
-			"slideNumber (number): slide number to add chart to (optional, defaults to current)",
-			"chartType (string): type of chart - bar, barStacked, barStackedPercent, bar3D, barStacked3D, barStackedPercent3D, barStackedPercent3DPerspective, horizontalBar, horizontalBarStacked, horizontalBarStackedPercent, horizontalBar3D, horizontalBarStacked3D, horizontalBarStackedPercent3D, lineNormal, lineStacked, lineStackedPercent, line3D, pie, pie3D, doughnut, scatter, stock, area, areaStacked, areaStackedPercent, comboBarLine, comboBarLineSecondary, comboCustom",
-			"data (array): 2D array of numeric data values - all sub-arrays must have same length, number of arrays must match series count",
-			"series (array): array of series names - must have same length as data arrays count",
-			"categories (array): array of category names - must have same length as each data array",
-			"prompt (string): description of what kind of data to generate for the chart (optional)"
-		];
-		func.examples = [
-			"if you need to add a bar chart showing sales data on slide 2, respond with:\n" +
-			"[functionCalling (addChartToSlide)]: {\"slideNumber\": 2, \"chartType\": \"bar3D\", \"data\": [[100, 120, 140], [90, 110, 130]], \"series\": [\"Product A\", \"Product B\"], \"categories\": [\"Q1\", \"Q2\", \"Q3\"]}",
-			"if you need to add a pie chart on current slide, respond with:\n" +
-			"[functionCalling (addChartToSlide)]: {\"chartType\": \"pie\", \"data\": [[30, 25, 20, 15, 10]], \"series\": [\"Market Share\"], \"categories\": [\"Company A\", \"Company B\", \"Company C\", \"Company D\", \"Others\"]}",
-			"if you need to add a line chart with 3 series and 4 data points, respond with:\n" +
-			"[functionCalling (addChartToSlide)]: {\"chartType\": \"lineNormal\", \"data\": [[10, 20, 30, 40], [15, 25, 35, 45], [12, 22, 32, 42]], \"series\": [\"Series 1\", \"Series 2\", \"Series 3\"], \"categories\": [\"Jan\", \"Feb\", \"Mar\", \"Apr\"]}",
-			"if you need AI to generate chart data, respond with:\n" +
-			"[functionCalling (addChartToSlide)]: {\"slideNumber\": 3, \"chartType\": \"lineNormal\", \"prompt\": \"Create monthly revenue data for 2024 showing steady growth from $50k to $120k\"}"
-		];
+		func.params = ["slideNumber (number): slide number to add chart to (optional, defaults to current)", "chartType (string): type of chart - bar, barStacked, barStackedPercent, bar3D, barStacked3D, barStackedPercent3D, barStackedPercent3DPerspective, horizontalBar, horizontalBarStacked, horizontalBarStackedPercent, horizontalBar3D, horizontalBarStacked3D, horizontalBarStackedPercent3D, lineNormal, lineStacked, lineStackedPercent, line3D, pie, pie3D, doughnut, scatter, stock, area, areaStacked, areaStackedPercent, comboBarLine, comboBarLineSecondary, comboCustom", "data (array): 2D array of numeric data values - all sub-arrays must have same length, number of arrays must match series count", "series (array): array of series names - must have same length as data arrays count", "categories (array): array of category names - must have same length as each data array", "prompt (string): description of what kind of data to generate for the chart (optional)"];
+		func.examples = ["if you need to add a bar chart showing sales data on slide 2, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"slideNumber\": 2, \"chartType\": \"bar3D\", \"data\": [[100, 120, 140], [90, 110, 130]], \"series\": [\"Product A\", \"Product B\"], \"categories\": [\"Q1\", \"Q2\", \"Q3\"]}", "if you need to add a pie chart on current slide, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"chartType\": \"pie\", \"data\": [[30, 25, 20, 15, 10]], \"series\": [\"Market Share\"], \"categories\": [\"Company A\", \"Company B\", \"Company C\", \"Company D\", \"Others\"]}", "if you need to add a line chart with 3 series and 4 data points, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"chartType\": \"lineNormal\", \"data\": [[10, 20, 30, 40], [15, 25, 35, 45], [12, 22, 32, 42]], \"series\": [\"Series 1\", \"Series 2\", \"Series 3\"], \"categories\": [\"Jan\", \"Feb\", \"Mar\", \"Apr\"]}", "if you need AI to generate chart data, respond with:\n" + "[functionCalling (addChartToSlide)]: {\"slideNumber\": 3, \"chartType\": \"lineNormal\", \"prompt\": \"Create monthly revenue data for 2024 showing steady growth from $50k to $120k\"}"];
 
-		func.call = async function(params) {
+		func.call = async function (params) {
 			Asc.scope.params = params;
 
 			if (params.prompt && !params.data) {
@@ -430,6 +413,7 @@ function getSlideFunctions() {
 				if (!requestEngine) return;
 
 				let isSendedEndLongAction = false;
+
 				async function checkEndAction() {
 					if (!isSendedEndLongAction) {
 						let actionName = "AI" + (requestEngine.modelUI && requestEngine.modelUI.name ? " (" + requestEngine.modelUI.name + ")" : " (Chart Generation)");
@@ -443,18 +427,7 @@ function getSlideFunctions() {
 				await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
 
 				try {
-					let chartPrompt = "Generate chart data for the following request: " + params.prompt +
-						"\n\nReturn ONLY a JSON object in this exact format (no other text):\n" +
-						"{\n" +
-						"  \"data\": [[number, number, ...], [number, number, ...]],\n" +
-						"  \"series\": [\"Series1\", \"Series2\", ...],\n" +
-						"  \"categories\": [\"Category1\", \"Category2\", ...]\n" +
-						"}\n\n" +
-						"IMPORTANT RULES:\n" +
-						"1. The number of arrays in 'data' MUST equal the number of items in 'series'\n" +
-						"2. ALL arrays in 'data' MUST have exactly the same length\n" +
-						"3. The number of items in 'categories' MUST equal the length of each data array\n" +
-						"Example: if data=[[10,20,30],[40,50,60]], then series must have 2 names and categories must have 3 names";
+					let chartPrompt = "Generate chart data for the following request: " + params.prompt + "\n\nReturn ONLY a JSON object in this exact format (no other text):\n" + "{\n" + "  \"data\": [[number, number, ...], [number, number, ...]],\n" + "  \"series\": [\"Series1\", \"Series2\", ...],\n" + "  \"categories\": [\"Category1\", \"Category2\", ...]\n" + "}\n\n" + "IMPORTANT RULES:\n" + "1. The number of arrays in 'data' MUST equal the number of items in 'series'\n" + "2. ALL arrays in 'data' MUST have exactly the same length\n" + "3. The number of items in 'categories' MUST equal the length of each data array\n" + "Example: if data=[[10,20,30],[40,50,60]], then series must have 2 names and categories must have 3 names";
 
 					let generatedData = await requestEngine.chatRequest(chartPrompt, false);
 
@@ -508,13 +481,14 @@ function getSlideFunctions() {
 				await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
 			}
 
-			await Asc.Editor.callCommand(function() {
+			await Asc.Editor.callCommand(function () {
 				let presentation = Api.GetPresentation();
 				let slide;
 
 				if (Asc.scope.params.slideNumber) {
 					slide = presentation.GetSlideByIndex(Asc.scope.params.slideNumber - 1);
-				} else {
+				}
+				else {
 					slide = presentation.GetCurrentSlide();
 				}
 
