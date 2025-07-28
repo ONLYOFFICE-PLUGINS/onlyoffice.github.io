@@ -638,33 +638,31 @@ function getSlideFunctions() {
 		func.description = "Universal function for adding ANY text content to slides. Use this for ALL text addition requests: recipes, lists, instructions, notes, ideas, or any other text content.";
 		func.params = [
 			"slideNumber (number): the slide number to add text to (optional, default current slide)",
-			"text (string): ANY text content to add - recipes, lists, instructions, notes, ideas, descriptions, stories, data, or whatever user asks to add",
+			"prompt (string): AI instructions for text enhancement or generation",
 			"textType (string): type of text - 'body', 'chart', 'clipArt', 'ctrTitle', 'diagram', 'date', 'footer', 'header', 'media', 'object', 'picture', 'sldImage', 'sldNumber', 'subTitle', 'table', 'title' (optional, default 'body')",
-			"prompt (string): AI instructions for text enhancement or generation (optional)"
 		];
 		func.examples = [
 			"IMPORTANT: Use this function for ANY text addition request!",
 			"if user asks 'add [anything]' or 'write [anything]' or 'create text about [anything]', respond with:\n" +
-			"[functionCalling (addTextToPlaceholder)]: {\"text\": \"[generated or specified content]\", \"textType\": \"body\"}",
+			"[functionCalling (addTextToPlaceholder)]: {\"prompt\": \"generate detailed content about this topic\", \"textType\": \"body\"}",
 			"if user asks 'add recipe for coffee' or just 'recipe for coffee', respond with:\n" +
-			"[functionCalling (addTextToPlaceholder)]: {\"text\": \"Coffee Recipe:\\n1. Grind coffee beans\\n2. Heat water to 95°C\\n3. Pour water over coffee\\n4. Wait 4 minutes\\n5. Enjoy\", \"textType\": \"body\"}",
+			"[functionCalling (addTextToPlaceholder)]: {\"prompt\": \"Coffee Recipe:\\n1. Grind coffee beans\\n2. Heat water to 95°C\\n3. Pour water over coffee\\n4. Wait 4 minutes\\n5. Enjoy\", \"textType\": \"body\"}",
 			"if user asks 'insert shopping list' or 'shopping list', respond with:\n" +
-			"[functionCalling (addTextToPlaceholder)]: {\"text\": \"Shopping List:\\n- Milk\\n- Bread\\n- Eggs\\n- Coffee\\n- Sugar\", \"textType\": \"body\"}",
+			"[functionCalling (addTextToPlaceholder)]: {\"prompt\": \"Shopping List:\\n- Milk\\n- Bread\\n- Eggs\\n- Coffee\\n- Sugar\", \"textType\": \"body\"}",
 			"if user asks 'put some text' or 'add some information', respond with:\n" +
-			"[functionCalling (addTextToPlaceholder)]: {\"text\": \"[the requested information]\", \"textType\": \"body\"}",
+			"[functionCalling (addTextToPlaceholder)]: {\"prompt\": \"[the requested information]\", \"textType\": \"body\"}",
 			"if user asks 'add meeting notes' or 'meeting agenda', respond with:\n" +
-			"[functionCalling (addTextToPlaceholder)]: {\"text\": \"Meeting Notes:\\n- Introduction\\n- Main topics\\n- Action items\\n- Next steps\", \"textType\": \"body\"}",
+			"[functionCalling (addTextToPlaceholder)]: {\"texpromptt\": \"Meeting Notes:\\n- Introduction\\n- Main topics\\n- Action items\\n- Next steps\", \"textType\": \"body\"}",
 			"if user asks to add title to slide 1, respond with:\n" +
-			"[functionCalling (addTextToPlaceholder)]: {\"slideNumber\": 1, \"text\": \"Introduction\", \"textType\": \"title\"}",
+			"[functionCalling (addTextToPlaceholder)]: {\"slideNumber\": 1, \"prompt\": \"Introduction\", \"textType\": \"title\"}",
 			"if user asks to generate content, respond with:\n" +
 			"[functionCalling (addTextToPlaceholder)]: {\"text\": \"Topic\", \"textType\": \"body\", \"prompt\": \"generate detailed content about this topic\"}"
 		];
 
 		func.call = async function (params) {
 			Asc.scope.slideNum = params.slideNumber;
-			Asc.scope.text = params.text;
+			//Asc.scope.text = params.text;
 			Asc.scope.textType = params.textType || "body";
-			Asc.scope.prompt = params.prompt;
 
 			await Asc.Editor.callCommand(function () {
 				let presentation = Api.GetPresentation();
@@ -775,40 +773,68 @@ function getSlideFunctions() {
 						internalContent.RemoveElement(1);
 					}
 
-					let lines = Asc.scope.text.split('\n').filter(line => line.trim() !== '');
+					let paragraph = internalContent.GetElement(0);
+					if (bNewShape)
+						paragraph.SetColor(0, 0, 0);
+					paragraph.Select();
+	
+					// let lines = Asc.scope.text.split('\n').filter(line => line.trim() !== '');
 
-					if (lines.length === 1) {
-						let paragraph = internalContent.GetElement(0);
-						if (paragraph) {
-							paragraph.RemoveAllElements();
-							paragraph.AddText(lines[0]);
-						}
-					}
-					else {
-						let firstParagraph = internalContent.GetElement(0);
-						if (firstParagraph) {
-							firstParagraph.RemoveAllElements();
-							let run = firstParagraph.AddText(lines[0]);
-							if (bNewShape) {
-								run.SetFill(Api.CreateSolidFill(Api.CreateSchemeColor("tx1")));
-							}
-						}
+					// if (lines.length === 1) {
+					// 	let paragraph = internalContent.GetElement(0);
+					// 	if (paragraph) {
+					// 		paragraph.RemoveAllElements();
+					// 		paragraph.AddText(lines[0]);
+					// 	}
+					// }
+					// else {
+					// 	let firstParagraph = internalContent.GetElement(0);
+					// 	if (firstParagraph) {
+					// 		firstParagraph.RemoveAllElements();
+					// 		let run = firstParagraph.AddText(lines[0]);
+					// 		if (bNewShape) {
+					// 			run.SetFill(Api.CreateSolidFill(Api.CreateSchemeColor("tx1")));
+					// 		}
+					// 	}
 
-						for (let i = 1; i < lines.length; i++) {
-							let newParagraph = Api.CreateParagraph();
-							let run = newParagraph.AddText(lines[i]);
-							if (bNewShape) {
-								run.SetFill(Api.CreateSolidFill(Api.CreateSchemeColor("tx1")));
-							}
-							internalContent.Push(newParagraph);
-						}
-					}
+					// 	for (let i = 1; i < lines.length; i++) {
+					// 		let newParagraph = Api.CreateParagraph();
+					// 		let run = newParagraph.AddText(lines[i]);
+					// 		if (bNewShape) {
+					// 			run.SetFill(Api.CreateSolidFill(Api.CreateSchemeColor("tx1")));
+					// 		}
+					// 		internalContent.Push(newParagraph);
+					// 	}
+					// }
 
 					return;
 				}
 
 				return;
 			});
+
+			let requestEngine = AI.Request.create(AI.ActionType.Chat);
+			if (!requestEngine)
+				return;
+
+			await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+
+			let isSendedEndLongAction = false;
+			async function checkEndAction() {
+				if (!isSendedEndLongAction) {
+					await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+					isSendedEndLongAction = true
+				}
+			}
+			let prompt = params.prompt + "\n" + "IMPORTANT: text shouldn't be long, since wee need add to slide"
+			await requestEngine.chatRequest(params.prompt, false, async function(data) {
+				if (!data)
+					return;
+				await checkEndAction();
+				await Asc.Library.PasteText(data);
+			});
+
+			await checkEndAction();
 
 		};
 		funcs.push(func);
