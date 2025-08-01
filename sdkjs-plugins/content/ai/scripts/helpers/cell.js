@@ -881,5 +881,229 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
+	if (true)
+	{
+		let func = new RegisteredFunction();
+		func.name = "cleanupRange";
+		func.params = [
+			"range (string, optional): cell range to analyze and cleanup (e.g., 'A1:D100'). If omitted, uses active/selected range",
+		];
+
+		func.examples = [
+			"Clean up duplicate values across multiple columns using AI-powered fuzzy matching.\n" +
+			"Use when you need to identify and standardize similar values in columns with many duplicates:\n" +
+			"[functionCalling (cleanupRange)]: {}",
+
+			"Clean up specific range with custom settings:\n" +
+			"[functionCalling (cleanupRange)]: {\"range\": \"A1:C100\"}"
+		];
+
+		/**
+		 * Calculates frequency maps, and uses LLM for fuzzy matching and canonicalization
+		 * @param {string} range - Target range to analyze
+		 */
+		func.call = async function (params) {
+			const duplicateThreshold = 0.4;
+			Asc.scope.range = params.range;
+			const prepareResult = await Asc.Editor.callCommand(function(){
+				let func = Api.GetWorksheetFunction();
+				const ws = Api.GetActiveSheet();
+				let targetRange;
+				if (Asc.scope.range) {
+					targetRange = ws.GetRange(Asc.scope.range);
+				} else {
+					targetRange = Api.GetSelection();
+				}
+
+				if (!targetRange) {
+					throw new Error("No valid range selected or specified");
+				}
+				
+				// Check size limit (Copilot in Excel works for Excel tables of up to 2 million cells)
+				let totalCells = targetRange.Rows.Count * targetRange.Cols.Count;
+				if (1 === totalCells) {
+					targetRange = targetRange.Expand();
+					totalCells = targetRange.Rows.Count * targetRange.Cols.Count;
+				}
+				if (totalCells < 2 || totalCells > 2000000) {
+					throw new Error("Range size must be between 2 and 2 million cells");
+				}
+				
+				// Collect unique values
+				const values = targetRange.GetValue2();
+				const columnsToProcess = [];
+				for (let i = 0; i < values.length; i++) {
+					const row = values[i];
+					for (let j = 0; j < row.length; j++) {
+						let value = row[j]; 
+						if (value !== null && value !== undefined) {
+							let colItem = columnsToProcess[j];
+							if (!colItem) {
+								colItem = {totalCount: 0, uniform : {}, uniqueValues : {}};
+								columnsToProcess[j] = colItem;
+							}
+							//todo TRIM
+							//value = func.TRIM(value);
+							const valueLower = value.toLowerCase();
+							colItem.totalCount++;
+							if (valueLower in colItem.uniqueValues) {
+								colItem.uniqueValues[valueLower]++;
+							} else {
+								colItem.uniqueValues[valueLower] = 1;
+								colItem.uniform[valueLower] = func.TRIM(value);
+							}
+						}
+					}
+				}
+				let res = {address: targetRange.Address, columnsToProcess};
+				return res;
+			});
+
+			if (!prepareResult) {
+				throw new Error("Failed to prepare data for AI");
+			}
+
+			// Build data string directly for AI
+			let dataLines = [];
+			for (let index = 0; index < prepareResult.columnsToProcess.length; index++) {
+				const col = prepareResult.columnsToProcess[index];
+				if (!col) continue;
+				
+				const uniqueCount = Object.keys(col.uniqueValues).length;
+				const totalCount = col.totalCount;
+				const duplicateRatio = totalCount > 0 ? (totalCount - uniqueCount) / totalCount : 0;
+				
+				// Only process columns with significant duplicates
+				if (duplicateRatio >= duplicateThreshold && uniqueCount > 1) {
+					dataLines.push(`Column ${index}: ${JSON.stringify(col.uniqueValues)}`);
+				}
+			}
+
+			if (!dataLines.length) {
+				throw new Error("No columns with significant duplicates found");	
+			}
+
+			//make ai request for fuzzy duplicate detection and replacement suggestions
+			const argPrompt = [
+				"TASK: Find fuzzy duplicates and suggest standardized replacements for similar values.",
+				"",
+				"INPUT DATA:",
+				dataLines.join('\n'),
+				"",
+				"INSTRUCTIONS:",
+				"- Identify similar values (case differences, spacing, punctuation, abbreviations, typos)",
+				"- Group them and choose the most common or standard form as replacement",
+				"- CRITICAL: ALL similar values in a group MUST be replaced with the SAME standardized_value for consistency",
+				"- Be conservative: only group values that are clearly the same entity",
+				"",
+				"OUTPUT FORMAT: Return ONLY valid JSON, no explanations or markdown:",
+				'{"columns": {"COLUMN_INDEX": {"replacements": {"original_value": "standardized_value"}}}}',
+				"",
+				"EXAMPLE OUTPUT:",
+				'{"columns": {"0": {"replacements": {"Apple Inc.": "Apple Inc", "apple inc": "Apple Inc", "APPLE": "Apple Inc"}}}}',
+				"",
+				"CRITICAL: Output must be valid JSON only. No text before or after. No markdown formatting."
+				].join('\n');
+
+			let requestEngine = AI.Request.create(AI.ActionType.Chat);
+			if (!requestEngine)
+				return;
+
+			await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+			await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+			let aiResult = await requestEngine.chatRequest(argPrompt, false, async function(data) {
+				if (!data)
+					return;
+			});
+			await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+			await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+				
+			
+			// Extract JSON from AI response
+			let suggestedReplacements = {"columns": {}};
+			if (aiResult) {
+				const cleanData = aiResult.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1');
+				const jsonStart = cleanData.indexOf('{');
+				const jsonEnd = cleanData.lastIndexOf('}');
+				
+				if (jsonStart !== -1 && jsonEnd !== -1 && jsonStart < jsonEnd) {
+					try {
+						const result = JSON.parse(cleanData.substring(jsonStart, jsonEnd + 1));
+						if (result?.columns && typeof result.columns === 'object') {
+							suggestedReplacements = result;
+						}
+					} catch (e) {}
+				}
+			}
+
+			if (!suggestedReplacements.columns || Object.keys(suggestedReplacements.columns).length === 0) {
+				throw new Error("Failed to parse AI response or no replacements suggested");
+			}
+
+			Asc.scope.address = prepareResult.address;
+			Asc.scope.columnsToProcess = prepareResult.columnsToProcess;
+			Asc.scope.suggestedReplacements = suggestedReplacements;
+			await Asc.Editor.callCommand(function() {
+				function getColInRange(ws, col, address) {
+					if (!address || typeof address !== 'string') {
+						return null;
+					}
+					const digits = address.match(/\d+/g);
+					if (!digits || digits.length < 2) {
+						return null;
+					}
+					const startRow = parseInt(digits[0], 10);
+					const endRow = parseInt(digits[1], 10);
+					const startRange = ws.GetRangeByNumber(startRow, col);
+					const endRange = ws.GetRangeByNumber(endRow, col);
+					return ws.GetRange(startRange, endRange);
+				}
+				const suggestedReplacements = Asc.scope.suggestedReplacements
+				const ws = Api.GetActiveSheet();
+				const columnsToProcess = Asc.scope.columnsToProcess;
+
+				for (let col in columnsToProcess) {
+					const colToProcess = columnsToProcess[col];
+					const colIndex = parseInt(col, 10);
+					const colInRange = getColInRange(ws, colIndex, Asc.scope.address);
+					if (!colInRange) {
+						continue;
+					}
+					let range = ws.GetRange(colInRange);
+					if (!range) {
+						continue;
+					}
+					for (let item in colToProcess.uniform) {
+						const colItem = suggestedReplacements.columns[col];
+						// if (colItem && colItem.replacements[item] && colToProcess.uniform[colItem.replacements[item]]) {
+						// 	item = colItem.replacements[item];
+						// } else if(colToProcess.uniqueValues[item] <= 1) {
+						// 	continue;
+						// }
+						// const replacement = colToProcess.uniform[item];
+						const replacement = colItem && colItem.replacements[item] || colToProcess.uniform[item];
+						if (!replacement || replacement === item) {
+							continue;
+						}
+						
+						const replaceData = {
+							What: item, 
+							Replacement: replacement,
+							LookAt: "xlWhole",
+							SearchOrder: "xlByColumns",
+							SearchDirection: "xlNext",
+							MatchCase: false,
+							ReplaceAll: true
+						};
+						range.Replace(replaceData);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
     return funcs;
 }
