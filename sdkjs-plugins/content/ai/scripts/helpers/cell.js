@@ -881,5 +881,106 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "changeTextStyle";
+		func.params = [
+			"bold (boolean): whether to make the text bold",
+			"italic (boolean): whether to make the text italic", 
+			"underline (string): underline type ('none', 'single', 'singleAccounting', 'double', 'doubleAccounting')",
+			"strikeout (boolean): whether to strike out the text",
+			"fontSize (number): font size to apply to the selected cell(s)",
+			"fontName (string): font family name to apply to the selected cell(s)",
+			"fontColor (string): font color (hex color like '#FF0000' or preset color name like 'red')",
+			"range (string, optional): cell range to format (e.g., 'A1:B5'). If omitted, uses current selection"
+		];
+
+		func.examples = [
+			"If you need to make selected cells bold and italic, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"bold\": true, \"italic\": true}",
+
+			"If you need to underline the selected cells, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"underline\": \"single\"}",
+
+			"If you need to strike out the selected cells, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"strikeout\": true}",
+
+			"If you need to set the font size of selected cells to 18, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"fontSize\": 18}",
+
+			"If you need to change font to Arial and make it red, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"fontName\": \"Arial\", \"fontColor\": \"red\"}",
+
+			"If you need to format range A1:C3 as bold, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"range\": \"A1:C3\", \"bold\": true}",
+
+			"If you need to make selected cells non-italic, respond with:\n" +
+			"[functionCalling (changeTextStyle)]: {\"italic\": false}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.bold = params.bold;
+			Asc.scope.italic = params.italic;
+			Asc.scope.underline = params.underline;
+			Asc.scope.strikeout = params.strikeout;
+			Asc.scope.fontSize = params.fontSize;
+			Asc.scope.fontName = params.fontName;
+			Asc.scope.fontColor = params.fontColor;
+			Asc.scope.range = params.range;
+
+			await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let _range;
+
+				if (!Asc.scope.range) {
+					_range = Api.GetSelection();
+				} else {
+					_range = ws.GetRange(Asc.scope.range);
+				}
+
+				if (!_range)
+					return;
+
+				if (undefined !== Asc.scope.bold)
+					_range.SetBold(Asc.scope.bold);
+
+				if (undefined !== Asc.scope.italic)
+					_range.SetItalic(Asc.scope.italic);
+
+				if (undefined !== Asc.scope.underline)
+					_range.SetUnderline(Asc.scope.underline);
+
+				if (undefined !== Asc.scope.strikeout)
+					_range.SetStrikeout(Asc.scope.strikeout);
+
+				if (undefined !== Asc.scope.fontSize)
+					_range.SetFontSize(Asc.scope.fontSize);
+
+				if (undefined !== Asc.scope.fontName)
+					_range.SetFontName(Asc.scope.fontName);
+
+				if (undefined !== Asc.scope.fontColor) {
+					// Handle different color formats
+					let color;
+					if (Asc.scope.fontColor.startsWith('#')) {
+						// Hex color
+						color = Api.CreateColorFromRGB(
+							parseInt(Asc.scope.fontColor.substring(1, 3), 16),
+							parseInt(Asc.scope.fontColor.substring(3, 5), 16),
+							parseInt(Asc.scope.fontColor.substring(5, 7), 16)
+						);
+					} else {
+						// Preset color name
+						color = Api.CreateColorByName(Asc.scope.fontColor);
+					}
+					if (color)
+						_range.SetFontColor(color);
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
     return funcs;
 }
