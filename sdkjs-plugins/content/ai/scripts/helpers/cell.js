@@ -1196,5 +1196,184 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "highlightDuplicates";
+		func.params = [
+			"range (string, optional): cell range to analyze for duplicates (e.g., 'A1:D10'). If omitted, uses current selection or entire used range",
+			"highlightColor (string, optional): color to highlight duplicates (hex color like '#FF0000' or preset color name like 'red'). Default: 'orange'"
+		];
+
+		func.examples = [
+			"To highlight duplicates in current selection, respond:\n" +
+			"[functionCalling (highlightDuplicates)]: {}",
+
+			"To highlight duplicates in specific range A1:D10, respond:\n" +
+			"[functionCalling (highlightDuplicates)]: {\"range\": \"A1:D10\"}",
+
+			"To highlight duplicates in red color, respond:\n" +
+			"[functionCalling (highlightDuplicates)]: {\"range\": \"A1:D10\", \"highlightColor\": \"red\"}",
+
+			"To highlight duplicates in specific range with custom color, respond:\n" +
+			"[functionCalling (highlightDuplicates)]: {\"range\": \"A1:D10\", \"highlightColor\": \"#FF5733\"}",
+
+			"If you need to find and highlight duplicate rows in data, respond:\n" +
+			"[functionCalling (highlightDuplicates)]: {}",
+
+			"If you need to detect duplicate entries with blue highlighting, respond:\n" +
+			"[functionCalling (highlightDuplicates)]: {\"highlightColor\": \"blue\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.highlightColor = params.highlightColor || "orange";
+
+			let rangeData = await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let _range;
+
+				if (!Asc.scope.range) {
+					_range = Api.GetSelection();
+				} else {
+					_range = ws.GetRange(Asc.scope.range);
+				}
+
+				if (!_range)
+					return null;
+
+				let values = _range.GetValue2();
+				let address = _range.Address;
+				let startRow = _range.Row;
+				let startCol = _range.Col;
+
+				return {
+					values: values,
+					address: address,
+					startRow: startRow,
+					startCol: startCol
+				};
+			});
+
+			if (!rangeData || !rangeData.values) {
+				return;
+			}
+
+			// Extract all values with their positions for duplicate detection
+			let allData = [];
+			let values = rangeData.values;
+			
+			if (Array.isArray(values)) {
+				for (let r = 0; r < values.length; r++) {
+					let row = values[r];
+					if (Array.isArray(row)) {
+						for (let c = 0; c < row.length; c++) {
+							allData.push({row: r, col: c, value: row[c]});
+						}
+					} else {
+						allData.push({row: r, col: 0, value: row});
+					}
+				}
+			} else {
+				allData.push({row: 0, col: 0, value: values});
+			}
+
+			if (allData.length === 0) {
+				return; // No data to analyze
+			}
+
+			let dataValues = allData.map(function(item) { return item.value; });
+			
+			let argPrompt = "Find duplicate values in this array: [" + dataValues.join(',') + "]\n\n" +
+				"Return ONLY a JSON array of indices (0-based) that are duplicates.\n" +
+				"Example: if values at positions 0 and 2 are identical, return [0,2]\n" +
+				"If no duplicates found, return []\n" +
+				"CRITICAL: Response must be ONLY the JSON array, nothing else.\n" +
+				"Invalid data formats are not allowed - must be valid JSON array format.\n" +
+				"No text, no explanations, no additional formatting - ONLY [1,2,3] format:";
+
+			let requestEngine = AI.Request.create(AI.ActionType.Chat);
+			if (!requestEngine)
+				return;
+
+			let isSendedEndLongAction = false;
+			async function checkEndAction() {
+				if (!isSendedEndLongAction) {
+					await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+					isSendedEndLongAction = true;
+				}
+			}
+
+			await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+			await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+			let aiResult = await requestEngine.chatRequest(argPrompt, false, async function(data) {
+				if (!data)
+					return;
+			});
+
+			await checkEndAction();
+
+			if (aiResult) {
+				try {
+					let duplicates = JSON.parse(aiResult.trim());
+					if (Array.isArray(duplicates) && duplicates.length > 0) {
+						Asc.scope.duplicates = [];
+						Asc.scope.allData = allData;
+						
+						for (let i = 0; i < duplicates.length; i++) {
+							let dataIndex = duplicates[i];
+							if (typeof dataIndex === 'number' && dataIndex >= 0 && dataIndex < allData.length) {
+								Asc.scope.duplicates.push({
+									row: allData[dataIndex].row,
+									col: allData[dataIndex].col
+								});
+							}
+						}
+						
+						if (Asc.scope.duplicates.length > 0) {
+							Asc.scope.rangeData = rangeData;
+
+							await Asc.Editor.callCommand(function(){
+								let ws = Api.GetActiveSheet();
+								let highlightColor;
+								
+								// Handle different color formats
+								if (Asc.scope.highlightColor.startsWith('#')) {
+									// Hex color
+									let hex = Asc.scope.highlightColor.substring(1);
+									let r = parseInt(hex.substring(0, 2), 16);
+									let g = parseInt(hex.substring(2, 4), 16);
+									let b = parseInt(hex.substring(4, 6), 16);
+									highlightColor = Api.CreateColorFromRGB(r, g, b);
+								} else {
+									// Named color
+									highlightColor = Api.CreateColorByName(Asc.scope.highlightColor);
+								}
+
+								for (let i = 0; i < Asc.scope.duplicates.length; i++) {
+									let duplicate = Asc.scope.duplicates[i];
+									let targetRow = Asc.scope.rangeData.startRow + duplicate.row;
+									let targetCol = Asc.scope.rangeData.startCol + duplicate.col;
+									
+									let cell = ws.GetCells(targetRow, targetCol);
+									if (cell) {
+										cell.SetFillColor(highlightColor);
+									}
+								}
+							});
+						}
+					}
+				} catch (error) {
+					// Handle JSON parsing errors or other issues
+					console.error("Error parsing duplicate detection result:", error);
+				}
+			}
+
+			await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+		};
+
+		funcs.push(func);
+	}
+
     return funcs;
 }
