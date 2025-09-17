@@ -438,6 +438,132 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "summarizeData";
+		func.params = [
+			"range (string, optional): cell range to summarize data (e.g., 'A1:D10'). If omitted, uses active/selected range"
+		];
+
+		func.examples = [
+			"Analyze and summarize data in the current selection with key trends, totals, and insights:" +
+			"[functionCalling (summarizeData)]: {}",
+
+			"If you need to summarize data in range A1:D10, respond:" +
+			"[functionCalling (summarizeData)]: {\"range\": \"A1:D10\"}",
+
+			"Create text summary of active range with statistics, patterns, and anomalies:" +
+			"[functionCalling (summarizeData)]: {}",
+
+			"When user asks to summarize, analyze, overview, or create insights from data, respond:" +
+			"[functionCalling (summarizeData)]: {\"range\": \"[specific_range_if_provided]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			
+			let rangeData = await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection; 
+				}
+				return [range.Address, range.GetValue2()];
+			});
+
+			let address = rangeData[0];
+			let data = rangeData[1];
+			let colCount = data.length > 0 ? data[0].length : 0;
+			let rowCount = data.length;
+			
+			let csv = data.map(function(item){
+				return item.map(function(value) {
+					if (value == null) return '';
+					const str = String(value);
+					if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+						return '"' + str.replace(/"/g, '""') + '"';
+					}
+					return str;
+				}).join(',');
+			}).join('\n');
+
+			const argPrompt = [
+				"You are a data analyst. Analyze the provided CSV data and create a comprehensive summary.",
+				"",
+				"Instructions:",
+				"1. Determine data types in each column (numeric, categorical/text, dates, mixed)",
+				"2. For NUMERIC data: calculate totals, averages, ranges, identify peaks/outliers",
+				"3. For CATEGORICAL data: find most frequent values, distribution patterns",
+				"4. For MIXED tables: combine insights (e.g., 'Category A average: 120, Category B: 95, outlier in row 15')",
+				"5. Identify trends, patterns, anomalies, and key insights",
+				"",
+				"Output format: Plain text summary in bullet points",
+				"- Start each bullet with '• '",
+				"- Keep concise but informative",
+				"- Include specific numbers and findings",
+				"- Highlight important patterns or anomalies",
+				"- Maximum 10-15 bullet points",
+				"",
+				"CSV data (" + rowCount + " rows, " + colCount + " columns):",
+				csv
+			].join('\n');
+
+			let requestEngine = AI.Request.create(AI.ActionType.Chat);
+			if (!requestEngine)
+				return;
+
+			let isSendedEndLongAction = false;
+			async function checkEndAction() {
+				if (!isSendedEndLongAction) {
+					await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+					isSendedEndLongAction = true;
+				}
+			}
+
+			await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+			await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+			let aiResult = await requestEngine.chatRequest(argPrompt, false, async function(data) {
+				if (!data)
+					return;
+			});
+			await checkEndAction();
+			await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+
+			Asc.scope.address = address;
+			Asc.scope.summary = aiResult;
+			Asc.scope.colCount = colCount;
+
+			if (Asc.scope.summary) {
+				await Asc.Editor.callCommand(function() {
+					let ws = Api.GetActiveSheet();
+					let range = ws.GetRange(Asc.scope.address);
+					let summary = Asc.scope.summary;
+					let colCount = Asc.scope.colCount;
+					
+					let summaryCol = range.GetCol() + colCount;
+					let summaryRow = range.GetRow();
+					
+					let summaryCell = ws.GetCells(summaryRow, summaryCol);
+					summaryCell.Value = "Data Summary:\n" + summary;
+					
+					summaryCell.WrapText = true;
+					summaryCell.AlignVertical = "top";
+					
+					let summaryRange = ws.GetRange(summaryCell.Address);
+					summaryRange.AutoFit(false, true);
+					
+					let highlightColor = Api.CreateColorFromRGB(245, 245, 245);
+					summaryCell.FillColor = highlightColor;
+				});
+			}
+		};
+
+		funcs.push(func);
+	}
+
 
    if (true)
     {
