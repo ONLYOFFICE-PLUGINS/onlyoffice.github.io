@@ -285,6 +285,159 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "fillMissingData";
+		func.params = [
+			"range (string, optional): cell range to fill missing data (e.g., 'A1:D10'). If omitted, uses active/selected range"
+		];
+
+		func.examples = [
+			"Fill missing data in the current selection with appropriate values based on column types:" +
+			"[functionCalling (fillMissingData)]: {}",
+
+			"If you need to fill missing data in range A1:D10, respond:" +
+			"[functionCalling (fillMissingData)]: {\"range\": \"A1:D10\"}",
+
+			"Fill empty cells in active range using smart algorithms (median for numeric, most frequent for categorical, forward fill for time series):" +
+			"[functionCalling (fillMissingData)]: {}",
+
+			"When user asks to fill missing values, fill empty cells, complete data, or handle null values, respond:" +
+			"[functionCalling (fillMissingData)]: {\"range\": \"[specific_range_if_provided]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			
+			let rangeData = await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				return [range.Address, range.GetValue2()];
+			});
+
+			//make csv from source data
+			let address = rangeData[0];
+			let data = rangeData[1];
+			let csv = data.map(function(item){
+				return item.map(function(value) {
+					if (value == null) return '';
+					const str = String(value);
+					if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+						return '"' + str.replace(/"/g, '""') + '"';
+					}
+					return str;
+				}).join(',');
+			}).join('\n');
+
+			//make ai request for missing data analysis
+			const argPrompt = [
+				"You are a data analyst.",
+				"Input is CSV (comma-separated, ','). Empty cells represent missing values to be filled.",
+				"Rules:",
+				"1. NUMERIC columns: Fill missing values with MEDIAN of non-empty values.",
+				"2. CATEGORICAL columns: Fill missing values with MOST FREQUENT value.", 
+				"3. TIME_SERIES columns: Fill missing values with FORWARD FILL (previous non-empty value).",
+				"",
+				"Output format: JSON array with exact row/column coordinates (1-based indexing):",
+				"[",
+				"  {\"row\": 2, \"column\": 1, \"new_value\": 25.5},",
+				"  {\"row\": 3, \"column\": 2, \"new_value\": \"Category A\"},",
+				"  {\"row\": 4, \"column\": 3, \"new_value\": \"FORWARD_FILL\"}",
+				"]",
+				"- Use \"FORWARD_FILL\" as new_value for time series columns",
+				"- Row and column numbers are 1-based (first row = 1, first column = 1)",
+				"- Only include cells that need to be filled",
+				"- The answer MUST be valid JSON array",
+				"- No extra text, spaces, or newlines outside JSON",
+				"",
+				"CSV:",
+				csv
+			].join('\n');
+
+			let requestEngine = AI.Request.create(AI.ActionType.Chat);
+			if (!requestEngine)
+				return;
+
+			let isSendedEndLongAction = false;
+			async function checkEndAction() {
+				if (!isSendedEndLongAction) {
+					await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+					isSendedEndLongAction = true;
+				}
+			}
+
+			await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+			await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+			let aiResult = await requestEngine.chatRequest(argPrompt, false, async function(data) {
+				if (!data)
+					return;
+			});
+			await checkEndAction();
+			await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+
+			//Parse AI result
+			function parseAIResult(result) {
+				try {
+					const jsonMatch = result.match(/\[[\s\S]*\]/);
+					if (!jsonMatch) return null;
+					return JSON.parse(jsonMatch[0]);
+				} catch (e) {
+					return null;
+				}
+			}
+
+			Asc.scope.address = address;
+			Asc.scope.fillData = parseAIResult(aiResult);
+			Asc.scope.originalData = data;
+
+			if (Asc.scope.fillData) {
+				await Asc.Editor.callCommand(function() {
+					let ws = Api.GetActiveSheet();
+					let range = ws.GetRange(Asc.scope.address);
+					let fillData = Asc.scope.fillData;
+					let originalData = Asc.scope.originalData;
+					
+					let highlightColor = Api.CreateColorFromRGB(173, 216, 230);
+					
+					for (let i = 0; i < fillData.length; i++) {
+						let fillItem = fillData[i];
+						let rowNum = fillItem.row;
+						let colNum = fillItem.column;
+						let newValue = fillItem.new_value;
+						
+						if (newValue === "FORWARD_FILL") {
+							let lastValue = null;
+							for (let searchRow = rowNum - 1; searchRow >= 1; searchRow--) {
+								let searchValue = originalData[searchRow - 1][colNum - 1];
+								if (searchValue != null && searchValue !== '') {
+									lastValue = searchValue;
+									break;
+								}
+							}
+							if (lastValue != null) {
+								let cell = range.GetCells(rowNum, colNum);
+								cell.Value = lastValue;
+								cell.FillColor = highlightColor;
+							}
+						} else {
+							let cell = range.GetCells(rowNum, colNum);
+							cell.Value = newValue;
+							cell.FillColor = highlightColor;
+						}
+					}
+				});
+			}
+		};
+
+		funcs.push(func);
+	}
+
 
    if (true)
     {
