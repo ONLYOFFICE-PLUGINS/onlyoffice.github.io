@@ -1375,5 +1375,146 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "fixFormula";
+		func.params = [
+			"range (string, optional): cell range to fix formulas (e.g., 'A1:D10'). If omitted, scans entire sheet"
+		];
+
+		func.examples = [
+			"To fix formula errors in entire sheet, respond:\n" +
+			"[functionCalling (fixFormula)]: {}",
+
+			"To fix formula errors in specific range A1:D10, respond:\n" +
+			"[functionCalling (fixFormula)]: {\"range\": \"A1:D10\"}",
+
+			"If you need to find and fix formula errors like #DIV/0!, #REF!, #NAME?, respond:\n" +
+			"[functionCalling (fixFormula)]: {}",
+
+			"To scan and correct formula errors in selected range, respond:\n" +
+			"[functionCalling (fixFormula)]: {\"range\": \"A1:Z100\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+
+			let rangeData = await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let _range;
+
+				if (!Asc.scope.range) {
+					_range = ws.GetUsedRange();
+				} else {
+					_range = ws.GetRange(Asc.scope.range);
+				}
+
+				if (!_range)
+					return null;
+
+				let formulaData = [];
+				let startRow = _range.Row;
+				let startCol = _range.Col;
+
+				// Use ForEach to iterate through each cell and get formulas
+				_range.ForEach(function(cell) {
+					let formula = cell.GetFormula();
+					if (formula && formula.startsWith('=')) {
+						let cellRow = cell.Row - startRow;
+						let cellCol = cell.Col - startCol;
+						
+						formulaData.push({
+							row: cellRow,
+							col: cellCol,
+							formula: formula,
+							cellValue: formula,
+							address: cell.Address
+						});
+					}
+				});
+
+				return {
+					formulas: formulaData,
+					startRow: startRow,
+					startCol: startCol
+				};
+			});
+
+			if (!rangeData || !rangeData.formulas || rangeData.formulas.length === 0) {
+				return;
+			}
+
+			let formulaData = rangeData.formulas;
+			let formulaValues = formulaData.map(function(item) { return item.cellValue; });
+			
+			let argPrompt = "Fix formulas with errors in this array: [" + formulaValues.join(',') + "]\n\n" +
+				"Return ONLY a JSON array of fixed formulas.\n" +
+				"Fix common errors: #DIV/0! (use IF), #REF! (fix references), #NAME? (fix typos), #VALUE! (fix types), #N/A (use IFERROR)\n" +
+				"If formula has no errors, return it unchanged.\n" +
+				"Example: input [=A1/B1,=SUM(A:A)] return [=IF(B1<>0,A1/B1,0),=SUM(A:A)]\n" +
+				"CRITICAL: Response must be ONLY the JSON array, nothing else.\n" +
+				"Invalid data formats are not allowed - must be valid JSON array format.\n" +
+				"No text, no explanations, no additional formatting - ONLY [\"=formula1\",\"=formula2\"] format:";
+
+			let requestEngine = AI.Request.create(AI.ActionType.Chat);
+			if (!requestEngine)
+				return;
+
+			let isSendedEndLongAction = false;
+			async function checkEndAction() {
+				if (!isSendedEndLongAction) {
+					await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+					isSendedEndLongAction = true;
+				}
+			}
+
+			await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+			await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+
+			let aiResult = await requestEngine.chatRequest(argPrompt, false, async function(data) {
+				if (!data)
+					return;
+			});
+
+			await checkEndAction();
+
+			if (aiResult) {
+				try {
+					let fixedFormulas = JSON.parse(aiResult.trim());
+					if (Array.isArray(fixedFormulas) && fixedFormulas.length > 0) {
+						Asc.scope.fixedFormulas = fixedFormulas;
+						Asc.scope.formulaData = formulaData;
+						Asc.scope.rangeData = rangeData;
+						
+						await Asc.Editor.callCommand(function(){
+							let ws = Api.GetActiveSheet();
+							
+							for (let i = 0; i < Asc.scope.fixedFormulas.length && i < Asc.scope.formulaData.length; i++) {
+								let fixedFormula = Asc.scope.fixedFormulas[i];
+								let originalFormula = Asc.scope.formulaData[i];
+								
+								if (fixedFormula && originalFormula && typeof fixedFormula === 'string') {
+									let targetRow = Asc.scope.rangeData.startRow + originalFormula.row;
+									let targetCol = Asc.scope.rangeData.startCol + originalFormula.col;
+									
+									let cell = ws.GetCells(targetRow, targetCol);
+									if (cell) {
+										cell.SetValue(fixedFormula);
+									}
+								}
+							}
+						});
+					}
+				} catch (error) {
+					console.error("Error parsing formula fix result:", error);
+				}
+			}
+
+			await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+		};
+
+		funcs.push(func);
+	}
+
     return funcs;
 }
