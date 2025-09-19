@@ -2054,5 +2054,514 @@ function getCellFunctions() {
 		funcs.push(func);
 	}
 
-    return funcs;
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addConditionalFormatting";
+		func.description = "Use this function when user asks for conditional formatting without specifying the exact type. This applies the most commonly used conditional formatting rule - highlighting cells based on values greater than a threshold with color background. Perfect for general requests like 'add conditional formatting', 'highlight important data', or 'format cells conditionally'.";
+		func.params = [
+			"range (string, optional): cell range to apply formatting (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"threshold (number, optional): value threshold for highlighting (default: calculated from data)",
+			"fillColor (object, optional): background color {r: 255, g: 200, b: 200} (default: light red)"
+		];
+
+		func.examples = [
+			"Apply default conditional formatting to current selection:" +
+			"[functionCalling (addConditionalFormatting)]: {}",
+
+			"Apply conditional formatting with custom threshold:" +
+			"[functionCalling (addConditionalFormatting)]: {\"threshold\": 100}",
+
+			"When user asks to add conditional formatting without specifics:" +
+			"[functionCalling (addConditionalFormatting)]: {\"range\": \"[specific_range_if_provided]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.threshold = params.threshold;
+			Asc.scope.fillColor = params.fillColor || {r: 255, g: 200, b: 200};
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let threshold = Asc.scope.threshold;
+				if (!threshold) {
+					let values = range.GetValue2();
+					let numericValues = [];
+					for (let i = 0; i < values.length; i++) {
+						for (let j = 0; j < values[i].length; j++) {
+							let val = parseFloat(values[i][j]);
+							if (!isNaN(val)) {
+								numericValues.push(val);
+							}
+						}
+					}
+					if (numericValues.length > 0) {
+						numericValues.sort((a, b) => a - b);
+						threshold = numericValues[Math.floor(numericValues.length * 0.7)];
+					} else {
+						threshold = 0;
+					}
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let condition = formatConditions.Add("xlCellValue", "xlGreater", threshold);
+				
+				if (condition && Asc.scope.fillColor) {
+					let color = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
+					condition.SetFillColor(color);
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addColorScale";
+		func.description = "Applies color scale conditional formatting to visualize data with gradient colors. Creates a heat map effect where values are represented by colors ranging from one color (minimum values) to another color (maximum values). Use 2-color scale for simple comparisons or 3-color scale for more detailed data visualization.";
+		func.params = [
+			"range (string, optional): cell range to apply color scale (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"colorScaleType (number, optional): color scale type - 2 for two-color scale, 3 for three-color scale (default: 3)"
+		];
+
+		func.examples = [
+			"Apply 3-color scale conditional formatting to current selection:" +
+			"[functionCalling (addColorScale)]: {}",
+
+			"Apply 2-color scale conditional formatting to range A1:D10:" +
+			"[functionCalling (addColorScale)]: {\"range\": \"A1:D10\", \"colorScaleType\": 2}",
+
+			"When user asks to add color scale, color gradient, heat map formatting:" +
+			"[functionCalling (addColorScale)]: {\"range\": \"[specific_range_if_provided]\", \"colorScaleType\": 3}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.colorScaleType = params.colorScaleType || 3;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				formatConditions.AddColorScale(Asc.scope.colorScaleType);
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addDataBars";
+		func.description = "Adds data bar conditional formatting to display values as horizontal bars within cells. The length of each bar represents the value relative to other values in the range. Useful for creating in-cell bar charts and comparing values at a glance without additional charts.";
+		func.params = [
+			"range (string, optional): cell range to apply data bars (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"barColor (object, optional): color of the data bars {r: 0, g: 112, b: 192} (default: blue)",
+			"showValue (boolean, optional): whether to show the cell values along with bars (default: true)",
+			"direction (string, optional): direction of bars - 'leftToRight', 'rightToLeft' (default: 'leftToRight')"
+		];
+
+		func.examples = [
+			"Apply data bars conditional formatting to current selection:" +
+			"[functionCalling (addDataBars)]: {}",
+
+			"Apply data bars with custom color to range A1:D10:" +
+			"[functionCalling (addDataBars)]: {\"range\": \"A1:D10\", \"barColor\": {\"r\": 255, \"g\": 0, \"b\": 0}}",
+
+			"When user asks to add data bars, bar chart formatting, progress bars:" +
+			"[functionCalling (addDataBars)]: {\"range\": \"[specific_range_if_provided]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.barColor = params.barColor;
+			Asc.scope.showValue = params.showValue;
+			Asc.scope.direction = params.direction;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let databar = formatConditions.AddDatabar();
+				
+				if (databar) {
+					if (Asc.scope.barColor) {
+						let barColor = Api.CreateColorFromRGB(Asc.scope.barColor.r, Asc.scope.barColor.g, Asc.scope.barColor.b);
+						databar.SetBarColor(barColor);
+					}
+					
+					if (typeof Asc.scope.showValue === "boolean") {
+						databar.SetShowValue(Asc.scope.showValue);
+					}
+					
+					if (Asc.scope.direction) {
+						databar.SetDirection(Asc.scope.direction);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addIconSet";
+		func.description = "Applies icon set conditional formatting to display icons (arrows, traffic lights, symbols) based on value ranges. Icons provide visual indicators for data trends and performance levels. Each icon represents a different value range, making it easy to identify patterns and outliers in your data.";
+		func.params = [
+			"range (string, optional): cell range to apply icon set (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"iconSetType (string, optional): type of icon set - 'threeArrows', 'threeTrafficLights', 'fourArrows', 'fiveArrows', etc. (default: 'threeArrows')",
+			"showIconOnly (boolean, optional): whether to show only icons without cell values (default: false)",
+			"reverseOrder (boolean, optional): whether to reverse the icon order (default: false)"
+		];
+
+		func.examples = [
+			"Apply icon set conditional formatting to current selection:" +
+			"[functionCalling (addIconSet)]: {}",
+
+			"Apply traffic lights icon set to range A1:D10:" +
+			"[functionCalling (addIconSet)]: {\"range\": \"A1:D10\", \"iconSetType\": \"threeTrafficLights\"}",
+
+			"When user asks to add icon set, arrow icons, traffic lights, symbols formatting:" +
+			"[functionCalling (addIconSet)]: {\"range\": \"[specific_range_if_provided]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.iconSetType = params.iconSetType;
+			Asc.scope.showIconOnly = params.showIconOnly;
+			Asc.scope.reverseOrder = params.reverseOrder;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let iconSet = formatConditions.AddIconSetCondition();
+				
+				if (iconSet) {
+					if (Asc.scope.iconSetType) {
+						iconSet.SetIconSet(Asc.scope.iconSetType);
+					}
+					
+					if (typeof Asc.scope.showIconOnly === "boolean") {
+						iconSet.SetShowIconOnly(Asc.scope.showIconOnly);
+					}
+					
+					if (typeof Asc.scope.reverseOrder === "boolean") {
+						iconSet.SetReverseOrder(Asc.scope.reverseOrder);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addCellValueCondition";
+		func.description = "Creates conditional formatting rules based on cell values using comparison operators (greater than, less than, equal to, between, etc.). This is the most flexible conditional formatting option, allowing you to highlight cells that meet specific criteria with custom colors for background and text.";
+		func.params = [
+			"range (string, optional): cell range to apply condition (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"operator (string): comparison operator - 'xlGreater', 'xlLess', 'xlEqual', 'xlNotEqual', 'xlGreaterEqual', 'xlLessEqual', 'xlBetween', 'xlNotBetween'",
+			"value1 (string|number): first comparison value or formula",
+			"value2 (string|number, optional): second comparison value for 'xlBetween' and 'xlNotBetween' operators",
+			"fillColor (object, optional): background color {r: 255, g: 0, b: 0}",
+			"fontColor (object, optional): font color {r: 0, g: 0, b: 0}"
+		];
+
+		func.examples = [
+			"Highlight cells greater than 10 with red background:" +
+			"[functionCalling (addCellValueCondition)]: {\"operator\": \"xlGreater\", \"value1\": 10, \"fillColor\": {\"r\": 255, \"g\": 0, \"b\": 0}}",
+
+			"Highlight cells between 5 and 15 with yellow background:" +
+			"[functionCalling (addCellValueCondition)]: {\"range\": \"A1:D10\", \"operator\": \"xlBetween\", \"value1\": 5, \"value2\": 15, \"fillColor\": {\"r\": 255, \"g\": 255, \"b\": 0}}",
+
+			"When user asks to highlight cells based on values (greater than, less than, equal to):" +
+			"[functionCalling (addCellValueCondition)]: {\"range\": \"[range_if_provided]\", \"operator\": \"[xl_operator]\", \"value1\": \"[comparison_value]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.operator = params.operator;
+			Asc.scope.value1 = params.value1;
+			Asc.scope.value2 = params.value2;
+			Asc.scope.fillColor = params.fillColor;
+			Asc.scope.fontColor = params.fontColor;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let condition = formatConditions.Add("xlCellValue", Asc.scope.operator, Asc.scope.value1, Asc.scope.value2);
+				
+				if (condition) {
+					if (Asc.scope.fontColor) {
+						let fontColor = Api.CreateColorFromRGB(Asc.scope.fontColor.r, Asc.scope.fontColor.g, Asc.scope.fontColor.b);
+						let font = condition.GetFont();
+						if (font && font.SetColor) {
+							font.SetColor(fontColor);
+						}
+					}
+					
+					if (Asc.scope.fillColor) {
+						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
+						condition.SetFillColor(fillColor);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addTop10Condition";
+		func.description = "Highlights the top or bottom ranked values in a range. You can choose to highlight by item count (e.g., top 10 values) or by percentage (e.g., top 20% of values). Perfect for identifying highest performers, outliers, or values that need attention in your dataset.";
+		func.params = [
+			"range (string, optional): cell range to apply condition (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"rank (number, optional): number of top/bottom items to highlight (default: 10)",
+			"isBottom (boolean, optional): true for bottom values, false for top values (default: false)",
+			"isPercent (boolean, optional): true for percentage, false for item count (default: false)",
+			"fillColor (object, optional): background color {r: 255, g: 0, b: 0}"
+		];
+
+		func.examples = [
+			"Highlight top 10 values with green background:" +
+			"[functionCalling (addTop10Condition)]: {\"fillColor\": {\"r\": 0, \"g\": 255, \"b\": 0}}",
+
+			"Highlight bottom 5 values with red background:" +
+			"[functionCalling (addTop10Condition)]: {\"rank\": 5, \"isBottom\": true, \"fillColor\": {\"r\": 255, \"g\": 0, \"b\": 0}}",
+
+			"When user asks to highlight top/bottom values, highest/lowest cells:" +
+			"[functionCalling (addTop10Condition)]: {\"rank\": \"[number_from_request]\", \"isBottom\": \"[true_if_bottom_requested]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.rank = params.rank || 10;
+			Asc.scope.isBottom = params.isBottom || false;
+			Asc.scope.isPercent = params.isPercent || false;
+			Asc.scope.fillColor = params.fillColor;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let condition = formatConditions.AddTop10();
+				
+				if (condition) {
+					if (condition.SetRank) {
+						condition.SetRank(Asc.scope.rank);
+					}
+					if (condition.SetBottom) {
+						condition.SetBottom(Asc.scope.isBottom);
+					}
+					if (condition.SetPercent) {
+						condition.SetPercent(Asc.scope.isPercent);
+					}
+					
+					if (Asc.scope.fillColor) {
+						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
+						condition.SetFillColor(fillColor);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addAboveAverage";
+		func.description = "Highlights cells that contain values above or below the average of all values in the range. This is useful for identifying data points that deviate significantly from the typical values in your dataset.";
+		func.params = [
+			"range (string, optional): cell range to apply condition (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"aboveBelow (boolean, optional): true for above average, false for below average (default: true)",
+			"numStdDev (number, optional): number of standard deviations from average (default: 0 for simple average)",
+			"fillColor (object, optional): background color {r: 255, g: 0, b: 0}"
+		];
+
+		func.examples = [
+			"Highlight cells above average with default color:" +
+			"[functionCalling (addAboveAverage)]: {}",
+
+			"Highlight cells below average with red background:" +
+			"[functionCalling (addAboveAverage)]: {\"aboveBelow\": false, \"fillColor\": {\"r\": 255, \"g\": 0, \"b\": 0}}",
+
+			"When user asks to highlight above/below average values:" +
+			"[functionCalling (addAboveAverage)]: {\"aboveBelow\": \"[true_for_above_false_for_below]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.aboveBelow = params.aboveBelow !== false; // default true
+			Asc.scope.numStdDev = params.numStdDev || 0;
+			Asc.scope.fillColor = params.fillColor;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let condition = formatConditions.AddAboveAverage();
+				
+				if (condition) {
+					condition.SetAboveBelow(Asc.scope.aboveBelow);
+					
+					if (Asc.scope.numStdDev !== 0) {
+						condition.SetNumStdDev(Asc.scope.numStdDev);
+					}
+					
+					if (Asc.scope.fillColor) {
+						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
+						condition.SetFillColor(fillColor);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "addUniqueValues";
+		func.description = "Highlights unique values or duplicate values in a range. Use this to identify data that appears only once (unique) or multiple times (duplicates) within the specified range. Perfect for data validation and cleanup tasks.";
+		func.params = [
+			"range (string, optional): cell range to apply condition (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"duplicateUnique (string, optional): 'unique' to highlight unique values, 'duplicate' to highlight duplicates (default: 'duplicate')",
+			"fillColor (object, optional): background color {r: 255, g: 255, b: 0}"
+		];
+
+		func.examples = [
+			"Highlight duplicate values with default color:" +
+			"[functionCalling (addUniqueValues)]: {}",
+
+			"Highlight unique values with yellow background:" +
+			"[functionCalling (addUniqueValues)]: {\"duplicateUnique\": \"unique\", \"fillColor\": {\"r\": 255, \"g\": 255, \"b\": 0}}",
+
+			"When user asks to highlight duplicate or unique values:" +
+			"[functionCalling (addUniqueValues)]: {\"duplicateUnique\": \"[unique_or_duplicate]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.duplicateUnique = params.duplicateUnique || 'duplicate';
+			Asc.scope.fillColor = params.fillColor;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				let condition = formatConditions.AddUniqueValues();
+				
+				if (condition) {
+					if (Asc.scope.duplicateUnique === 'unique') {
+						condition.SetDupeUnique(false);
+					} else {
+						condition.SetDupeUnique(true);
+					}
+					
+					if (Asc.scope.fillColor) {
+						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
+						condition.SetFillColor(fillColor);
+					}
+				}
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	if (true) {
+		let func = new RegisteredFunction();
+		func.name = "clearConditionalFormatting";
+		func.description = "Removes all conditional formatting rules from the specified range or current selection. This function cleans up all existing conditional formatting including color scales, data bars, icon sets, and highlight cell rules, returning cells to their default appearance.";
+		func.params = [
+			"range (string, optional): cell range to clear formatting (e.g., 'A1:D10'). If omitted, uses active/selected range"
+		];
+
+		func.examples = [
+			"Clear all conditional formatting from current selection:" +
+			"[functionCalling (clearConditionalFormatting)]: {}",
+
+			"Clear conditional formatting from range A1:D10:" +
+			"[functionCalling (clearConditionalFormatting)]: {\"range\": \"A1:D10\"}",
+
+			"When user asks to remove, delete, clear conditional formatting:" +
+			"[functionCalling (clearConditionalFormatting)]: {\"range\": \"[specific_range_if_provided]\"}"
+		];
+
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+
+			await Asc.Editor.callCommand(function() {
+				let ws = Api.GetActiveSheet();
+				let range;
+				if (Asc.scope.range) {
+					range = ws.GetRange(Asc.scope.range);
+				} else {
+					range = ws.Selection;
+				}
+				
+				let formatConditions = range.GetFormatConditions();
+				formatConditions.Delete();
+			});
+		};
+
+		funcs.push(func);
+	}
+
+	return funcs;
 }
