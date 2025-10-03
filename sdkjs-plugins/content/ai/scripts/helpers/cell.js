@@ -1839,7 +1839,7 @@ function getCellFunctions() {
 				if (!Asc.scope.range) {
 					_range = Api.GetSelection();
 					// If no selection, use the used range of the sheet
-					if (!_range || (_range.range.bbox.r2 - _range.range.bbox.r1 + 1) === 1 && (_range.range.bbox.c2 - _range.range.bbox.c1 + 1) === 1) {
+					if (!_range || (_range.GetRowsCount() === 1 && _range.GetColumnsCount() === 1)) {
 						_range = ws.GetUsedRange();
 					}
 				} else {
@@ -1849,9 +1849,9 @@ function getCellFunctions() {
 				if (!_range)
 					return;
 
-				let bbox = _range.range.bbox;
-				let rowsCount = bbox.r2 - bbox.r1 + 1;
-				let colsCount = bbox.c2 - bbox.c1 + 1;
+			
+				let rowsCount = _range.GetRowsCount();
+				let colsCount = _range.GetColumnsCount();
 
 				// Color schemes definition
 				let colorSchemes = {
@@ -2112,8 +2112,10 @@ function getCellFunctions() {
 				let formatConditions = range.GetFormatConditions();
 				let condition = formatConditions.Add("xlCellValue", "xlGreater", threshold);
 				
-				if (condition && Asc.scope.fillColor) {
-					let color = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
+				if (condition) {
+					let color = Asc.scope.fillColor ? 
+						Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b) :
+						Api.CreateColorFromRGB(255, 200, 200);
 					condition.SetFillColor(color);
 				}
 			});
@@ -2207,6 +2209,9 @@ function getCellFunctions() {
 					if (Asc.scope.barColor) {
 						let barColor = Api.CreateColorFromRGB(Asc.scope.barColor.r, Asc.scope.barColor.g, Asc.scope.barColor.b);
 						databar.SetBarColor(barColor);
+					} else {
+						let defaultBarColor = Api.CreateColorFromRGB(70, 130, 180);
+						databar.SetBarColor(defaultBarColor);
 					}
 					
 					if (typeof Asc.scope.showValue === "boolean") {
@@ -2257,9 +2262,13 @@ function getCellFunctions() {
 				if (Asc.scope.range) {
 					range = ws.GetRange(Asc.scope.range);
 				} else {
-					range = ws.Selection;
+					range = ws.GetSelection();
 				}
 				
+				if (!range) {
+					return;
+				}
+
 				let formatConditions = range.GetFormatConditions();
 				let iconSet = formatConditions.AddIconSetCondition();
 				
@@ -2338,6 +2347,9 @@ function getCellFunctions() {
 					if (Asc.scope.fillColor) {
 						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
 						condition.SetFillColor(fillColor);
+					} else {
+						let defaultFillColor = Api.CreateColorFromRGB(255, 255, 0);
+						condition.SetFillColor(defaultFillColor);
 					}
 				}
 			});
@@ -2402,6 +2414,9 @@ function getCellFunctions() {
 					if (Asc.scope.fillColor) {
 						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
 						condition.SetFillColor(fillColor);
+					} else {
+						let defaultFillColor = Api.CreateColorFromRGB(144, 238, 144);
+						condition.SetFillColor(defaultFillColor);
 					}
 				}
 			});
@@ -2444,9 +2459,13 @@ function getCellFunctions() {
 				if (Asc.scope.range) {
 					range = ws.GetRange(Asc.scope.range);
 				} else {
-					range = ws.Selection;
+					range = ws.GetSelection();
 				}
-				
+
+				if (!range) {
+					return;
+				}
+
 				let formatConditions = range.GetFormatConditions();
 				let condition = formatConditions.AddAboveAverage();
 				
@@ -2460,6 +2479,9 @@ function getCellFunctions() {
 					if (Asc.scope.fillColor) {
 						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
 						condition.SetFillColor(fillColor);
+					} else {
+						let defaultFillColor = Api.CreateColorFromRGB(255, 165, 0);
+						condition.SetFillColor(defaultFillColor);
 					}
 				}
 			});
@@ -2516,6 +2538,9 @@ function getCellFunctions() {
 					if (Asc.scope.fillColor) {
 						let fillColor = Api.CreateColorFromRGB(Asc.scope.fillColor.r, Asc.scope.fillColor.g, Asc.scope.fillColor.b);
 						condition.SetFillColor(fillColor);
+					} else {
+						let defaultFillColor = Api.CreateColorFromRGB(255, 192, 203);
+						condition.SetFillColor(defaultFillColor);
 					}
 				}
 			});
