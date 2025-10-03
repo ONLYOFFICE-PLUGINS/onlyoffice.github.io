@@ -2527,12 +2527,12 @@ function getCellFunctions() {
 				
 				let formatConditions = range.GetFormatConditions();
 				let condition = formatConditions.AddUniqueValues();
-				
+
 				if (condition) {
 					if (Asc.scope.duplicateUnique === 'unique') {
-						condition.SetDupeUnique(false);
+						condition.SetDupeUnique("xlUnique");
 					} else {
-						condition.SetDupeUnique(true);
+						condition.SetDupeUnique("xlDuplicate");
 					}
 					
 					if (Asc.scope.fillColor) {
