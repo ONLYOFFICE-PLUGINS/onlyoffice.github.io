@@ -755,222 +755,332 @@ function getCellFunctions() {
         funcs.push(func);
     }
 
-    if (true)
-    {
-        let func = new RegisteredFunction();
-        func.name = "setSort";
-        func.params = [
-            "range (string, optional): cell range to sort (e.g., 'A1:D10'). If omitted, uses active/selected range",
-            "key1 (string|ApiRange|number, optional): first sort field - range, named range reference, or column index within range (1-based)",
-            "key1Name (string, optional): first sort field column name/header (e.g., 'Name', 'Age'). Will automatically find the column number",
-            "sortOrder1 (string, optional): sort order for key1 - 'xlAscending' or 'xlDescending' (default: 'xlAscending')",
-            "key2 (string|ApiRange|number, optional): second sort field - range, named range reference, or column index within range (1-based)",
-            "key2Name (string, optional): second sort field column name/header (e.g., 'Name', 'Age'). Will automatically find the column number",
-            "sortOrder2 (string, optional): sort order for key2 - 'xlAscending' or 'xlDescending'",
-            "key3 (string|ApiRange|number, optional): third sort field - range, named range reference, or column index within range (1-based)",
-            "key3Name (string, optional): third sort field column name/header (e.g., 'Name', 'Age'). Will automatically find the column number",
-            "sortOrder3 (string, optional): sort order for key3 - 'xlAscending' or 'xlDescending'",
-            "header (string, optional): specifies if first row contains headers - 'xlYes' or 'xlNo' (default: 'xlNo')"
-        ];
+	if (true)
+	{
+		let func = new RegisteredFunction();
+		func.name = "setSort";
+		func.description = "Sorts data in a range by a single column in ascending or descending order.";
+		func.params = [
+			"range (string, optional): cell range to sort (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"key1 (string|number, optional): sort field - cell reference (e.g., 'A1'), column index (1-based), or column name. If omitted, uses first column",
+			"sortOrder1 (string, optional): 'xlAscending' or 'xlDescending' (default: 'xlAscending')",
+			"header (string, optional): 'xlYes' or 'xlNo' (default: 'xlNo')"
+		];
 
-        func.examples = [
-            "To sort range A1:D10 by first column in ascending order, respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"sortOrder1\": \"xlAscending\"}",
+		func.examples = [
+			"To sort range A1:D10 by first column in ascending order:" +
+			"[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"sortOrder1\": \"xlAscending\"}",
 
-            "To sort active range by first column with headers, respond:" +
-            "[functionCalling (setSort)]: {\"key1\": \"A1\", \"header\": \"xlYes\"}",
+			"To sort active range in descending order:" +
+			"[functionCalling (setSort)]: {\"sortOrder1\": \"xlDescending\"}",
 
-            "To sort range by multiple columns (first ascending, second descending), respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"sortOrder1\": \"xlAscending\", \"key2\": \"B1\", \"sortOrder2\": \"xlDescending\"}",
+			"To sort by column name 'Name':" +
+			"[functionCalling (setSort)]: {\"key1\": \"Name\", \"header\": \"xlYes\"}"
+		];
 
-            "To sort range by three columns, respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"sortOrder1\": \"xlAscending\", \"key2\": \"B1\", \"sortOrder2\": \"xlDescending\", \"key3\": \"C1\", \"sortOrder3\": \"xlAscending\"}",
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.key1 = params.key1;
+			Asc.scope.sortOrder1 = params.sortOrder1 || "xlAscending";
+			Asc.scope.header = params.header || "xlNo";
 
-            "To sort range by rows instead of columns, respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"A1\", \"orientation\": \"xlSortRows\"}",
+			async function findColumnByName(fieldName) {
+				if (!fieldName) return null;
 
-            "To sort range with headers by second column descending, respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": \"B1\", \"sortOrder1\": \"xlDescending\", \"header\": \"xlYes\"}",
+				let insertRes = await Asc.Editor.callCommand(function(){
+					let ws = Api.GetActiveSheet();
+					let _range;
 
-            "To sort active range by named range key, respond:" +
-            "[functionCalling (setSort)]: {\"key1\": \"MyRange\", \"sortOrder1\": \"xlAscending\"}",
+					if (!Asc.scope.range) {
+						_range = Api.GetSelection();
+					} else {
+						_range = ws.GetRange(Asc.scope.range);
+					}
 
-            "To sort range by column index (1st column), respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": 1, \"sortOrder1\": \"xlAscending\"}",
+					return _range.GetValue2();
+				});
 
-            "To sort range by multiple column indices (1st ascending, 3rd descending), respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1\": 1, \"sortOrder1\": \"xlAscending\", \"key2\": 3, \"sortOrder2\": \"xlDescending\"}",
+				let csv = insertRes.map(function(item){
+					return item.map(function(value) {
+						if (value == null) return '';
+						const str = String(value);
+						if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+							return '"' + str.replace(/"/g, '""') + '"';
+						}
+						return str;
+					}).join(',');
+				}).join('\n');
 
-            "To sort active range by second column index with headers, respond:" +
-            "[functionCalling (setSort)]: {\"key1\": 2, \"sortOrder1\": \"xlAscending\", \"header\": \"xlYes\"}",
+				let argPromt = "Find column index for header '" + fieldName + "' in the following CSV data.\n\n" +
+				"IMPORTANT RULES:\n" +
+				"1. Return ONLY a single number (column index starting from 1). No text, no explanations, no additional characters.\n" +
+				"2. Find EXACT match first. If exact match exists, return its index.\n" +
+				"3. If no exact match, then look for partial matches.\n" +
+				"4. Case-insensitive comparison allowed.\n" +
+				"5. Data is CSV format (comma-separated). Look ONLY at the first row (header row).\n" +
+				"6. Count positions carefully: each comma marks a column boundary.\n" +
+				"7. Example: if searching for 'test2' and headers are 'test1,test2,test', return 2 (not 1 or 3).\n" +
+				"8. If the header is in the 3rd column, return only: 3\n\n" +
+				"CSV data:\n" + csv;
+				
+				let requestEngine = AI.Request.create(AI.ActionType.Chat);
+				if (!requestEngine)
+					return null;
 
-            "To sort by column name 'Name' in ascending order, respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1Name\": \"Name\", \"sortOrder1\": \"xlAscending\", \"header\": \"xlYes\"}",
+				let isSendedEndLongAction = false;
+				async function checkEndAction() {
+					if (!isSendedEndLongAction) {
+						await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+						isSendedEndLongAction = true
+					}
+				}
 
-            "To sort by multiple column names (Name ascending, Age descending), respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1Name\": \"Name\", \"sortOrder1\": \"xlAscending\", \"key2Name\": \"Age\", \"sortOrder2\": \"xlDescending\", \"header\": \"xlYes\"}",
+				await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+				await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
 
-            "To sort active range by column name 'Price' descending with headers, respond:" +
-            "[functionCalling (setSort)]: {\"key1Name\": \"Price\", \"sortOrder1\": \"xlDescending\", \"header\": \"xlYes\"}",
+				let result = await requestEngine.chatRequest(argPromt, false, async function(data) {
+					if (!data)
+						return;
+					await checkEndAction();
+				});
 
-            "To sort by three column names, respond:" +
-            "[functionCalling (setSort)]: {\"range\": \"A1:D10\", \"key1Name\": \"Category\", \"sortOrder1\": \"xlAscending\", \"key2Name\": \"Price\", \"sortOrder2\": \"xlDescending\", \"key3Name\": \"Date\", \"sortOrder3\": \"xlAscending\", \"header\": \"xlYes\"}",
+				await checkEndAction();
+				await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+				return result - 0;
+			}
 
-            "When user requests sorting by column name (e.g., 'sort by column X', 'order by field Y'), respond:" +
-            "[functionCalling (setSort)]: {\"key1Name\": \"[extracted_column_name]\", \"sortOrder1\": \"xlAscending\", \"header\": \"xlYes\"}",
+			if (Asc.scope.key1 && typeof Asc.scope.key1 === 'string' && isNaN(Asc.scope.key1) && !Asc.scope.key1.match(/^[A-Z]+\d+$/i)) {
+				Asc.scope.key1 = await findColumnByName(Asc.scope.key1);
+			}
 
-            "For sorting by specific column names in any case/format, respond:" +
-            "[functionCalling (setSort)]: {\"key1Name\": \"[column_name_from_request]\", \"header\": \"xlYes\"}",
+			await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let range;
 
-            "To sort data by any column header mentioned in user request, respond:" +
-            "[functionCalling (setSort)]: {\"key1Name\": \"[header_name_from_user]\", \"sortOrder1\": \"[xlAscending_or_xlDescending]\", \"header\": \"xlYes\"}"
-        ];
+				if (!Asc.scope.range) {
+					range = Api.GetSelection();
+				} else {
+					range = ws.GetRange(Asc.scope.range);
+				}
 
-        func.call = async function(params) {
-            Asc.scope.range = params.range;
-            Asc.scope.key1 = params.key1;
-            Asc.scope.key1Name = params.key1Name;
-            Asc.scope.sortOrder1 = params.sortOrder1 || "xlAscending";
-            Asc.scope.key2 = params.key2;
-            Asc.scope.key2Name = params.key2Name;
-            Asc.scope.sortOrder2 = params.sortOrder2;
-            Asc.scope.key3 = params.key3;
-            Asc.scope.key3Name = params.key3Name;
-            Asc.scope.sortOrder3 = params.sortOrder3;
-            Asc.scope.header = params.header || "xlNo";
+				if (!range) {
+					return;
+				}
 
-            // Функция для поиска колонки по имени
-            async function findColumnByName(fieldName) {
-                if (!fieldName) return null;
+				if (Asc.scope.header === "xlYes") {
+					range.SetOffset(1, 0);
+				}
 
-                let insertRes = await Asc.Editor.callCommand(function(){
-                    let ws = Api.GetActiveSheet();
-                    let _range;
+				let key1 = null;
 
-                    if (!Asc.scope.range) {
-                        _range = Api.GetSelection();
-                    } else {
-                        _range = ws.GetRange(Asc.scope.range);
-                    }
+				function adjustSortKey(keyValue) {
+					if (!keyValue) {
+						return ws.GetCells(range.GetRow(), range.GetCol());
+					}
 
-                    return _range.GetValue2();
-                });
+					if (typeof keyValue === 'number') {
+						return ws.GetCells(range.GetRow(), range.GetCol() + keyValue - 1);
+					} else if (typeof keyValue === 'string') {
+						try {
+							let keyRange = ws.GetRange(keyValue);
+							return keyRange || keyValue;
+						} catch {
+							return keyValue;
+						}
+					} else {
+						return keyValue;
+					}
+				}
 
-                let csv = insertRes.map(function(item){
-                    return item.map(function(value) {
-                        if (value == null) return '';
-                        const str = String(value);
-                        if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
-                            return '"' + str.replace(/"/g, '""') + '"';
-                        }
-                        return str;
-                    }).join(',');
-                }).join('\n');
+				key1 = adjustSortKey(Asc.scope.key1);
 
-                let argPromt = "Find column index for header '" + fieldName + "' in the following CSV data.\n\n" +
-                "IMPORTANT RULES:\n" +
-                "1. Return ONLY a single number (column index starting from 1). No text, no explanations, no additional characters.\n" +
-                "2. Find EXACT match first. If exact match exists, return its index.\n" +
-                "3. If no exact match, then look for partial matches.\n" +
-                "4. Case-insensitive comparison allowed.\n" +
-                "5. Data is CSV format (comma-separated). Look ONLY at the first row (header row).\n" +
-                "6. Count positions carefully: each comma marks a column boundary.\n" +
-                "7. Example: if searching for 'test2' and headers are 'test1,test2,test', return 2 (not 1 or 3).\n" +
-                "8. If the header is in the 3rd column, return only: 3\n\n" +
-                "CSV data:\n" + csv;
-                
-                let requestEngine = AI.Request.create(AI.ActionType.Chat);
-                if (!requestEngine)
-                    return null;
+				range.SetSort(
+					key1,
+					Asc.scope.sortOrder1,
+					null,
+					null,
+					null,
+					null,
+					Asc.scope.header
+				);
+			});
+		};
 
-                let isSendedEndLongAction = false;
-                async function checkEndAction() {
-                    if (!isSendedEndLongAction) {
-                        await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
-                        isSendedEndLongAction = true
-                    }
-                }
+		funcs.push(func);
+	}
 
-                await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
-                await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
+	if (true)
+	{
+		let func = new RegisteredFunction();
+		func.name = "setMultiSort";
+		func.description = "Sorts data by multiple columns (up to 3 levels). Use this when you need to sort by primary, secondary, and tertiary sort keys. Each level can have its own sort order.";
+		func.params = [
+			"range (string, optional): cell range to sort (e.g., 'A1:D10'). If omitted, uses active/selected range",
+			"key1 (string|number, optional): first sort field - cell reference, column index (1-based), or column name. If omitted, uses first column",
+			"sortOrder1 (string, optional): sort order for key1 - 'xlAscending' or 'xlDescending' (default: 'xlAscending')",
+			"key2 (string|number, optional): second sort field - cell reference, column index, or column name. If omitted, uses second column",
+			"sortOrder2 (string, optional): sort order for key2 - 'xlAscending' or 'xlDescending' (default: 'xlAscending')",
+			"key3 (string|number, optional): third sort field - cell reference, column index, or column name",
+			"sortOrder3 (string, optional): sort order for key3 - 'xlAscending' or 'xlDescending' (default: 'xlAscending')",
+			"header (string, optional): specifies if first row contains headers - 'xlYes' or 'xlNo' (default: 'xlNo')"
+		];
 
-                let result = await requestEngine.chatRequest(argPromt, false, async function(data) {
-                    if (!data)
-                        return;
-                    await checkEndAction();
-                });
+		func.examples = [
+			"To sort by two columns:" +
+			"[functionCalling (setMultiSort)]: {}",
 
-                await checkEndAction();
-                await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
-                return result - 0;
-            }
+			"To sort by Name and Age:" +
+			"[functionCalling (setMultiSort)]: {\"key1\": \"Name\", \"key2\": \"Age\", \"header\": \"xlYes\"}",
 
-            if (Asc.scope.key1Name && !Asc.scope.key1) {
-                Asc.scope.key1 = await findColumnByName(Asc.scope.key1Name);
-            }
-            if (Asc.scope.key2Name && !Asc.scope.key2) {
-                Asc.scope.key2 = await findColumnByName(Asc.scope.key2Name);
-            }
-            if (Asc.scope.key3Name && !Asc.scope.key3) {
-                Asc.scope.key3 = await findColumnByName(Asc.scope.key3Name);
-            }
+			"To sort first column ascending, second descending:" +
+			"[functionCalling (setMultiSort)]: {\"sortOrder1\": \"xlAscending\", \"sortOrder2\": \"xlDescending\"}"
+		];
 
-            await Asc.Editor.callCommand(function(){
-                let ws = Api.GetActiveSheet();
-                let range;
+		func.call = async function(params) {
+			Asc.scope.range = params.range;
+			Asc.scope.key1 = params.key1;
+			Asc.scope.sortOrder1 = params.sortOrder1 || "xlAscending";
+			Asc.scope.key2 = params.key2;
+			Asc.scope.sortOrder2 = params.sortOrder2 || "xlAscending";
+			Asc.scope.key3 = params.key3;
+			Asc.scope.sortOrder3 = params.sortOrder3 || "xlAscending";
+			Asc.scope.header = params.header || "xlNo";
 
-                if (!Asc.scope.range) {
-                    range = Api.GetSelection();
-                } else {
-                    range = ws.GetRange(Asc.scope.range);
-                }
+			async function findColumnByName(fieldName) {
+				if (!fieldName) return null;
 
-                if (!range) {
-                    return;
-                }
+				let insertRes = await Asc.Editor.callCommand(function(){
+					let ws = Api.GetActiveSheet();
+					let _range;
 
-                if (Asc.scope.header === "xlYes") {
-                    range.SetOffset(1, 0);
-                }
+					if (!Asc.scope.range) {
+						_range = Api.GetSelection();
+					} else {
+						_range = ws.GetRange(Asc.scope.range);
+					}
 
-                let key1 = null, key2 = null, key3 = null;
+					return _range.GetValue2();
+				});
 
-                function adjustSortKey(keyValue) {
-                    if (!keyValue) return null;
+				let csv = insertRes.map(function(item){
+					return item.map(function(value) {
+						if (value == null) return '';
+						const str = String(value);
+						if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+							return '"' + str.replace(/"/g, '""') + '"';
+						}
+						return str;
+					}).join(',');
+				}).join('\n');
 
-                    if (typeof keyValue === 'number') {
-                        return ws.GetCells(range.GetRow(), range.GetCol() + keyValue - 1);
-                    } else if (typeof keyValue === 'string') {
-                        try {
-                            let keyRange = ws.GetRange(keyValue);
-                            return keyRange || keyValue;
-                        } catch {
-                            return keyValue;
-                        }
-                    } else {
-                        return keyValue;
-                    }
-                }
+				let argPromt = "Find column index for header '" + fieldName + "' in the following CSV data.\n\n" +
+				"IMPORTANT RULES:\n" +
+				"1. Return ONLY a single number (column index starting from 1). No text, no explanations, no additional characters.\n" +
+				"2. Find EXACT match first. If exact match exists, return its index.\n" +
+				"3. If no exact match, then look for partial matches.\n" +
+				"4. Case-insensitive comparison allowed.\n" +
+				"5. Data is CSV format (comma-separated). Look ONLY at the first row (header row).\n" +
+				"6. Count positions carefully: each comma marks a column boundary.\n" +
+				"7. Example: if searching for 'test2' and headers are 'test1,test2,test', return 2 (not 1 or 3).\n" +
+				"8. If the header is in the 3rd column, return only: 3\n\n" +
+				"CSV data:\n" + csv;
+				
+				let requestEngine = AI.Request.create(AI.ActionType.Chat);
+				if (!requestEngine)
+					return null;
 
-                key1 = adjustSortKey(Asc.scope.key1);
-                key2 = adjustSortKey(Asc.scope.key2);
-                key3 = adjustSortKey(Asc.scope.key3);
+				let isSendedEndLongAction = false;
+				async function checkEndAction() {
+					if (!isSendedEndLongAction) {
+						await Asc.Editor.callMethod("EndAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+						isSendedEndLongAction = true
+					}
+				}
 
-                range.SetSort(
-                    key1,
-                    Asc.scope.sortOrder1,
-                    key2,
-                    Asc.scope.sortOrder2,
-                    key3,
-                    Asc.scope.sortOrder3,
-                    Asc.scope.header
-                );
-            });
-        };
+				await Asc.Editor.callMethod("StartAction", ["Block", "AI (" + requestEngine.modelUI.name + ")"]);
+				await Asc.Editor.callMethod("StartAction", ["GroupActions"]);
 
-        funcs.push(func);
-    }
+				let result = await requestEngine.chatRequest(argPromt, false, async function(data) {
+					if (!data)
+						return;
+					await checkEndAction();
+				});
 
+				await checkEndAction();
+				await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
+				return result - 0;
+			}
+
+			if (Asc.scope.key1 && typeof Asc.scope.key1 === 'string' && isNaN(Asc.scope.key1) && !Asc.scope.key1.match(/^[A-Z]+\d+$/i)) {
+				Asc.scope.key1 = await findColumnByName(Asc.scope.key1);
+			}
+			if (Asc.scope.key2 && typeof Asc.scope.key2 === 'string' && isNaN(Asc.scope.key2) && !Asc.scope.key2.match(/^[A-Z]+\d+$/i)) {
+				Asc.scope.key2 = await findColumnByName(Asc.scope.key2);
+			}
+			if (Asc.scope.key3 && typeof Asc.scope.key3 === 'string' && isNaN(Asc.scope.key3) && !Asc.scope.key3.match(/^[A-Z]+\d+$/i)) {
+				Asc.scope.key3 = await findColumnByName(Asc.scope.key3);
+			}
+
+			await Asc.Editor.callCommand(function(){
+				let ws = Api.GetActiveSheet();
+				let range;
+
+				if (!Asc.scope.range) {
+					range = Api.GetSelection();
+				} else {
+					range = ws.GetRange(Asc.scope.range);
+				}
+
+				if (!range) {
+					return;
+				}
+
+				if (Asc.scope.header === "xlYes") {
+					range.SetOffset(1, 0);
+				}
+
+				let key1 = null, key2 = null, key3 = null;
+
+				function adjustSortKey(keyValue, defaultColumnOffset) {
+					if (!keyValue) {
+						if (defaultColumnOffset !== undefined) {
+							return ws.GetCells(range.GetRow(), range.GetCol() + defaultColumnOffset);
+						}
+						return null;
+					}
+
+					if (typeof keyValue === 'number') {
+						return ws.GetCells(range.GetRow(), range.GetCol() + keyValue - 1);
+					} else if (typeof keyValue === 'string') {
+						try {
+							let keyRange = ws.GetRange(keyValue);
+							return keyRange || keyValue;
+						} catch {
+							return keyValue;
+						}
+					} else {
+						return keyValue;
+					}
+				}
+
+				key1 = adjustSortKey(Asc.scope.key1, 0);
+				key2 = adjustSortKey(Asc.scope.key2, 1);
+				key3 = adjustSortKey(Asc.scope.key3);
+
+				range.SetSort(
+					key1,
+					Asc.scope.sortOrder1,
+					key2,
+					Asc.scope.sortOrder2,
+					key3,
+					Asc.scope.sortOrder3,
+					Asc.scope.header
+				);
+			});
+		};
+
+		funcs.push(func);
+	}
 
 	if (true) {
 		let func = new RegisteredFunction();
