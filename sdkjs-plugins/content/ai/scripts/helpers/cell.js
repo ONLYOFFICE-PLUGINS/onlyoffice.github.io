@@ -288,6 +288,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "fillMissingData";
+		func.description = "Intelligently fills missing or empty cells in a data range using appropriate statistical methods. For numeric columns, fills with median values. For categorical columns, uses the most frequent value. For time series data, applies forward fill (uses the previous non-empty value). Automatically detects column types and highlights filled cells with light blue color for easy identification.";
 		func.params = [
 			"range (string, optional): cell range to fill missing data (e.g., 'A1:D10'). If omitted, uses active/selected range"
 		];
@@ -441,6 +442,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "summarizeData";
+		func.description = "Analyzes and creates a comprehensive text summary of data in the specified range. Automatically determines data types (numeric, categorical, dates) and provides relevant statistics for each type. For numeric data: calculates totals, averages, ranges, and identifies outliers. For categorical data: finds most frequent values and distribution patterns. The summary is placed in a new cell adjacent to the data range with proper formatting and text wrapping.";
 		func.params = [
 			"range (string, optional): cell range to summarize data (e.g., 'A1:D10'). If omitted, uses active/selected range"
 		];
@@ -569,6 +571,7 @@ function getCellFunctions() {
     {
         let func = new RegisteredFunction();
         func.name = "setAutoFilter";
+		func.description = "Applies autofilter to a data range, enabling dropdown filters on column headers. Supports filtering by column number or column name (with fuzzy matching). Offers multiple filter types: value comparison operators (greater than, less than, equals), multiple value selection, top/bottom N items or percentage, color-based filtering (cell background or font color), and dynamic filters. Can be used to filter active selection or specific ranges.";
         func.params = [
             "range (string, optional): cell range to apply autofilter (e.g., 'A1:D10'). If omitted, uses active/selected range",
             "field (number, optional): field number for filtering (starting from 1, left-most field)",
@@ -1152,6 +1155,7 @@ function getCellFunctions() {
 	{
 		let func = new RegisteredFunction();
 		func.name = "explainFormula";
+		func.description = "Analyzes and explains Excel formulas in natural language. Uses AI to provide detailed explanations of formula logic, function parameters, nested operations, and expected results. The explanation is added as a cell comment to the cell containing the formula. Particularly useful for understanding complex formulas with multiple nested functions or unfamiliar Excel functions. Keeps explanations concise (under 1024 characters recommended) while covering all essential information.";
 		func.params = [
 			"range (string, optional): cell range containing formula to explain (e.g., 'A1'). If omitted, uses active/selected cell"
 		];
@@ -1273,6 +1277,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "changeTextStyle";
+		func.description = "Applies text formatting styles to cells in the specified range or current selection. Supports comprehensive text styling options including bold, italic, underline (multiple types), strikeout, font family, font size, and font color. Colors can be specified using hex codes (#FF0000) or preset color names (red, blue, etc.). All formatting parameters are optional - only specified properties will be changed, leaving others unchanged.";
 		func.params = [
 			"bold (boolean): whether to make the text bold",
 			"italic (boolean): whether to make the text italic", 
@@ -1374,6 +1379,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "highlightAnomalies";
+		func.description = "Detects and highlights statistical outliers (anomalies) in numeric data using the IQR (Interquartile Range) method or Z-score analysis. Applies conservative outlier detection to avoid false positives - only marks clear statistical anomalies. Automatically extracts numeric values from the range, calculates quartiles, and identifies values that fall outside Q1-1.5*IQR or Q3+1.5*IQR. Highlights detected anomalies with customizable colors. Requires at least 4 numeric values for analysis.";
 		func.params = [
 			"range (string, optional): cell range to analyze for anomalies (e.g., 'A1:D10'). If omitted, uses current selection or entire used range",
 			"highlightColor (string, optional): color to highlight anomalies (hex color like '#FF0000' or preset color name like 'red'). Default: 'yellow'"
@@ -1588,6 +1594,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "highlightDuplicates";
+		func.description = "Identifies and highlights duplicate values within a specified range. Compares all cells in the range and highlights cells that contain values appearing more than once. Uses AI to accurately detect duplicates while handling various data types (numbers, text, dates). Highlights all instances of duplicate values with customizable color. Useful for data validation, cleanup tasks, and identifying repeated entries in datasets.";
 		func.params = [
 			"range (string, optional): cell range to analyze for duplicates (e.g., 'A1:D10'). If omitted, uses current selection or entire used range",
 			"highlightColor (string, optional): color to highlight duplicates (hex color like '#FF0000' or preset color name like 'red'). Default: 'orange'"
@@ -1767,6 +1774,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "fixFormula";
+		func.description = "Scans cells for formulas containing errors and attempts to fix them automatically. Detects common formula errors including #DIV/0! (division by zero), #REF! (invalid cell references), #NAME? (unrecognized function names), #VALUE! (wrong value types), and #N/A (value not available). Applies appropriate fixes: wraps division operations in IF statements, corrects cell references, fixes function name typos, and adds IFERROR wrappers. Preserves formulas that have no errors. Can scan entire sheet or specific range.";
 		func.params = [
 			"range (string, optional): cell range to fix formulas (e.g., 'A1:D10'). If omitted, scans entire sheet"
 		];
@@ -1908,6 +1916,7 @@ function getCellFunctions() {
 	if (true) {
 		let func = new RegisteredFunction();
 		func.name = "formatTable";
+		func.description = "Applies professional table formatting to a data range with consistent styling, colors, and alignment. Features include: automatic or manual color scheme selection (blue, green, orange, gray, red), alternating row colors for readability, optional header row formatting (bold, centered, colored background), table borders, and automatic column width adjustment. Can auto-detect existing formatting to avoid overriding intentional styles. Supports smart content-based text alignment (right-align numbers, left-align text).";
 		func.params = [
 			"range (string, optional): cell range to format as a table (e.g., 'A1:D10'). If omitted, uses active/selected range or entire sheet if no selection",
 			"applyHeaderStyle (boolean, optional): whether to apply bold and center alignment to first row as headers (default: true)",
