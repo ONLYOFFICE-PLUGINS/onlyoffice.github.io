@@ -190,6 +190,79 @@
 
 })(window);
 
+function fetchExternal(url, options, isStreaming) {
+	if (!window.externalFetchRecords) {
+		window.externalFetchRecords = {
+			counter : 0,
+			requests : {}
+		};
+		window.Asc.plugin.attachEditorEvent("ai_onExternalFetch", function(e) {
+			let request = window.externalFetchRecords.requests[e.id];
+			if (!request)
+				return;
+
+			if (e.type === "error") {
+				request.resolve(new Error(e.error));
+				delete window.externalFetchRecords.requests[e.id];
+				return;
+			}
+
+			if (e.type === "response") {
+				if (request.streaming) {
+					let stream = new ReadableStream({
+						start : function(controller) {
+							request.controller = controller;
+						}
+					});
+
+					let response = new Response(stream, { 
+						status : e.status,
+						headers : e.headers
+					});
+
+					request.resolve(response);
+				} else {
+					let response = new Response(e.body, { 
+						status : e.status,
+						headers : e.headers
+					});
+
+					request.resolve(response);
+					delete window.externalFetchRecords.requests[e.id];
+				}
+			}
+
+			if (e.type === "chunk" && request.streaming && request.controller) {
+				request.controller.enqueue(new TextEncoder().encode(e.chunk));
+			}
+
+			if (e.type === "end" && request.streaming && request.controller) {
+				request.controller.close();
+				delete window.externalFetchRecords.requests[e.id];
+			}			
+		});
+	}
+
+	return new Promise((resolve, reject) => {
+		let request = {
+			id : ++window.externalFetchRecords.counter,
+			streaming : isStreaming,
+			resolve : resolve,
+			reject : reject,
+			controller : null
+		};
+
+		window.externalFetchRecords.requests[request.id] = request;
+		window.Asc.plugin.sendEvent("ai_onExternalFetch", {
+			id : request.id,
+			url : url,
+			options : options,
+			streaming : isStreaming,
+			type: "request"
+		});
+	});
+}
+
 (function(window, undefined)
 {
 	async function requestWrapper(message) {
@@ -210,6 +283,7 @@
 					}
 				});
 			} else {
+				let requestUrl = message.url;
 				let request = {
 					method: message.method,
 					headers: message.headers
@@ -228,20 +302,31 @@
 							})
 						}
 						if (AI.serverSettings){
-							message.url = AI.serverSettings.proxy;
+							requestUrl = AI.serverSettings.proxy;
 							request["headers"] = {
 								"Authorization" : "Bearer " + Asc.plugin.info.jwt,
 							}
 						} else {
-							message.url = AI.PROXY_URL;
+							requestUrl = AI.PROXY_URL;
 						}
 					}
-				}				
-
+				}
+				
 				try {
-					fetch(message.url, request)
+					let _fetch = fetch;
+					if (requestUrl.startsWith("[external]"))
+						_fetch = fetchExternal;
+
+					_fetch(requestUrl, request)
 						.then(function(response) {
-							return response.json()
+							return response.text();
+						})
+						.then(function(text) {
+							try {
+								return JSON.parse(text)
+    						} catch {
+      							return { error : text };
+    						}
 						})
 						.then(function(data) {
 							if (data.error)
@@ -393,7 +478,12 @@
 				}
 				
 				try {
-					const response = await fetch(message.url, request);
+					let response = null;
+					if (!message.url.startsWith("[external]"))
+						response = await fetch(message.url, request);
+					else
+						response = await fetchExternal(message.url, request, true);
+
 					resolve(response.body ? new FetchReader(response.body.getReader()) : null);
 				}
 				catch (error) {
@@ -551,10 +641,11 @@
 		}
 	};
 
-	AI.Request.create = function(action) {
+	AI.Request.create = function(action, disableSettings) {
 		let model = AI.Storage.getModelById(AI.Actions[action].model);
 		if (!model) {
-			onOpenSettingsModal();
+			if (!disableSettings)
+				onOpenSettingsModal();
 			return null;
 		}
 		return new AI.Request(model);
@@ -579,7 +670,10 @@
 					this.errorHandler(err);
 				else {
 					if (true) {
-						await Asc.Library.SendError(err.message, 0);
+						// timer for exit from long action
+						setTimeout(async function(){
+							await Asc.Library.SendError(err.message, 0);
+						}, 100);						
 					} else {
 						// since 8.3.0!!!
 						await Asc.Editor.callMethod("ShowError", [err.message, 0]);
@@ -696,7 +790,7 @@
 		let requestBody = {};
 		let model = this.model;
 		let processResult = function(data) {
-			let result = provider.getChatCompletionsResult(data, model);
+			let result = provider.getChatCompletionsResult(data, model, isStreaming ? false : true);
 			if (result.content.length === 0)
 				return "";
 
@@ -761,17 +855,38 @@
 					let resultObj = getStreamedResult(tail + readData.value);
 					tail = resultObj.tail;
 
-					let chunks = eval(resultObj.result);
+					//let chunks = eval(resultObj.result);
+					let chunks = JSON.parse(resultObj.result);
+
+					let errorObj = null;
+					try {
+						if (chunks.error)
+							errorObj = chunks.error;
+						else if (chunks[0].error)
+							errorObj = chunks[0].error;
+						else if (chunks.data && chunks.data.error)
+							errorObj = chunks.data.error;
+						else if (chunks[0].data && chunks[0].data.error)
+							errorObj = chunks[0].data.error;
+					} catch (err) {					
+					}
+
+					if (errorObj) {
+						throw {
+							error : errorObj, 
+							message : errorObj.message || JSON.stringify(errorObj)
+						};
+						return;
+					}
 
 					let dataChunk = "";
 					for (let j = 0, len = chunks.length; j < len; j++) {
 						dataChunk += processResult(chunks[j]);
 
 						// TODO: MD support
-						dataChunk = dataChunk.replace(/\n\n/g, '\n');
+						//dataChunk = dataChunk.replace(/\n\n/g, '\n');
 					}
 
-					//console.log(dataChunk);
 					allChunks += dataChunk;
 
 					if (streamFunc)
@@ -1121,7 +1236,7 @@
 	};
 
 	function getStreamedResult(responseText) {
-		
+
 		let result = "[";
 
 		let isEscaped = false;
@@ -1163,7 +1278,7 @@
 						firstObject = false;
 						
 						
-						result += ("{ data : " + responseText.substring(curObjectStartPos, i) + "}");
+						result += ("{ \"data\" : " + responseText.substring(curObjectStartPos, i) + "}");
 
 						while (i < inputLen) {
 							char = responseText[i];
@@ -1184,6 +1299,7 @@
 		}
 
 		result += "]";
+
 		return {
 			result : result,
 			tail : (curObjectPos === inputLen) ? "" : responseText.substring(curObjectPos)
