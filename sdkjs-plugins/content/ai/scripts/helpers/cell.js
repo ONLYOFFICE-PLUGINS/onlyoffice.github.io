@@ -1366,9 +1366,7 @@ function getCellFunctions() {
 
 		};
 
-		funcs.push(func);
-	}
-	return funcs;
+	funcs.push(func);
 }
 	if (true) {
 		let func = new RegisteredFunction();
