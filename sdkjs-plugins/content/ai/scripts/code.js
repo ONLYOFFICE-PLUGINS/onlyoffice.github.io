@@ -978,7 +978,7 @@ function customAssistantWindowShow(assistantId, buttonAssistant)
 		],
 		isModal : false,
 		isCanDocked: false,
-		type: "window",
+		type: window.localStorage.getItem("onlyoffice_ai_assistant_placement") || "window",
 		EditorsSupport : ["word"],
 		size : [ 427, 303 ] //383
 	};
@@ -990,6 +990,16 @@ function customAssistantWindowShow(assistantId, buttonAssistant)
 			customAssistantWindow.command('onEditAssistant', assistantId);
 		}
 	});
+	customAssistantWindow.attachEvent("onDockedChanged", async function(type) {
+			window.localStorage.setItem("onlyoffice_ai_assistant_placement", type);
+
+			await new Promise(resolve => (function(){
+				customAssistantWindow.attachEvent("onUpdateState", resolve);
+				customAssistantWindow.command("onUpdateState");
+			})());
+			
+			Asc.Editor.callMethod("OnWindowDockChangedCallback", [customAssistantWindow.id]);
+		});
 	
 	customAssistantWindow.show(variation);
 

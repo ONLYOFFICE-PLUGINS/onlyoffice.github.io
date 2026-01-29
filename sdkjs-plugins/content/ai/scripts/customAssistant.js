@@ -36,23 +36,23 @@
 /// <reference path="../vendor/select2-4.0.6-rc.1/dist/js/select2.js" />
 /// <reference path="./text-annotations/custom-annotations/types.js" />
 
-
 (function (window) {
     const LOCAL_STORAGE_KEY = "onlyoffice_ai_saved_assistants";
+    const LOCAL_STORAGE_STATE_KEY = "onlyoffice_ai_assistant_state";
     /** @type {any} */
     let selectType = null;
-    const { form, textarea, inputId, inputName } = initFormElements();
+    const { form, textarea, inputId, inputName } = initForm();
     const mainContainer = document.getElementById("custom_assistant_window");
     if (!mainContainer) {
         console.error("Custom Assistant: required elements are missing");
         return;
     }
+    restoreFormState();
 
     window.Asc.plugin.init = function () {
         window.Asc.plugin.sendToPlugin("onWindowReady", {});
 
-        inputId.value = generateHashedDateString();
-        inputName.focus();
+        
 
         mainContainer.addEventListener("click", function (e) {
             if (e.target instanceof HTMLAnchorElement) {
@@ -91,7 +91,7 @@
             if (assistant) {
                 inputId.value = assistant.id;
                 inputName.value = assistant.name;
-                selectType.val(assistant.type).trigger('change');
+                selectType.val(assistant.type).trigger("change");
                 textarea.value = assistant.query;
             }
 
@@ -102,23 +102,35 @@
     window.Asc.plugin.attachEvent(
         "onWarningAssistant",
         (/** @type {string} */ warningText) => {
-            const image = '<svg width="44" height="39" viewBox="0 0 44 39" fill="none" xmlns="http://www.w3.org/2000/svg">' + 
+            const image =
+                '<svg width="44" height="39" viewBox="0 0 44 39" fill="none" xmlns="http://www.w3.org/2000/svg">' +
                 '<path d="M20.5201 0.853631C21.1693 -0.284655 22.8103 -0.284653 23.4594 0.853633L43.7548 36.4414C44.398 37.5693 43.5835 38.9714 42.2851 38.9714H1.69445C0.396056 38.9714 -0.418416 37.5693 0.224796 36.4414L20.5201 0.853631Z" fill="#F2BE08"/>' +
                 '<circle cx="21.99" cy="32.4614" r="2.51612" fill="white"/>' +
                 '<path d="M25.3447 12.3324C25.3447 13.1968 24.33 17.5992 23.6672 21.5581C23.0761 25.0894 22.8285 28.2678 22.8285 28.2678C22.4092 28.2678 21.7103 28.2678 21.1511 28.2678C21.1511 28.2678 20.9036 25.0894 20.3124 21.5581C19.6496 17.5992 18.635 13.1968 18.635 12.3324C18.635 10.4795 20.137 8.97754 21.9898 8.97754C23.8427 8.97754 25.3447 10.4795 25.3447 12.3324Z" fill="white"/>' +
-                '</svg>';
-            const text =  '<div id="warning_text" class="noselect">' +
-                image + '<p class="i18n">' + warningText + '</p></div>'   
+                "</svg>";
+            const text =
+                '<div id="warning_text" class="noselect">' +
+                image +
+                '<p class="i18n">' +
+                warningText +
+                "</p></div>";
             mainContainer.innerHTML = text;
             mainContainer.classList.add("warning");
-        }
+        },
     );
 
-    function onThemeChanged(theme) {
-        window.Asc.plugin.onThemeChangedBase(theme);
-        updateBodyThemeClasses(theme.type, theme.name);
-        updateThemeVariables(theme);
-    }
+    window.Asc.plugin.attachEvent("onUpdateState", () => {
+        const state = {
+			id: inputId.value,
+			name: inputName.value.trim(),
+            type: Number(selectType.val()),
+            query: textarea.value,
+			timestamp: Date.now(),
+		};
+		window.localStorage.setItem(LOCAL_STORAGE_STATE_KEY, JSON.stringify(state));
+		window.Asc.plugin.sendToPlugin("onUpdateState");
+	});
+
     window.Asc.plugin.onTranslate = function () {
         let elements = document.querySelectorAll(".i18n");
         elements.forEach(function (element) {
@@ -135,6 +147,11 @@
     window.Asc.plugin.onThemeChanged = onThemeChanged;
     window.Asc.plugin.attachEvent("onThemeChanged", onThemeChanged);
 
+    function onThemeChanged(theme) {
+        window.Asc.plugin.onThemeChangedBase(theme);
+        updateBodyThemeClasses(theme.type, theme.name);
+        updateThemeVariables(theme);
+    }
     /** @returns {localStorageCustomAssistantItem} */
     function saveCustomAssistantToLocalStorage() {
         const id = inputId.value;
@@ -164,7 +181,7 @@
     }
 
     /** @returns {{textarea: HTMLTextAreaElement, inputId: HTMLInputElement, inputName: HTMLInputElement, form: HTMLFormElement}} */
-    function initFormElements() {
+    function initForm() {
         const form = document.getElementById("input_prompt_wrapper");
         const inputId = document.getElementById("input_prompt_id");
         const inputName = document.getElementById("input_prompt_name");
@@ -189,36 +206,55 @@
         }
         form.onsubmit = function (e) {
             e.preventDefault();
-        }
+        };
 
-        selectType = $('#assistantType');
+        selectType = $("#assistantType");
         selectType.select2({
-            data : [{
-                id: 0,
-                text: "Hint"
-            },
-            {
-                id: 2,
-                text: "Replace"
-            },
-            {
-                id: 1,
-                text: "Replace + Hint"
-            }],
+            data: [
+                {
+                    id: 0,
+                    text: "Hint"
+                },
+                {
+                    id: 2,
+                    text: "Replace"
+                },
+                {
+                    id: 1,
+                    text: "Replace + Hint"
+                }
+            ],
             tags: true,
             minimumResultsForSearch: Infinity,
-            dropdownAutoWidth: true
+            dropdownAutoWidth: true,
         });
-        selectType.on('select2:select', (e) => {
-            
-        });
+        selectType.on("select2:select", (e) => {});
         selectType.val(0); // Default value
 
-        selectType.trigger('select2:select');
-        selectType.trigger('change');
+        selectType.trigger("select2:select");
+        selectType.trigger("change");
+
+        inputName.focus();
+        inputId.value = generateHashedDateString();
 
         return { form, textarea, inputId, inputName };
     }
+
+    function restoreFormState() {
+		const storageState = window.localStorage.getItem(LOCAL_STORAGE_STATE_KEY);
+        window.localStorage.removeItem(LOCAL_STORAGE_STATE_KEY);
+		if(!storageState) return;
+        const state = JSON.parse(storageState);
+        const timestamp = Date.now();
+        if (timestamp - state.timestamp > 1000 * 5) { // 5 seconds
+            return;
+        }
+
+        inputId.value = state.id;
+        inputName.value = state.name;
+        textarea.value = state.query;
+        selectType.val(state.type).trigger("change");
+	};
 
     /** @returns {string} */
     function generateHashedDateString() {
