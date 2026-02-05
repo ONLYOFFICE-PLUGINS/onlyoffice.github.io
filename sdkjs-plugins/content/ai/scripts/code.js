@@ -977,7 +977,7 @@ function customAssistantWindowShow(assistantId, buttonAssistant)
 			{ text: window.Asc.plugin.tr('Cancel'), primary: false },
 		],
 		isModal : false,
-		isCanDocked: false,
+		isCanDocked: true,
 		type: window.localStorage.getItem("onlyoffice_ai_assistant_placement") || "window",
 		EditorsSupport : ["word"],
 		size : [ 427, 303 ] //383
