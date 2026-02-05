@@ -47,6 +47,8 @@ function TextAnnotator(annotatorPopup)
 	this.checked = new Set(); // was checked on the previous request
 	
 	this.type = -1;
+    this.onAddAnnotation = () => {};
+	this.onRemoveAnnotation = () => {};
 }
 /**
  * @param {string} paraId 
@@ -100,6 +102,7 @@ TextAnnotator.prototype._checkParagraph = async function(paraId)
 	range["rangeId"] = undefined;
 	range["all"] = true;
 	await Asc.Editor.callMethod("RemoveAnnotationRange", [range]);
+	this.onRemoveAnnotation(range);
 	const isAnnotate = await this.annotateParagraph(paraId, recalcId, text);
 	
 	delete this.waitParagraphs[paraId];
@@ -152,6 +155,7 @@ TextAnnotator.prototype.onReject = async function(paraId, rangeId)
 {
 	let range = this.getAnnotationRangeObj(paraId, rangeId);
 	await Asc.Editor.callMethod("RemoveAnnotationRange", [range]);
+	this.onRemoveAnnotation(range);
 };
 TextAnnotator.prototype.getAnnotation = function(paraId, rangeId)
 {

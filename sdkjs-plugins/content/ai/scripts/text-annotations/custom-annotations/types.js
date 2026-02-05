@@ -65,3 +65,10 @@
 /**
  * @typedef {CustomAnnotator & TextAnnotator & AssistantHint & AssistantReplaceHint & AssistantReplace} Assistant
  */
+
+/**
+ * @typedef {Object} AnnotationRange
+ * @property {number} start
+ * @property {number} length
+ * @property {number} id
+ */

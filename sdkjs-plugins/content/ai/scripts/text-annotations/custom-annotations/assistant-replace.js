@@ -34,6 +34,7 @@
 /// <reference path="./types.js" />
 
 /**
+ * @param {CustomAnnotationPopup} annotationPopup
  * @param {localStorageCustomAssistantItem} assistantData
  * @constructor
  * @extends CustomAnnotator
@@ -48,6 +49,7 @@ Object.assign(AssistantReplace.prototype, {
     /**
      * @param {string} text
      * @param {ReplaceAiResponse[]} matches
+     * @returns {AnnotationRange[]}
      */
     _convertToRanges: function (paraId, text, matches) {
         const _t = this;
@@ -192,6 +194,7 @@ Object.assign(AssistantReplace.prototype, {
         });
 
         await Asc.Editor.callMethod("RemoveAnnotationRange", [range]);
+        this.onRemoveAnnotation(range);
         await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
         await Asc.Editor.callMethod("FocusEditor");
     },

@@ -36,6 +36,8 @@
 /**
  * @constructor
  * @extends TextAnnotator
+ * @param {CustomAnnotationPopup} annotationPopup
+ * @param {localStorageCustomAssistantItem} assistantData
  */
 function CustomAnnotator(annotationPopup, assistantData) {
     TextAnnotator.call(this, annotationPopup);
@@ -44,6 +46,7 @@ function CustomAnnotator(annotationPopup, assistantData) {
     this._skipNextChangeParagraph = false;
 
     this._lastUsedPrompt = "";
+
 }
 CustomAnnotator.prototype = Object.create(TextAnnotator.prototype);
 CustomAnnotator.prototype.constructor = CustomAnnotator;
@@ -96,6 +99,13 @@ Object.assign(CustomAnnotator.prototype, {
                 ranges: ranges,
             };
             await Asc.Editor.callMethod("AnnotateParagraph", [obj]);
+            this.onAddAnnotation({
+                ranges: ranges,
+                paraId: paraId,
+                recalcId: recalcId,
+                text: text,
+                assistantData: this.assistantData,
+            });
         } catch (e) {}
 
         return true;
@@ -129,6 +139,7 @@ Object.assign(CustomAnnotator.prototype, {
 
         if (annot["original"] !== text.substring(start, start + len)) {
             let annotRange = this.getAnnotationRangeObj(paraId, rangeId);
+            this.onRemoveAnnotation(annotRange);
             return Asc.Editor.callMethod("RemoveAnnotationRange", [annotRange]);
         }
     },
@@ -151,19 +162,21 @@ Object.assign(CustomAnnotator.prototype, {
      * @returns 
      */
     uncheckParagraphs: async function (paraIds) {
-        /** @type {Promise<any>[]} */
-        const promises = [];
+        const ranges = [];
 
         paraIds.forEach(function(paraId) {
-            promises.push(Asc.Editor.callMethod("RemoveAnnotationRange", [{
+            ranges.push({
                 all: true,
                 paragraphId : paraId,
 		        rangeId : undefined,
                 name: "customAssistant_" + this.assistantData.id
-            }]));
+            });
         }, this);
-
-        return Promise.all(promises);
+        
+        this.onRemoveAnnotation(ranges);
+        await Asc.Editor.callMethod("RemoveAnnotationRange", ranges);
+        
+        return true;
     },
     onAccept: async function (paraId, rangeId) {
         if (this.type !== 0) { // not for hint

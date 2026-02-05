@@ -1110,6 +1110,7 @@ if (window.customAssistantWindow) {
 						"onlyoffice_ai_saved_assistants",
 						JSON.stringify(savedAssistants)
 					);
+					customAssistantManager.deleteAssistant(assistantId);
 					if (buttonAssistant) {
 						buttonAssistant.removed = true;
 						Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
@@ -1225,6 +1226,10 @@ async function customAssistantOnClickToolbarIcon(assistantId, buttonAssistant)
 	}
 
 	await Asc.Editor.callMethod("EndAction", ["Block", preloaderMessage]);
+}
+
+function customAnnotationsWindowShow() {
+	customAssistantManager.showAnnotationsList();
 }
 
 /**

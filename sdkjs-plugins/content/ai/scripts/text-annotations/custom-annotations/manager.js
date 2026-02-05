@@ -38,13 +38,13 @@
 /// <reference path="./assistant-replace.js" />
 /// <reference path="../text-annotator.js" />
 /// <reference path="./annotation-popup.js" />
+/// <reference path="./annotations-watcher.js" />
 
 class CustomAssistantManager {
     constructor() {
-        /**
-         * @type {Map<string, Assistant>}
-         */
+        /** @type {Map<string, Assistant>} */
         this._customAssistants = new Map();
+        this._annotationsWatcher = new AnnotationsWatcher();
         this._isCustomAssistantTrackChanges = new Map();
         this._isCustomAssistantRunning = new Map();
         /** @type {Map<string, {recalcId: string, text: string, annotations: any}>} */
@@ -112,6 +112,7 @@ class CustomAssistantManager {
         }
         const isRunning = this._isCustomAssistantRunning.get(assistantData.id);
         const newAssistant = this.createAssistant(assistantData, isRunning);
+        this._annotationsWatcher.addAssistant(newAssistant);
         if (!isRunning) {
             return newAssistant;
         }
@@ -132,7 +133,9 @@ class CustomAssistantManager {
     }
 
     /** @param {string} assistantId */
-    deleteAssistant(assistantId) {
+    async deleteAssistant(assistantId) {
+        await this.stop(assistantId);
+        this._annotationsWatcher.removeAssistant(assistantId);
         this._customAssistants.delete(assistantId);
         this._isCustomAssistantTrackChanges.delete(assistantId);
         this._isCustomAssistantRunning.delete(assistantId);
@@ -157,6 +160,7 @@ class CustomAssistantManager {
             return this.STATUSES.NOT_FOUND;
         }
         this._isCustomAssistantRunning.set(assistantId, true);
+        this._annotationsWatcher.addAssistant(assistant);
 
         if (!this._isCustomAssistantTrackChanges.get(assistantId)) {
             /** @type {Promise<boolean | null>[]} */
@@ -181,12 +185,14 @@ class CustomAssistantManager {
             isParagraphsChecked.length &&  
             isParagraphsChecked.every(isDone => !isDone) 
         ) {
+            this._annotationsWatcher.removeAssistant(assistantId);
             if (isParagraphsChecked.some(isDone => isDone === null)) {
                 return this.STATUSES.NO_AI_MODEL_SELECTED;
             }
             return this.STATUSES.ERROR;
         }
 
+        this._annotationsWatcher.addAssistant(assistant);
         this._isCustomAssistantTrackChanges.set(assistantId, true);
 
         return this.STATUSES.OK;
@@ -204,6 +210,7 @@ class CustomAssistantManager {
         assistant.checked.clear();
         this._isCustomAssistantTrackChanges.set(assistantId, false);
         await assistant.uncheckParagraphs(paraIdsToUncheck);
+        this._annotationsWatcher.removeAssistant(assistantId);
     }
 
     /**
@@ -219,8 +226,8 @@ class CustomAssistantManager {
             annotations,
         });
         this._customAssistants.forEach((assistant, assistantId) => {
-            const isInit = this._isCustomAssistantTrackChanges.get(assistantId);
-            if (!isInit) {
+            const isWatched = this._annotationsWatcher.hasAssistant(assistantId);
+            if (!isWatched) {
                 return;
             }
             assistant.onChangeParagraph(
@@ -256,5 +263,9 @@ class CustomAssistantManager {
         } else {
             console.error("Custom assistant not found: " + assistantId);
         }
+    }
+
+    showAnnotationsList() {
+        this._annotationsWatcher.showPanel();
     }
 }

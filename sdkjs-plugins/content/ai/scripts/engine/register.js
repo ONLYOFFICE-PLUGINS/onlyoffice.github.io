@@ -677,6 +677,12 @@ async function registerButtons(window, undefined)
 			buttonCustomAssistant.attachOnClick(function(){
 				customAssistantWindowShow();
 			});
+			const buttonCustomAnnotations = new Asc.ButtonToolbar(buttonMainToolbar);
+			buttonCustomAnnotations.text = "Show annotations";
+			buttonCustomAnnotations.icons = getToolBarButtonIcons("plugin-writer");
+			buttonCustomAnnotations.attachOnClick(function(){
+				customAnnotationsWindowShow();
+			});
 			const savedAssistants = JSON.parse(
 				localStorage.getItem("onlyoffice_ai_saved_assistants") || "[]"
 			);

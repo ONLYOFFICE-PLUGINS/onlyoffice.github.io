@@ -34,6 +34,7 @@
 /// <reference path="./types.js" />
 
 /**
+ * @param {CustomAnnotationPopup} annotationPopup
  * @param {localStorageCustomAssistantItem} assistantData
  * @constructor
  * @extends CustomAnnotator
@@ -48,6 +49,7 @@ Object.assign(AssistantHint.prototype, {
     /**
      * @param {string} text
      * @param {Array<HintAiResponse>} matches
+     * @returns {AnnotationRange[]}
      */
     _convertToRanges: function (paraId, text, matches) {
         const _t = this;
@@ -187,6 +189,7 @@ Object.assign(AssistantHint.prototype, {
         });
 
         await Asc.Editor.callMethod("RemoveAnnotationRange", [range]);
+        this.onRemoveAnnotation(range);
         await Asc.Editor.callMethod("EndAction", ["GroupActions"]);
         await Asc.Editor.callMethod("FocusEditor");
     },
