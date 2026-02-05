@@ -208,27 +208,11 @@
             e.preventDefault();
         };
 
-        selectType = $("#assistantType");
-        selectType.select2({
-            data: [
-                {
-                    id: 0,
-                    text: "Hint"
-                },
-                {
-                    id: 2,
-                    text: "Replace"
-                },
-                {
-                    id: 1,
-                    text: "Replace + Hint"
-                }
-            ],
-            tags: true,
-            minimumResultsForSearch: Infinity,
-            dropdownAutoWidth: true,
+        selectType = $('#assistantType');
+
+        selectType.on('select2:select', (e) => {
+            
         });
-        selectType.on("select2:select", (e) => {});
         selectType.val(0); // Default value
 
         selectType.trigger("select2:select");
