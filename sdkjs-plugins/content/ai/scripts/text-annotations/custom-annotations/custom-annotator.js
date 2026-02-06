@@ -163,20 +163,21 @@ Object.assign(CustomAnnotator.prototype, {
      */
     uncheckParagraphs: async function (paraIds) {
         const ranges = [];
-
+        const promises = [];
         paraIds.forEach(function(paraId) {
-            ranges.push({
+            const range = {
                 all: true,
                 paragraphId : paraId,
 		        rangeId : undefined,
                 name: "customAssistant_" + this.assistantData.id
-            });
+            };
+            ranges.push(range);
+            promises.push(Asc.Editor.callMethod("RemoveAnnotationRange", [range]));
         }, this);
         
         this.onRemoveAnnotation(ranges);
-        await Asc.Editor.callMethod("RemoveAnnotationRange", ranges);
         
-        return true;
+        return Promise.all(promises);
     },
     onAccept: async function (paraId, rangeId) {
         if (this.type !== 0) { // not for hint
