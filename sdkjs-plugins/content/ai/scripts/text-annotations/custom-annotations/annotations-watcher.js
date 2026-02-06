@@ -37,9 +37,16 @@
 class AnnotationsWatcher {
     constructor() {
         this._assistants = new Map();
+        this._panel = null;
+        /** @type {Map<string, EventAnnotationInfo>} */
+        this._annotations = new Map();
     }
 
     showPanel() {
+        if (this._panel) {
+            // TODO: update panel
+            return;
+        }
         const description = "List of annotations";
 
         let variation = {
@@ -53,12 +60,12 @@ class AnnotationsWatcher {
             EditorsSupport: ["word"],
         };
 
-        const customAnnotationsWindow = new window.Asc.PluginWindow();
-        customAnnotationsWindow.attachEvent("onWindowReady", function () {
+        this._panel = new window.Asc.PluginWindow();
+        this._panel.attachEvent("onWindowReady", function () {
             console.log("onWindowReady");
         });
 
-        customAnnotationsWindow.show(variation);
+        this._panel.show(variation);
 
     }
 
@@ -70,6 +77,8 @@ class AnnotationsWatcher {
             );
         }
         this._assistants.set(assistant.assistantData.id, assistant);
+        assistant.onRemoveAnnotation = this._onRemoveAnnotation.bind(this);
+        assistant.onAddAnnotation = this._onAddAnnotation.bind(this);
     }
 
     /** @param {string} assistantId */
@@ -80,5 +89,37 @@ class AnnotationsWatcher {
     /** @param {string} assistantId */
     hasAssistant(assistantId) {
         return this._assistants.has(assistantId);
+    }
+
+    /** @param {EventAnnotationInfo} annotationInfo */
+    _onAddAnnotation(annotationInfo) {
+        console.warn("onAddAnnotation", annotationInfo);
+        const key = annotationInfo.paraId + "_" + annotationInfo.assistantData.id;
+        this._annotations.set(key, annotationInfo);
+        if (this._panel) {
+            this._panel.command("onAddAnnotations", annotationInfo);
+        }
+    }
+
+    /** @param {TextAnnotation} rangeInfo */
+    _onRemoveAnnotation(rangeInfo) {
+        console.warn("onRemoveAnnotation", rangeInfo);
+        if (rangeInfo.name.slice(0, 15) !== "customAssistant_") {
+            return;
+        }
+        const key = rangeInfo.paragraphId + "_" + rangeInfo.name.slice(15);
+        if (rangeInfo.all) {
+            this._annotations.delete(key);
+        } else {
+            let annotation = this._annotations.get(key);
+            if (!annotation) {
+                return;
+            }
+            const num = Number(rangeInfo.rangeId) - 1;
+            annotation.ranges[num] = null;
+            if (annotation.ranges.every(range => range === null)) {
+                this._annotations.delete(key);
+            }
+        }
     }
 }

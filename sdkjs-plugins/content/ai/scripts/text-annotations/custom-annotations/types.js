@@ -72,3 +72,21 @@
  * @property {number} length
  * @property {number} id
  */
+
+/**
+ * @typedef {Object} EventAnnotationInfo 
+ * @property {string} paraId
+ * @property {string} recalcId
+ * @property {string} text
+ * @property {Array<AnnotationRange | null>} ranges
+ * @property {AssistantData} assistantData
+*/
+
+/**
+ * @typedef {Object} TextAnnotation 
+ * @property {string} name
+ * @property {string} rangeId
+ * @property {string} paragraphId
+ * @property {boolean} [all]
+*/
+

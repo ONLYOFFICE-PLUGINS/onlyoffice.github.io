@@ -37,47 +37,68 @@
 
 (function (window) {
     const LOCAL_STORAGE_KEY = "onlyoffice_ai_saved_assistants";
-   
-    const mainContainer = document.getElementById("custom_annotations_panel");
-    if (!mainContainer) {
-        console.error("Custom Annotations: required elements are missing");
-        return;
+
+    
+    class AnnotationsPanel {
+        constructor() {
+            this.annotations = new Map();
+            const mainContainer = document.getElementById("custom_annotations_panel");
+            if (!mainContainer) {
+                console.error("Custom Annotations: required elements are missing");
+                return;
+            }
+            /** @type {HTMLElement} */
+            this.container = mainContainer;
+        }
+
+        init() {
+            window.Asc.plugin.sendToPlugin("onWindowReady", {});
+
+            this.container.addEventListener("click", function (e) {
+                if (e.target instanceof HTMLAnchorElement) {
+                    e.preventDefault();
+                    window.open(e.target.href, "_blank");
+                }
+            });
+        }
+
+        /** @param {EventAnnotationInfo} annotationInfo */
+        onAddAnnotations(annotationInfo) {
+            const key = `${annotationInfo.paraId}_${annotationInfo.assistantData.id}`;
+            this.annotations.set(key, annotationInfo);
+
+            const allAnnotations = Array.from(this.annotations.values());
+            console.log("Custom Annotations: all annotations", allAnnotations);
+            this.container.textContent = JSON.stringify(allAnnotations, null, 2);
+        }
+
+        onThemeChanged(theme) {
+            window.Asc.plugin.onThemeChangedBase(theme);
+            updateBodyThemeClasses(theme.type, theme.name);
+            updateThemeVariables(theme);
+        }
+
+        onTranslate() {
+            let elements = document.querySelectorAll(".i18n");
+            elements.forEach(function (element) {
+                if (
+                    element instanceof HTMLTextAreaElement ||
+                    element instanceof HTMLInputElement
+                ) {
+                    element.placeholder = window.Asc.plugin.tr(element.placeholder);
+                } else if (element instanceof HTMLElement) {
+                    element.innerText = window.Asc.plugin.tr(element.innerText);
+                }
+            });
+        };
     }
 
-
-    window.Asc.plugin.init = function () {
-        window.Asc.plugin.sendToPlugin("onWindowReady", {});
-
-        mainContainer.addEventListener("click", function (e) {
-            if (e.target instanceof HTMLAnchorElement) {
-                e.preventDefault();
-                window.open(e.target.href, "_blank");
-            }
-        });
-    };
-
-    window.Asc.plugin.onTranslate = function () {
-        let elements = document.querySelectorAll(".i18n");
-        elements.forEach(function (element) {
-            if (
-                element instanceof HTMLTextAreaElement ||
-                element instanceof HTMLInputElement
-            ) {
-                element.placeholder = window.Asc.plugin.tr(element.placeholder);
-            } else if (element instanceof HTMLElement) {
-                element.innerText = window.Asc.plugin.tr(element.innerText);
-            }
-        });
-    };
-    window.Asc.plugin.onThemeChanged = onThemeChanged;
-    window.Asc.plugin.attachEvent("onThemeChanged", onThemeChanged);
-
-    function onThemeChanged(theme) {
-        window.Asc.plugin.onThemeChangedBase(theme);
-        updateBodyThemeClasses(theme.type, theme.name);
-        updateThemeVariables(theme);
-    }
-
+    const annotationsPanel = new AnnotationsPanel();
+    window.Asc.plugin.init = annotationsPanel.init.bind(annotationsPanel);
+    window.Asc.plugin.attachEvent("onAddAnnotations", annotationsPanel.onAddAnnotations.bind(annotationsPanel));
+    window.Asc.plugin.onTranslate = annotationsPanel.onTranslate.bind(annotationsPanel);
+    window.Asc.plugin.onThemeChanged = annotationsPanel.onThemeChanged.bind(annotationsPanel);
+    window.Asc.plugin.attachEvent("onThemeChanged", annotationsPanel.onThemeChanged.bind(annotationsPanel));
 
 
 })(window);
