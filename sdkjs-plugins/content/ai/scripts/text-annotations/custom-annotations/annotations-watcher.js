@@ -77,12 +77,12 @@ class AnnotationsWatcher {
     }
     /** @param {Assistant} assistant */
     addAssistant(assistant) {
-        if (this._assistants.has(assistant.assistantData.id)) {
+        if (this._assistants.has(assistant.assistantId)) {
             console.warn(
-                "Assistant already added: " + assistant.assistantData.id,
+                "Assistant already added: " + assistant.assistantId,
             );
         }
-        this._assistants.set(assistant.assistantData.id, assistant);
+        this._assistants.set(assistant.assistantId, assistant);
         assistant.onRemoveAnnotation = this._onRemoveAnnotation.bind(this);
         assistant.onAddAnnotation = this._onAddAnnotation.bind(this);
     }
@@ -106,7 +106,7 @@ class AnnotationsWatcher {
 
     /** @param {AnnotationInfo} annotationInfo */
     _onAddAnnotation(annotationInfo) {
-        const key = annotationInfo.paraId + "_" + annotationInfo.assistantData.id;
+        const key = annotationInfo.paraId + "_" + annotationInfo.assistantId;
         this._annotations.set(key, annotationInfo);
         if (this._panel) {
             this._panel.command("onAddAnnotations", annotationInfo);
@@ -129,19 +129,18 @@ class AnnotationsWatcher {
             } else {
                 let annotation = this._annotations.get(key);
                 if (!annotation) {
-                    console.warn("Remove annotation: not found", key);
                     return;
                 }
 
-                annotation.ranges.find((range, index) => {
-                    if (range && range.id === Number(rangeInfo.rangeId)) {
-                        annotation.ranges[index] = null;
+                annotation.balloons.find((item, index) => {
+                    if (item && item.rangeId === Number(rangeInfo.rangeId)) {
+                        annotation.balloons[index] = null;
                         return true;
                     }
                     return false;
                 });
 
-                if (annotation.ranges.every(range => range === null)) {
+                if (annotation.balloons.every(item => item === null)) {
                     this._annotations.delete(key);
                 }
             }

@@ -74,12 +74,17 @@
  */
 
 /**
+ * @typedef {Object} AnnotationBalloonInfo
+ * @property {number} rangeId
+ * @property {ReplaceInfoForPopup | HintInfoForPopup | ReplaceHintInfoForPopup} balloon
+ */
+
+/**
  * @typedef {Object} AnnotationInfo 
  * @property {string} paraId
  * @property {string} recalcId
- * @property {string} text
- * @property {Array<AnnotationRange | null>} ranges
- * @property {AssistantData} assistantData
+ * @property {Array<AnnotationBalloonInfo | null>} balloons
+ * @property {string} assistantId
 */
 
 /**

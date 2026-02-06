@@ -67,7 +67,7 @@
 
         /** @param {AnnotationInfo} annotationInfo */
         onAddAnnotations(annotationInfo) {
-            const key = `${annotationInfo.paraId}_${annotationInfo.assistantData.id}`;
+            const key = `${annotationInfo.paraId}_${annotationInfo.assistantId}`;
             this.annotations.set(key, annotationInfo);
 
             this._render();
@@ -92,15 +92,15 @@
                         return;
                     }
 
-                    annotation.ranges.find((range, index) => {
-                        if (range && range.id === Number(rangeInfo.rangeId)) {
-                            annotation.ranges[index] = null;
+                    annotation.balloons.find((item, index) => {
+                        if (item && item.rangeId === Number(rangeInfo.rangeId)) {
+                            annotation.balloons[index] = null;
                             return true;
                         }
                         return false;
                     });
 
-                    if (annotation.ranges.every(range => range === null)) {
+                    if (annotation.balloons.every(item => item === null)) {
                         this.annotations.delete(key);
                     }
                 }
@@ -118,32 +118,27 @@
 
             const allAnnotations = Array.from(this.annotations.values());
 
-            /** @type {Map<string, Map<string, Array<{annotationInfo: AnnotationInfo, range: AnnotationRange}>>>} */
+            /** @type {Map<string, Map<string, Array<{annotationInfo: AnnotationInfo, item: AnnotationBalloonInfo}>>>} */
             const grouped = new Map();
 
             allAnnotations.forEach((annotationInfo) => {
-                const assistantName =
-                    (annotationInfo.assistantData && annotationInfo.assistantData.name)
-                        ? annotationInfo.assistantData.name
-                        : (annotationInfo.assistantData && annotationInfo.assistantData.id)
-                            ? annotationInfo.assistantData.id
-                            : "Assistant";
+                const assistantId = annotationInfo.assistantId;
 
                 const paraId = annotationInfo.paraId || "";
-                const ranges = annotationInfo.ranges;
-                if (!ranges || !Array.isArray(ranges)) {
+                const balloons = annotationInfo.balloons;
+                if (!balloons || !Array.isArray(balloons)) {
                     return;
                 }
 
-                ranges.forEach((range) => {
-                    if (!range) {
+                balloons.forEach((item) => {
+                    if (!item) {
                         return;
                     }
 
-                    let byAssistant = grouped.get(assistantName);
+                    let byAssistant = grouped.get(assistantId);
                     if (!byAssistant) {
                         byAssistant = new Map();
-                        grouped.set(assistantName, byAssistant);
+                        grouped.set(assistantId, byAssistant);
                     }
 
                     let byPara = byAssistant.get(paraId);
@@ -152,26 +147,26 @@
                         byAssistant.set(paraId, byPara);
                     }
 
-                    byPara.push({ annotationInfo, range });
+                    byPara.push({ annotationInfo, item });
                 });
             });
 
-            grouped.forEach((byPara, assistantName) => {
-                listContainer.appendChild(this._createAssistantGroup(assistantName, byPara));
+            grouped.forEach((byPara, assistantId) => {
+                listContainer.appendChild(this._createAssistantGroup(assistantId, byPara));
             });
         }
 
         /**
-         * @param {string} assistantName
-         * @param {Map<string, Array<{annotationInfo: AnnotationInfo, range: AnnotationRange}>>} byPara
+         * @param {string} assistantId
+         * @param {Map<string, Array<{annotationInfo: AnnotationInfo, item: AnnotationBalloonInfo}>>} byPara
          */
-        _createAssistantGroup(assistantName, byPara) {
+        _createAssistantGroup(assistantId, byPara) {
             const group = document.createElement("div");
             group.className = "custom_annotations_group";
 
             const header = document.createElement("div");
             header.className = "custom_annotations_group_header";
-            header.textContent = assistantName;
+            header.textContent = assistantId;
 
             group.appendChild(header);
 
@@ -184,7 +179,7 @@
 
         /**
          * @param {string} paraId
-         * @param {Array<{annotationInfo: AnnotationInfo, range: AnnotationRange}>} items
+         * @param {Array<{annotationInfo: AnnotationInfo, item: AnnotationBalloonInfo}>} items
          */
         _createParagraphGroup(paraId, items) {
             const group = document.createElement("div");
@@ -198,7 +193,7 @@
 
             items.forEach((item) => {
                 group.appendChild(
-                    this._createRangeItem(item.annotationInfo, item.range),
+                    this._createRangeItem(item.annotationInfo, item.item),
                 );
             });
 
@@ -207,19 +202,19 @@
 
         /**
          * @param {AnnotationInfo} annotationInfo
-         * @param {AnnotationRange} range
+         * @param {AnnotationBalloonInfo} item
          */
-        _createRangeItem(annotationInfo, range) {
+        _createRangeItem(annotationInfo, item) {
             const root = document.createElement("div");
             root.className = "custom_annotation_item";
 
-            const assistantId = annotationInfo.assistantData && annotationInfo.assistantData.id
-                ? annotationInfo.assistantData.id
-                : "";
+            const assistantId = annotationInfo.assistantId;
             const name = `customAssistant_${assistantId}`;
             const paragraphId = annotationInfo.paraId;
-            const rangeId = range.id;
-            const substring = this._getRangeText(annotationInfo.text, range);
+            const rangeId = item.rangeId;
+            
+            /** @type {ReplaceInfoForPopup | HintInfoForPopup | ReplaceHintInfoForPopup} */
+            let balloon = item.balloon;
 
             /** @type {RangeAddress} */
             const actionContext = {
@@ -250,49 +245,112 @@
                 e.stopPropagation();
                 this._onAcceptAnnotation(actionContext);
             });
-
-            const rejectBtn = document.createElement("button");
-            rejectBtn.type = "button";
-            rejectBtn.className = "custom_annotation_action custom_annotation_action_reject";
-            rejectBtn.textContent = "✕";
-            rejectBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                this._onRejectAnnotation(actionContext);
-            });
-
             actions.appendChild(acceptBtn);
-            actions.appendChild(rejectBtn);
+
+            if (balloon.type !== 0) { // Hint
+                const rejectBtn = document.createElement("button");
+                rejectBtn.type = "button";
+                rejectBtn.className = "custom_annotation_action custom_annotation_action_reject";
+                rejectBtn.textContent = "✕";
+                rejectBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    this._onRejectAnnotation(actionContext);
+                });
+                actions.appendChild(rejectBtn);
+            }
+            
 
             const meta = document.createElement("div");
             meta.className = "custom_annotation_meta";
-            meta.textContent = substring;
+            meta.textContent = balloon.original;
+
+            const tooltip = this._createBalloonTooltip(balloon);
 
             header.appendChild(meta);
             header.appendChild(actions);
-
-            const kv = document.createElement("div");
-            kv.className = "custom_annotation_kv";
-
             root.appendChild(header);
-            root.appendChild(kv);
+
+            if (tooltip) {
+                root.appendChild(tooltip);
+            }
 
             return root;
         }
 
         /**
-         * @param {string} text
-         * @param {AnnotationRange} range
+         * @param {ReplaceInfoForPopup | HintInfoForPopup | ReplaceHintInfoForPopup} balloon
          */
-        _getRangeText(text, range) {
-            if (typeof text !== "string") {
-                return "";
+        _createBalloonTooltip(balloon) {
+            /** @type {any} */
+            const b = balloon;
+
+            const hasSuggested = typeof b.suggested === "string" && b.suggested !== "";
+            const hasExplanation = typeof b.explanation === "string" && b.explanation !== "";
+
+            if (!hasSuggested && !hasExplanation) {
+                return null;
             }
-            const start = typeof range.start === "number" ? range.start : 0;
-            const length = typeof range.length === "number" ? range.length : 0;
-            const end = start + Math.max(length, 0);
-            return text.slice(start, end);
+
+            const tooltip = document.createElement("div");
+            tooltip.className = "custom_annotation_tooltip";
+
+            if (hasSuggested) {
+                const block = document.createElement("div");
+                block.className = "custom_annotation_tooltip_block";
+
+                const title = document.createElement("div");
+                title.className = "custom_annotation_tooltip_title";
+                title.textContent = window.Asc.plugin.tr("Suggested correction");
+
+                const content = document.createElement("div");
+                content.className = "custom_annotation_tooltip_content";
+
+                const row = document.createElement("div");
+                row.className = "custom_annotation_tooltip_row";
+
+                const original = document.createElement("span");
+                original.className = "custom_annotation_tooltip_original";
+                original.textContent = balloon.original || "";
+
+                const arrow = document.createElement("span");
+                arrow.className = "custom_annotation_tooltip_arrow";
+                arrow.textContent = "→";
+
+                const corrected = document.createElement("span");
+                corrected.className = "custom_annotation_tooltip_corrected";
+                corrected.textContent = b.suggested;
+
+                row.appendChild(original);
+                row.appendChild(arrow);
+                row.appendChild(corrected);
+
+                content.appendChild(row);
+                block.appendChild(title);
+                block.appendChild(content);
+                tooltip.appendChild(block);
+            }
+
+            if (hasExplanation) {
+                const block = document.createElement("div");
+                block.className = "custom_annotation_tooltip_block";
+
+                const title = document.createElement("div");
+                title.className = "custom_annotation_tooltip_title";
+                title.textContent = window.Asc.plugin.tr("Explanation");
+
+                const content = document.createElement("div");
+                content.className = "custom_annotation_tooltip_content";
+                content.textContent = b.explanation;
+
+                block.appendChild(title);
+                block.appendChild(content);
+                tooltip.appendChild(block);
+            }
+
+            return tooltip;
         }
 
+        /** @param {any} theme */
         onThemeChanged(theme) {
             window.Asc.plugin.onThemeChangedBase(theme);
             updateBodyThemeClasses(theme.type, theme.name);

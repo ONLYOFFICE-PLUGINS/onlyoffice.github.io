@@ -99,13 +99,17 @@ Object.assign(CustomAnnotator.prototype, {
                 ranges: ranges,
             };
             await Asc.Editor.callMethod("AnnotateParagraph", [obj]);
-            this.onAddAnnotation({
-                ranges: ranges,
+            /** @type {AnnotationInfo} */
+            const annotationInfo = {
                 paraId: paraId,
                 recalcId: recalcId,
-                text: text,
-                assistantData: this.assistantData,
-            });
+                balloons: ranges.map(range => ({
+                    rangeId: range.id,
+                    balloon: this.getInfoForPopup(paraId, range.id),
+                })),
+                assistantId: this.assistantData.id,
+            };
+            this.onAddAnnotation(annotationInfo);
         } catch (e) {}
 
         return true;
