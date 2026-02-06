@@ -36,23 +36,26 @@
 /// <reference path="./text-annotations/custom-annotations/types.js" />
 
 (function (window) {
-    const LOCAL_STORAGE_KEY = "onlyoffice_ai_saved_assistants";
-
-    
     class AnnotationsPanel {
         constructor() {
+            /** @type {Map<string, EventAnnotationInfo>} */
             this.annotations = new Map();
-            const mainContainer = document.getElementById("custom_annotations_panel");
-            if (!mainContainer) {
+            /** @type {HTMLElement | null} */
+            this.container = document.getElementById("custom_annotations_panel");
+            /** @type {HTMLElement | null} */
+            this.listContainer = document.getElementById("custom_annotations_list");
+
+            if (!this.container || !this.listContainer) {
                 console.error("Custom Annotations: required elements are missing");
-                return;
             }
-            /** @type {HTMLElement} */
-            this.container = mainContainer;
         }
 
         init() {
             window.Asc.plugin.sendToPlugin("onWindowReady", {});
+
+            if (!this.container) {
+                return;
+            }
 
             this.container.addEventListener("click", function (e) {
                 if (e.target instanceof HTMLAnchorElement) {
@@ -67,9 +70,219 @@
             const key = `${annotationInfo.paraId}_${annotationInfo.assistantData.id}`;
             this.annotations.set(key, annotationInfo);
 
+            this._render();
+        }
+
+        /** @param {TextAnnotation | Array<TextAnnotation>} rangesInfo */
+        onRemoveAnnotation(rangesInfo) {
+            if (!Array.isArray(rangesInfo)) {
+                rangesInfo = [rangesInfo];
+            }
+            rangesInfo.forEach((rangeInfo) => {
+                if (rangeInfo.name.slice(0, 16) !== "customAssistant_") {
+                    console.warn("Remove annotation: not a custom annotation");
+                    return;
+                }
+                const key = rangeInfo.paragraphId + "_" + rangeInfo.name.slice(16);
+                if (rangeInfo.all) {
+                    this.annotations.delete(key);
+                } else {
+                    let annotation = this.annotations.get(key);
+                    if (!annotation) {
+                        return;
+                    }
+
+                    annotation.ranges.find((range, index) => {
+                        if (range && range.id === Number(rangeInfo.rangeId)) {
+                            annotation.ranges[index] = null;
+                            return true;
+                        }
+                        return false;
+                    });
+
+                    if (annotation.ranges.every(range => range === null)) {
+                        this.annotations.delete(key);
+                    }
+                }
+            });
+            this._render();
+        }
+
+        _render() {
+            const listContainer = this.listContainer;
+            if (!listContainer) {
+                return;
+            }
+
+            listContainer.innerHTML = "";
+
             const allAnnotations = Array.from(this.annotations.values());
-            console.log("Custom Annotations: all annotations", allAnnotations);
-            this.container.textContent = JSON.stringify(allAnnotations, null, 2);
+
+            /** @type {Map<string, Map<string, Array<{annotationInfo: EventAnnotationInfo, range: AnnotationRange}>>>} */
+            const grouped = new Map();
+
+            allAnnotations.forEach((annotationInfo) => {
+                const assistantName =
+                    (annotationInfo.assistantData && annotationInfo.assistantData.name)
+                        ? annotationInfo.assistantData.name
+                        : (annotationInfo.assistantData && annotationInfo.assistantData.id)
+                            ? annotationInfo.assistantData.id
+                            : "Assistant";
+
+                const paraId = annotationInfo.paraId || "";
+                const ranges = annotationInfo.ranges;
+                if (!ranges || !Array.isArray(ranges)) {
+                    return;
+                }
+
+                ranges.forEach((range) => {
+                    if (!range) {
+                        return;
+                    }
+
+                    let byAssistant = grouped.get(assistantName);
+                    if (!byAssistant) {
+                        byAssistant = new Map();
+                        grouped.set(assistantName, byAssistant);
+                    }
+
+                    let byPara = byAssistant.get(paraId);
+                    if (!byPara) {
+                        byPara = [];
+                        byAssistant.set(paraId, byPara);
+                    }
+
+                    byPara.push({ annotationInfo, range });
+                });
+            });
+
+            grouped.forEach((byPara, assistantName) => {
+                listContainer.appendChild(this._createAssistantGroup(assistantName, byPara));
+            });
+        }
+
+        /**
+         * @param {string} assistantName
+         * @param {Map<string, Array<{annotationInfo: EventAnnotationInfo, range: AnnotationRange}>>} byPara
+         */
+        _createAssistantGroup(assistantName, byPara) {
+            const group = document.createElement("div");
+            group.className = "custom_annotations_group";
+
+            const header = document.createElement("div");
+            header.className = "custom_annotations_group_header";
+            header.textContent = assistantName;
+
+            group.appendChild(header);
+
+            byPara.forEach((items, paraId) => {
+                group.appendChild(this._createParagraphGroup(paraId, items));
+            });
+
+            return group;
+        }
+
+        /**
+         * @param {string} paraId
+         * @param {Array<{annotationInfo: EventAnnotationInfo, range: AnnotationRange}>} items
+         */
+        _createParagraphGroup(paraId, items) {
+            const group = document.createElement("div");
+            group.className = "custom_annotations_subgroup";
+
+            const header = document.createElement("div");
+            header.className = "custom_annotations_subgroup_header";
+            header.textContent = "Paragraph id: " + paraId;
+
+            group.appendChild(header);
+
+            items.forEach((item) => {
+                group.appendChild(
+                    this._createRangeItem(item.annotationInfo, item.range),
+                );
+            });
+
+            return group;
+        }
+
+        /**
+         * @param {EventAnnotationInfo} annotationInfo
+         * @param {AnnotationRange} range
+         */
+        _createRangeItem(annotationInfo, range) {
+            const root = document.createElement("div");
+            root.className = "custom_annotation_item";
+
+            root.addEventListener("click", () => {
+                const assistantId = annotationInfo.assistantData && annotationInfo.assistantData.id
+                    ? annotationInfo.assistantData.id
+                    : "";
+                const name = `customAssistant_${assistantId}`;
+                this._selectAnnotationInDocument(
+                    annotationInfo.paraId,
+                    range.id,
+                    name,
+                );
+            });
+
+            const header = document.createElement("div");
+            header.className = "custom_annotation_header";
+
+            const title = document.createElement("div");
+            title.className = "custom_annotation_title";
+            title.textContent = `#${range.id}`;
+
+            const meta = document.createElement("div");
+            meta.className = "custom_annotation_meta";
+            meta.textContent = this._getRangeText(annotationInfo.text, range);
+
+            header.appendChild(title);
+            header.appendChild(meta);
+
+            const kv = document.createElement("div");
+            kv.className = "custom_annotation_kv";
+
+            root.appendChild(header);
+            root.appendChild(kv);
+
+            return root;
+        }
+
+        /**
+         * @param {string} text
+         * @param {AnnotationRange} range
+         */
+        _getRangeText(text, range) {
+            if (typeof text !== "string") {
+                return "";
+            }
+            const start = typeof range.start === "number" ? range.start : 0;
+            const length = typeof range.length === "number" ? range.length : 0;
+            const end = start + Math.max(length, 0);
+            return text.slice(start, end);
+        }
+
+        /** @param {Array<AnnotationRange | null> | undefined} ranges */
+        _formatRanges(ranges) {
+            if (!ranges || !Array.isArray(ranges) || ranges.length === 0) {
+                return "";
+            }
+
+            /** @type {AnnotationRange[]} */
+            const safeRanges = ranges.filter((r) => r !== null);
+
+            return safeRanges
+                .map(r => `start=${r.start}, length=${r.length}, id=${r.id}`)
+                .join("\n");
+        }
+
+        /** @param {any} obj */
+        _safeStringify(obj) {
+            try {
+                return JSON.stringify(obj, null, 2);
+            } catch (e) {
+                return String(obj);
+            }
         }
 
         onThemeChanged(theme) {
@@ -91,11 +304,33 @@
                 }
             });
         };
+
+        /**
+         * @param {string} paragraphId
+         * @param {number} rangeId
+         * @param {string} name
+         */
+        async _selectAnnotationInDocument(paragraphId, rangeId, name) {
+            const annotation = {
+                paragraphId: paragraphId,
+                rangeId: rangeId,
+                name: name,
+            };
+
+            const selectResult = await new Promise((resolve) => {
+                window.Asc.plugin.executeMethod(
+                    "SelectAnnotationRange",
+                    [annotation],
+                    resolve,
+                );
+            });
+        }
     }
 
     const annotationsPanel = new AnnotationsPanel();
     window.Asc.plugin.init = annotationsPanel.init.bind(annotationsPanel);
     window.Asc.plugin.attachEvent("onAddAnnotations", annotationsPanel.onAddAnnotations.bind(annotationsPanel));
+    window.Asc.plugin.attachEvent("onRemoveAnnotation", annotationsPanel.onRemoveAnnotation.bind(annotationsPanel));
     window.Asc.plugin.onTranslate = annotationsPanel.onTranslate.bind(annotationsPanel);
     window.Asc.plugin.onThemeChanged = annotationsPanel.onThemeChanged.bind(annotationsPanel);
     window.Asc.plugin.attachEvent("onThemeChanged", annotationsPanel.onThemeChanged.bind(annotationsPanel));

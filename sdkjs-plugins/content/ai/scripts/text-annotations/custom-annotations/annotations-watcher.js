@@ -61,8 +61,10 @@ class AnnotationsWatcher {
         };
 
         this._panel = new window.Asc.PluginWindow();
-        this._panel.attachEvent("onWindowReady", function () {
-            console.log("onWindowReady");
+        this._panel.attachEvent("onWindowReady", () => {
+            this._annotations.forEach((annotationInfo) => {
+                this._panel.command("onAddAnnotations", annotationInfo);
+            });
         });
 
         this._panel.show(variation);
@@ -93,7 +95,6 @@ class AnnotationsWatcher {
 
     /** @param {EventAnnotationInfo} annotationInfo */
     _onAddAnnotation(annotationInfo) {
-        console.warn("onAddAnnotation", annotationInfo);
         const key = annotationInfo.paraId + "_" + annotationInfo.assistantData.id;
         this._annotations.set(key, annotationInfo);
         if (this._panel) {
@@ -101,25 +102,41 @@ class AnnotationsWatcher {
         }
     }
 
-    /** @param {TextAnnotation} rangeInfo */
-    _onRemoveAnnotation(rangeInfo) {
-        console.warn("onRemoveAnnotation", rangeInfo);
-        if (rangeInfo.name.slice(0, 15) !== "customAssistant_") {
-            return;
+    /** @param {TextAnnotation | Array<TextAnnotation>} rangesInfo */
+    _onRemoveAnnotation(rangesInfo) {
+        if (!Array.isArray(rangesInfo)) {
+            rangesInfo = [rangesInfo];
         }
-        const key = rangeInfo.paragraphId + "_" + rangeInfo.name.slice(15);
-        if (rangeInfo.all) {
-            this._annotations.delete(key);
-        } else {
-            let annotation = this._annotations.get(key);
-            if (!annotation) {
+        rangesInfo.forEach((rangeInfo) => {
+            if (rangeInfo.name.slice(0, 16) !== "customAssistant_") {
+                console.warn("Remove annotation: not a custom annotation");
                 return;
             }
-            const num = Number(rangeInfo.rangeId) - 1;
-            annotation.ranges[num] = null;
-            if (annotation.ranges.every(range => range === null)) {
+            const key = rangeInfo.paragraphId + "_" + rangeInfo.name.slice(16);
+            if (rangeInfo.all) {
                 this._annotations.delete(key);
+            } else {
+                let annotation = this._annotations.get(key);
+                if (!annotation) {
+                    console.warn("Remove annotation: not found", key);
+                    return;
+                }
+
+                annotation.ranges.find((range, index) => {
+                    if (range && range.id === Number(rangeInfo.rangeId)) {
+                        annotation.ranges[index] = null;
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (annotation.ranges.every(range => range === null)) {
+                    this._annotations.delete(key);
+                }
             }
+        });
+        if (this._panel) {
+            this._panel.command("onRemoveAnnotation", rangesInfo);
         }
     }
 }
