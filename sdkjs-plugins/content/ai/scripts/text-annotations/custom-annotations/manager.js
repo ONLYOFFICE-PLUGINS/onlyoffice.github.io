@@ -225,7 +225,7 @@ class CustomAssistantManager {
             annotations,
         });
         this._customAssistants.forEach((assistant, assistantId) => {
-            const isWatched = this._annotationsWatcher.hasAssistant(assistantId);
+            const isWatched = this._isCustomAssistantTrackChanges.get(assistantId);
             if (!isWatched) {
                 return;
             }

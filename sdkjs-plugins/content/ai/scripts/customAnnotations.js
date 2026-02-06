@@ -48,6 +48,9 @@
             if (!this.container || !this.listContainer) {
                 console.error("Custom Annotations: required elements are missing");
             }
+
+            this._numOfAnnotations = 0;
+            this._numOfRenderedAnnotations = 0;
         }
 
         init() {
@@ -114,6 +117,8 @@
                 return;
             }
 
+            this._numOfAnnotations = 0;
+            this._numOfRenderedAnnotations = 0;
             listContainer.innerHTML = "";
 
             const allAnnotations = Array.from(this.annotations.values());
@@ -149,7 +154,8 @@
 
                     byPara.push({ annotationInfo, item });
                 });
-            });
+                this._numOfAnnotations += balloons.length;
+            }, this);
 
             grouped.forEach((byPara, assistantId) => {
                 listContainer.appendChild(this._createAssistantGroup(assistantId, byPara));
@@ -195,6 +201,7 @@
                 group.appendChild(
                     this._createRangeItem(item.annotationInfo, item.item),
                 );
+                this._numOfRenderedAnnotations++;
             });
 
             return group;
@@ -207,6 +214,19 @@
         _createRangeItem(annotationInfo, item) {
             const root = document.createElement("div");
             root.className = "custom_annotation_item";
+
+            root.addEventListener("mouseenter", () => {
+                const rect = root.getBoundingClientRect();
+                const midY = window.innerHeight / 2;
+                if (rect.top > midY) {
+                    root.classList.add("below-middle");
+                } else {
+                    root.classList.remove("below-middle");
+                }
+            });
+            if (this._numOfRenderedAnnotations > this._numOfAnnotations / 2) {
+                root.classList.add("below-middle");
+            }
 
             const assistantId = annotationInfo.assistantId;
             const name = `customAssistant_${assistantId}`;
@@ -239,7 +259,8 @@
 
             const acceptBtn = document.createElement("button");
             acceptBtn.type = "button";
-            acceptBtn.className = "custom_annotation_action custom_annotation_action_accept";
+            acceptBtn.className = "i18n custom_annotation_action custom_annotation_action_accept";
+            acceptBtn.title = window.Asc.plugin.tr("Accept");
             acceptBtn.textContent = "✓";
             acceptBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
@@ -250,7 +271,8 @@
             if (balloon.type !== 0) { // Hint
                 const rejectBtn = document.createElement("button");
                 rejectBtn.type = "button";
-                rejectBtn.className = "custom_annotation_action custom_annotation_action_reject";
+                rejectBtn.className = "i18n custom_annotation_action custom_annotation_action_reject";
+                rejectBtn.title = window.Asc.plugin.tr("Reject");
                 rejectBtn.textContent = "✕";
                 rejectBtn.addEventListener("click", (e) => {
                     e.stopPropagation();
@@ -299,7 +321,7 @@
                 block.className = "custom_annotation_tooltip_block";
 
                 const title = document.createElement("div");
-                title.className = "custom_annotation_tooltip_title";
+                title.className = "i18n custom_annotation_tooltip_title";
                 title.textContent = window.Asc.plugin.tr("Suggested correction");
 
                 const content = document.createElement("div");
@@ -318,7 +340,7 @@
 
                 const corrected = document.createElement("span");
                 corrected.className = "custom_annotation_tooltip_corrected";
-                corrected.textContent = b.suggested;
+                corrected.innerHTML = b.suggested;
 
                 row.appendChild(original);
                 row.appendChild(arrow);
@@ -335,7 +357,7 @@
                 block.className = "custom_annotation_tooltip_block";
 
                 const title = document.createElement("div");
-                title.className = "custom_annotation_tooltip_title";
+                title.className = "i18n custom_annotation_tooltip_title";
                 title.textContent = window.Asc.plugin.tr("Explanation");
 
                 const content = document.createElement("div");
