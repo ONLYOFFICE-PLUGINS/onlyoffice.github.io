@@ -262,29 +262,6 @@
             return text.slice(start, end);
         }
 
-        /** @param {Array<AnnotationRange | null> | undefined} ranges */
-        _formatRanges(ranges) {
-            if (!ranges || !Array.isArray(ranges) || ranges.length === 0) {
-                return "";
-            }
-
-            /** @type {AnnotationRange[]} */
-            const safeRanges = ranges.filter((r) => r !== null);
-
-            return safeRanges
-                .map(r => `start=${r.start}, length=${r.length}, id=${r.id}`)
-                .join("\n");
-        }
-
-        /** @param {any} obj */
-        _safeStringify(obj) {
-            try {
-                return JSON.stringify(obj, null, 2);
-            } catch (e) {
-                return String(obj);
-            }
-        }
-
         onThemeChanged(theme) {
             window.Asc.plugin.onThemeChangedBase(theme);
             updateBodyThemeClasses(theme.type, theme.name);
@@ -317,7 +294,7 @@
                 name: name,
             };
 
-            const selectResult = await new Promise((resolve) => {
+            await new Promise((resolve) => {
                 window.Asc.plugin.executeMethod(
                     "SelectAnnotationRange",
                     [annotation],

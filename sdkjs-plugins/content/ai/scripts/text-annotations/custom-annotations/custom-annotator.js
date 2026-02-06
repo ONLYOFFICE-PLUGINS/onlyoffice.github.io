@@ -63,7 +63,7 @@ Object.assign(CustomAnnotator.prototype, {
 
         if (text.length === 0) return false;
 
-        const argPrompt = this._createPrompt(text);
+        let argPrompt = this._createPrompt(text);
 
         if (this._lastUsedPrompt && argPrompt !== this._lastUsedPrompt) {
             let resetInstruction = 

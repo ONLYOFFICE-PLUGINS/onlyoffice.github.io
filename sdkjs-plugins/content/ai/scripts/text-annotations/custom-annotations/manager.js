@@ -63,9 +63,9 @@ class CustomAssistantManager {
 
     /**
      * @param {localStorageCustomAssistantItem} assistantData
-     * @param {boolean} [isForUpdate]
+     * @param {boolean} [isRunning]
      */
-    createAssistant(assistantData, isForUpdate) {
+    createAssistant(assistantData, isRunning) {
         /** @type {Assistant | null} */
         let assistant = null;
         switch (assistantData.type) {
@@ -95,7 +95,7 @@ class CustomAssistantManager {
         }
 
         this._customAssistants.set(assistantData.id, assistant);
-        if (!isForUpdate) {
+        if (!isRunning) {
             this._isCustomAssistantTrackChanges.set(assistantData.id, false);
             this._isCustomAssistantRunning.set(assistantData.id, false);
         }
@@ -192,7 +192,6 @@ class CustomAssistantManager {
             return this.STATUSES.ERROR;
         }
 
-        this._annotationsWatcher.addAssistant(assistant);
         this._isCustomAssistantTrackChanges.set(assistantId, true);
 
         return this.STATUSES.OK;
