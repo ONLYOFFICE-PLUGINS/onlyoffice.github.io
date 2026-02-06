@@ -38,14 +38,13 @@ class AnnotationsWatcher {
     constructor() {
         this._assistants = new Map();
         this._panel = null;
-        /** @type {Map<string, EventAnnotationInfo>} */
+        /** @type {Map<string, AnnotationInfo>} */
         this._annotations = new Map();
     }
 
     showPanel() {
         if (this._panel) {
-            // TODO: update panel
-            return;
+            this._closePanel();
         }
         const description = "List of annotations";
 
@@ -66,11 +65,16 @@ class AnnotationsWatcher {
                 this._panel.command("onAddAnnotations", annotationInfo);
             });
         });
+        this._panel.attachEvent("onAcceptAnnotation", (/** @type {RangeAddress} */ ctx) => {
+            console.log("Accept annotation", ctx);
+        });
+        this._panel.attachEvent("onRejectAnnotation", (/** @type {RangeAddress} */ ctx) => {
+            console.log("Reject annotation", ctx);
+        });
 
         this._panel.show(variation);
 
     }
-
     /** @param {Assistant} assistant */
     addAssistant(assistant) {
         if (this._assistants.has(assistant.assistantData.id)) {
@@ -93,7 +97,14 @@ class AnnotationsWatcher {
         return this._assistants.has(assistantId);
     }
 
-    /** @param {EventAnnotationInfo} annotationInfo */
+    _closePanel() {
+        if (this._panel) {
+            this._panel.close();
+            this._panel = null;
+        }
+    }
+
+    /** @param {AnnotationInfo} annotationInfo */
     _onAddAnnotation(annotationInfo) {
         const key = annotationInfo.paraId + "_" + annotationInfo.assistantData.id;
         this._annotations.set(key, annotationInfo);
@@ -109,7 +120,7 @@ class AnnotationsWatcher {
         }
         rangesInfo.forEach((rangeInfo) => {
             if (rangeInfo.name.slice(0, 16) !== "customAssistant_") {
-                console.warn("Remove annotation: not a custom annotation");
+                console.error("Remove annotation: not a custom annotation");
                 return;
             }
             const key = rangeInfo.paragraphId + "_" + rangeInfo.name.slice(16);

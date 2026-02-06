@@ -47,7 +47,7 @@ function TextAnnotator(annotatorPopup)
 	this.checked = new Set(); // was checked on the previous request
 	
 	this.type = -1;
-    this.onAddAnnotation = (/** @type {EventAnnotationInfo} */ annotationInfo) => {};
+    this.onAddAnnotation = (/** @type {AnnotationInfo} */ annotationInfo) => {};
 	this.onRemoveAnnotation = (/** @type {TextAnnotation} */ annotationInfo) => {};
 }
 /**

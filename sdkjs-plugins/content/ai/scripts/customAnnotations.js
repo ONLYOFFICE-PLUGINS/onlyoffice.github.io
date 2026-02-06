@@ -38,7 +38,7 @@
 (function (window) {
     class AnnotationsPanel {
         constructor() {
-            /** @type {Map<string, EventAnnotationInfo>} */
+            /** @type {Map<string, AnnotationInfo>} */
             this.annotations = new Map();
             /** @type {HTMLElement | null} */
             this.container = document.getElementById("custom_annotations_panel");
@@ -65,7 +65,7 @@
             });
         }
 
-        /** @param {EventAnnotationInfo} annotationInfo */
+        /** @param {AnnotationInfo} annotationInfo */
         onAddAnnotations(annotationInfo) {
             const key = `${annotationInfo.paraId}_${annotationInfo.assistantData.id}`;
             this.annotations.set(key, annotationInfo);
@@ -118,7 +118,7 @@
 
             const allAnnotations = Array.from(this.annotations.values());
 
-            /** @type {Map<string, Map<string, Array<{annotationInfo: EventAnnotationInfo, range: AnnotationRange}>>>} */
+            /** @type {Map<string, Map<string, Array<{annotationInfo: AnnotationInfo, range: AnnotationRange}>>>} */
             const grouped = new Map();
 
             allAnnotations.forEach((annotationInfo) => {
@@ -163,7 +163,7 @@
 
         /**
          * @param {string} assistantName
-         * @param {Map<string, Array<{annotationInfo: EventAnnotationInfo, range: AnnotationRange}>>} byPara
+         * @param {Map<string, Array<{annotationInfo: AnnotationInfo, range: AnnotationRange}>>} byPara
          */
         _createAssistantGroup(assistantName, byPara) {
             const group = document.createElement("div");
@@ -184,7 +184,7 @@
 
         /**
          * @param {string} paraId
-         * @param {Array<{annotationInfo: EventAnnotationInfo, range: AnnotationRange}>} items
+         * @param {Array<{annotationInfo: AnnotationInfo, range: AnnotationRange}>} items
          */
         _createParagraphGroup(paraId, items) {
             const group = document.createElement("div");
@@ -206,21 +206,32 @@
         }
 
         /**
-         * @param {EventAnnotationInfo} annotationInfo
+         * @param {AnnotationInfo} annotationInfo
          * @param {AnnotationRange} range
          */
         _createRangeItem(annotationInfo, range) {
             const root = document.createElement("div");
             root.className = "custom_annotation_item";
 
+            const assistantId = annotationInfo.assistantData && annotationInfo.assistantData.id
+                ? annotationInfo.assistantData.id
+                : "";
+            const name = `customAssistant_${assistantId}`;
+            const paragraphId = annotationInfo.paraId;
+            const rangeId = range.id;
+            const substring = this._getRangeText(annotationInfo.text, range);
+
+            /** @type {RangeAddress} */
+            const actionContext = {
+                paragraphId,
+                rangeId,
+                assistantId,
+            };
+
             root.addEventListener("click", () => {
-                const assistantId = annotationInfo.assistantData && annotationInfo.assistantData.id
-                    ? annotationInfo.assistantData.id
-                    : "";
-                const name = `customAssistant_${assistantId}`;
                 this._selectAnnotationInDocument(
-                    annotationInfo.paraId,
-                    range.id,
+                    paragraphId,
+                    rangeId,
                     name,
                 );
             });
@@ -228,16 +239,36 @@
             const header = document.createElement("div");
             header.className = "custom_annotation_header";
 
-            const title = document.createElement("div");
-            title.className = "custom_annotation_title";
-            title.textContent = `#${range.id}`;
+            const actions = document.createElement("div");
+            actions.className = "custom_annotation_actions";
+
+            const acceptBtn = document.createElement("button");
+            acceptBtn.type = "button";
+            acceptBtn.className = "custom_annotation_action custom_annotation_action_accept";
+            acceptBtn.textContent = "✓";
+            acceptBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this._onAcceptAnnotation(actionContext);
+            });
+
+            const rejectBtn = document.createElement("button");
+            rejectBtn.type = "button";
+            rejectBtn.className = "custom_annotation_action custom_annotation_action_reject";
+            rejectBtn.textContent = "✕";
+            rejectBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this._onRejectAnnotation(actionContext);
+            });
+
+            actions.appendChild(acceptBtn);
+            actions.appendChild(rejectBtn);
 
             const meta = document.createElement("div");
             meta.className = "custom_annotation_meta";
-            meta.textContent = this._getRangeText(annotationInfo.text, range);
+            meta.textContent = substring;
 
-            header.appendChild(title);
             header.appendChild(meta);
+            header.appendChild(actions);
 
             const kv = document.createElement("div");
             kv.className = "custom_annotation_kv";
@@ -302,6 +333,21 @@
                 );
             });
         }
+
+        /**
+         * @param {RangeAddress} ctx
+         */
+        _onAcceptAnnotation(ctx) {
+            window.Asc.plugin.sendToPlugin("onAcceptAnnotation", ctx);
+        }
+
+        /**
+         * @param {RangeAddress} ctx
+         */
+        _onRejectAnnotation(ctx) {
+            window.Asc.plugin.sendToPlugin("onRejectAnnotation", ctx);
+        }
+
     }
 
     const annotationsPanel = new AnnotationsPanel();

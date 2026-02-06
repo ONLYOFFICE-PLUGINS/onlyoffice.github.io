@@ -206,9 +206,9 @@ class CustomAssistantManager {
             throw new Error("Custom assistant not found: " + assistantId);
         }
         const paraIdsToUncheck = [...assistant.checked];
+        await assistant.uncheckParagraphs(paraIdsToUncheck);
         assistant.checked.clear();
         this._isCustomAssistantTrackChanges.set(assistantId, false);
-        await assistant.uncheckParagraphs(paraIdsToUncheck);
         this._annotationsWatcher.removeAssistant(assistantId);
     }
 

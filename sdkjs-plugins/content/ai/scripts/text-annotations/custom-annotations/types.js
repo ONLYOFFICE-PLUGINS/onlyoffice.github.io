@@ -74,7 +74,7 @@
  */
 
 /**
- * @typedef {Object} EventAnnotationInfo 
+ * @typedef {Object} AnnotationInfo 
  * @property {string} paraId
  * @property {string} recalcId
  * @property {string} text
@@ -90,3 +90,9 @@
  * @property {boolean} [all]
 */
 
+/** 
+ * @typedef {Object} RangeAddress
+ * @property {string} paragraphId
+ * @property {number} rangeId
+ * @property {string} assistantId
+ */
