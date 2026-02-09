@@ -85,6 +85,7 @@
  * @property {string} recalcId
  * @property {Array<AnnotationBalloonInfo | null>} balloons
  * @property {string} assistantId
+ * @property {string} assistantName
 */
 
 /**

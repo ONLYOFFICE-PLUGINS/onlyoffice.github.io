@@ -66,12 +66,10 @@ class AnnotationsWatcher {
             });
         });
         this._panel.attachEvent("onAcceptAnnotation", (/** @type {RangeAddress} */ ctx) => {
-            console.log("Accept annotation", ctx);
             const assistant = this._assistants.get(ctx.assistantId);
             assistant.onAccept(ctx.paragraphId, ctx.rangeId);
         });
         this._panel.attachEvent("onRejectAnnotation", (/** @type {RangeAddress} */ ctx) => {
-            console.log("Reject annotation", ctx);
             const assistant = this._assistants.get(ctx.assistantId);
             assistant.onReject(ctx.paragraphId, ctx.rangeId);
         });

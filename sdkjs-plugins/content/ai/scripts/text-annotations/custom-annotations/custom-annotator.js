@@ -108,6 +108,7 @@ Object.assign(CustomAnnotator.prototype, {
                     balloon: this.getInfoForPopup(paraId, range.id),
                 })),
                 assistantId: this.assistantData.id,
+                assistantName: this.assistantData.name,
             };
             this.onAddAnnotation(annotationInfo);
         } catch (e) {}

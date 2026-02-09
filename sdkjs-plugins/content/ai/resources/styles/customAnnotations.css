@@ -9,9 +9,9 @@ html {
 
 .custom_annotations_panel {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 24px);
     box-sizing: border-box;
-    margin: 12px;
+    margin: 12px 0;
     overflow-y: auto;
 }
 
@@ -19,7 +19,8 @@ html {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
+    width: calc(100% - 24px);
+    margin: 0 12px;
 }
 
 .custom_annotations_group {
@@ -62,7 +63,6 @@ html {
 }
 
 .custom_annotation_item:hover {
-    background: #EDF4FC;
     border-color: rgba(0, 120, 215, 0.35);
 }
 
@@ -71,39 +71,55 @@ html {
     width: calc(100% - 24px);
     z-index: 1;
     left: -1px;
-    top: calc(100% - 4px);
+    top: calc(100% + 6px);
     padding: 12px;
     border-style: solid;
-    border-top-width: 0;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-bottom-width: 2px;
+    border-width: 1px;
     border-color: rgba(0, 120, 215, 0.35);
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
+    border-radius: 4px;
     background: #EDF4FC;
     cursor: default;
     pointer-events: none;
-
     opacity: 0;
     visibility: hidden;
     transform: translateY(-2px);
     transition:
-        opacity 140ms ease,
-        transform 140ms ease,
-        visibility 0ms linear 140ms;
+        opacity 200ms ease,
+        transform 200ms ease,
+        visibility 0ms linear 200ms;
+}
+.custom_annotation_tooltip::before,
+.custom_annotation_tooltip::after {
+    content: "";
+    display: inline-block;
+    position: absolute;
+    transform: rotate(180deg);
+    border: 6px solid transparent;
+    left: calc(50% - 6px);
+}
+.custom_annotation_tooltip::before {
+    border-top-color: rgba(0, 120, 215, 0.35);
+    top: -12px;
+}
+.custom_annotation_tooltip::after {
+    border-top-color: #EDF4FC;
+    top: -11px;
 }
 .below-middle .custom_annotation_tooltip {
     top: auto;
-    bottom: calc(100% - 4px);
-    border-top-width: 1px;
-    border-bottom-width: 0;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-
+    bottom: calc(100% + 6px);
     transform: translateY(2px);
+}
+.below-middle .custom_annotation_tooltip::before,
+.below-middle .custom_annotation_tooltip::after {
+    transform: rotate(0deg);
+    top: auto;
+}
+.below-middle .custom_annotation_tooltip::before {
+    bottom: -12px;
+}
+.below-middle .custom_annotation_tooltip::after {
+    bottom: -11px;
 }
 
 .custom_annotation_item:hover .custom_annotation_tooltip {
@@ -111,8 +127,8 @@ html {
     visibility: visible;
     transform: translateY(0);
     transition:
-        opacity 140ms ease,
-        transform 140ms ease,
+        opacity 200ms ease,
+        transform 200ms ease,
         visibility 0ms;
 }
 
@@ -163,7 +179,6 @@ html {
     align-items: baseline;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 8px;
 }
 
 .custom_annotation_actions {
