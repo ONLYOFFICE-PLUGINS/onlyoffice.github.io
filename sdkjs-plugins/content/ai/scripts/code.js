@@ -1200,6 +1200,9 @@ async function customAssistantOnClickToolbarIcon(assistantId, buttonAssistant)
 	});
 
 	await Asc.Editor.callMethod("StartAction", ["Block", preloaderMessage]);
+	buttonAssistant.disabled = true;
+	Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
+
 
 	const status = await customAssistantManager.run(assistantId, paraIds);
 	switch (status) {
@@ -1226,6 +1229,8 @@ async function customAssistantOnClickToolbarIcon(assistantId, buttonAssistant)
 	}
 
 	await Asc.Editor.callMethod("EndAction", ["Block", preloaderMessage]);
+	buttonAssistant.disabled = false;
+	Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
 }
 
 function customAnnotationsWindowShow() {
