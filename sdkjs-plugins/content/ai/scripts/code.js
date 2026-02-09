@@ -1199,7 +1199,7 @@ async function customAssistantOnClickToolbarIcon(assistantId, buttonAssistant)
 		return result;
 	});
 
-	await Asc.Editor.callMethod("StartAction", ["Block", preloaderMessage]);
+	await Asc.Editor.callMethod("StartAction", ["Info", preloaderMessage]);
 	buttonAssistant.disabled = true;
 	Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
 
@@ -1228,7 +1228,7 @@ async function customAssistantOnClickToolbarIcon(assistantId, buttonAssistant)
 			break;		
 	}
 
-	await Asc.Editor.callMethod("EndAction", ["Block", preloaderMessage]);
+	await Asc.Editor.callMethod("EndAction", ["Info", preloaderMessage]);
 	buttonAssistant.disabled = false;
 	Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
 }
