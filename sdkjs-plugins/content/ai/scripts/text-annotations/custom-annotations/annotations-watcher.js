@@ -67,22 +67,25 @@ class AnnotationsWatcher {
         });
         this._panel.attachEvent("onAcceptAnnotation", (/** @type {RangeAddress} */ ctx) => {
             console.log("Accept annotation", ctx);
+            const assistant = this._assistants.get(ctx.assistantId);
+            assistant.onAccept(ctx.paragraphId, ctx.rangeId);
         });
         this._panel.attachEvent("onRejectAnnotation", (/** @type {RangeAddress} */ ctx) => {
             console.log("Reject annotation", ctx);
+            const assistant = this._assistants.get(ctx.assistantId);
+            assistant.onReject(ctx.paragraphId, ctx.rangeId);
         });
 
         this._panel.show(variation);
-
     }
     /** @param {Assistant} assistant */
     addAssistant(assistant) {
-        if (this._assistants.has(assistant.assistantId)) {
+        if (this._assistants.has(assistant.assistantData.id)) {
             console.warn(
-                "Assistant already added: " + assistant.assistantId,
+                "Assistant already added: " + assistant.assistantData.id,
             );
         }
-        this._assistants.set(assistant.assistantId, assistant);
+        this._assistants.set(assistant.assistantData.id, assistant);
         assistant.onRemoveAnnotation = this._onRemoveAnnotation.bind(this);
         assistant.onAddAnnotation = this._onAddAnnotation.bind(this);
     }
