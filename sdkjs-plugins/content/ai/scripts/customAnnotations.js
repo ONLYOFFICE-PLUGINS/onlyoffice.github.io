@@ -115,9 +115,9 @@
                     if (balloons.every(item => item === null)) {
                         assistantAnnotations.delete(rangeInfo.paragraphId);
                     }
-                    if (!assistantAnnotations.size) {
-                        this.annotations.delete(assistantId);
-                    }
+                }
+                if (!assistantAnnotations.size) {
+                    this.annotations.delete(assistantId);
                 }
             });
             this._render();
@@ -126,6 +126,11 @@
         _render() {
             this._numOfAnnotations = 0;
             this._numOfRenderedAnnotations = 0;
+
+            if (!this.annotations.size) {
+                this.listContainer.innerHTML = "<h3>No annotations</h3>";
+                return;
+            }
             this.listContainer.innerHTML = "";
 
             this.annotations.forEach((assistantAnnotations, assistantId) => {
@@ -163,12 +168,6 @@
             const group = document.createElement("div");
             group.className = "custom_annotations_subgroup";
 
-            const header = document.createElement("div");
-            header.className = "custom_annotations_subgroup_header";
-            header.textContent = "Paragraph id: " + paragraphId;
-
-            group.appendChild(header);
-
             balloons.forEach((item) => {
                 if (!item) {
                     return;
@@ -194,6 +193,9 @@
             
             const root = document.createElement("div");
             root.className = "custom_annotation_item";
+            root.setAttribute("data-assistant-id", assistantId);
+            root.setAttribute("data-paragraph-id", paragraphId);
+            root.setAttribute("data-range-id", rangeId.toString());
 
             root.addEventListener("mouseenter", () => {
                 const rect = root.getBoundingClientRect();
@@ -349,17 +351,6 @@
             }
 
             return tooltip;
-        }
-
-        /**
-         * @param {Function} func
-         * @returns {Function}
-         */
-        debounce(func) {
-            return () => {
-                clearTimeout(this._timeout);
-                this._timeout = setTimeout(func, 1000);
-            };
         }
 
         /** @param {any} theme */

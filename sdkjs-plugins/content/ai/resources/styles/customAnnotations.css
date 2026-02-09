@@ -43,13 +43,6 @@ html {
     border-left: 2px solid rgba(0, 0, 0, 0.08);
 }
 
-.custom_annotations_subgroup_header {
-    font-weight: 600;
-    font-size: 12px;
-    opacity: 0.75;
-    padding: 4px 2px;
-}
-
 .custom_annotation_item {
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 4px;
