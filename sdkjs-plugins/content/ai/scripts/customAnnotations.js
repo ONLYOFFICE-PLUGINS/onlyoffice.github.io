@@ -32,6 +32,7 @@
 
 // @ts-check
 
+/// <reference path="../../../v1/asc.d.ts" /> 
 /// <reference path="./utils/theme.js" />
 /// <reference path="./text-annotations/custom-annotations/types.js" />
 

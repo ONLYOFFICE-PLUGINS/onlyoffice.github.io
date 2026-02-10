@@ -32,9 +32,14 @@
 
 // @ts-check
 
+/// <reference path="../../../v1/asc.d.ts" /> 
 /// <reference path="./utils/theme.js" />
 /// <reference path="../vendor/select2-4.0.6-rc.1/dist/js/select2.js" />
 /// <reference path="./text-annotations/custom-annotations/types.js" />
+
+/**
+ * @typedef {import('../../../v1/asc.d.ts').Asc.Theme} AscTheme
+ */
 
 (function (window) {
     const LOCAL_STORAGE_KEY = "onlyoffice_ai_saved_assistants";
@@ -147,6 +152,7 @@
     window.Asc.plugin.onThemeChanged = onThemeChanged;
     window.Asc.plugin.attachEvent("onThemeChanged", onThemeChanged);
 
+    /** @param {AscTheme} theme */
     function onThemeChanged(theme) {
         window.Asc.plugin.onThemeChangedBase(theme);
         updateBodyThemeClasses(theme.type, theme.name);
@@ -210,7 +216,7 @@
 
         selectType = $('#assistantType');
 
-        selectType.on('select2:select', (e) => {
+        selectType.on('select2:select', () => {
             
         });
         selectType.val(0); // Default value
