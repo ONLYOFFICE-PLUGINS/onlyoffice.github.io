@@ -168,6 +168,7 @@
 	"Not able to perform this action. Please use prompts related to text analysis, editing, or formatting.": "无法执行此操作。请使用与文本分析、编辑或格式化相关的提示。",
 	"Processing selection...": "处理选择...",
 	"Processing document...": "处理文档...",
+	"Update...": "更新...",
 	"Action": "操作",
 	"Prompt": "提示词",
 	"Give your tool a short name for the toolbar": "为工具栏提供一个简短的名称",

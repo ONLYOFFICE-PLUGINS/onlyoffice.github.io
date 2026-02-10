@@ -1046,10 +1046,17 @@ function customAssistantWindowShow(assistantId, buttonAssistant)
 					customAssistantWindow.attachEvent("onAddEditAssistant", resolve);
 					customAssistantWindow.command('onClickAdd');
 				});
+				customAssistantWindowClose();
 				if (!element) return;
 				if (buttonAssistant) {
+					let preloaderMessage = window.Asc.plugin.tr("Update...");
+					await Asc.Editor.callMethod("StartAction", ["Info", preloaderMessage]);
 					buttonAssistant.text = element.name;
-					customAssistantManager.updateAssistant(element);
+					buttonAssistant.disabled = true;
+					Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
+					await customAssistantManager.updateAssistant(element);
+					buttonAssistant.disabled = false;
+					await Asc.Editor.callMethod("EndAction", ["Info", preloaderMessage]);
 				} else {
 					buttonAssistant = new Asc.ButtonToolbar(null);
 					buttonAssistant.text = element.name;
@@ -1072,8 +1079,10 @@ function customAssistantWindowShow(assistantId, buttonAssistant)
 					customAssistantManager.createAssistant(element);
 				}
 				Asc.Buttons.updateToolbarMenu(window.buttonMainToolbar.id, window.buttonMainToolbar.name, [buttonAssistant]);
+			} else {
+				customAssistantWindowClose();
 			}
-			customAssistantWindowClose();
+
 		} else {
 			await window.pluginsButtonsCallback(id, windowId, ...args);
 		}

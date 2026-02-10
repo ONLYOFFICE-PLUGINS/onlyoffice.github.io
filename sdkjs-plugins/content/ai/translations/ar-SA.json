@@ -167,6 +167,7 @@
 	"Not able to perform this action. Please use prompts related to text analysis, editing, or formatting.": "غير قادر على تنفيذ هذا الإجراء. يرجى استخدام تعليمات متعلقة بتحليل النصوص، التحرير، أو التنسيق.",
 	"Processing selection...": "معالجة التحديد...",
 	"Processing document...": "معالجة المستند...",
+	"Update...": "تحديث...",
 	"Action": "إجراء",
 	"Prompt": "إدخال",
 	"Give your tool a short name for the toolbar": "أعطِ أداةك اسماً قصيراً للشريط الأدائي",

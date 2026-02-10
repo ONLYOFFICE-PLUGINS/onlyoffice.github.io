@@ -167,6 +167,7 @@
 	"Not able to perform this action. Please use prompts related to text analysis, editing, or formatting.": "No se puede realizar esta acción. Por favor, use prompts relacionados con el análisis, edición o formato de texto.",
 	"Processing selection...": "Procesamiento de la selección...",
 	"Processing document...": "Procesamiento del documento...",
+	"Update...": "Actualizar...",
 	"Action": "Acción",
 	"Prompt": "Prompt",
 	"Give your tool a short name for the toolbar": "Dale un nombre corto a tu herramienta para la barra de herramientas",

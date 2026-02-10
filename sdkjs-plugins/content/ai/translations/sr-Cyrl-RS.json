@@ -168,6 +168,7 @@
 	"Not able to perform this action. Please use prompts related to text analysis, editing, or formatting.": "Није могуће извршити ову акцију. Молимо користите промпте повезане са анализом текста, уређивањем или форматирањем.",
 	"Processing selection...": "Процесирање избора...",
 	"Processing document...": "Процесирање документа...",
+	"Update...": "Ажурирање...",
 	"Action": "Акција",
 	"Prompt": "Пометка",
 	"Give your tool a short name for the toolbar": "Дајте вашем alatu kratko ime za alatnu traku",

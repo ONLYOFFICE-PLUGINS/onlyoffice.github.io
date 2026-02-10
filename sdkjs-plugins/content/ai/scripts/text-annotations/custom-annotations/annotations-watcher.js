@@ -79,9 +79,7 @@ class AnnotationsWatcher {
     /** @param {Assistant} assistant */
     addAssistant(assistant) {
         if (this._assistants.has(assistant.assistantData.id)) {
-            console.warn(
-                "Assistant already added: " + assistant.assistantData.id,
-            );
+            // console.warn("Assistant already added: " + assistant.assistantData.id);
         }
         this._assistants.set(assistant.assistantData.id, assistant);
         assistant.onRemoveAnnotation = this._onRemoveAnnotation.bind(this);

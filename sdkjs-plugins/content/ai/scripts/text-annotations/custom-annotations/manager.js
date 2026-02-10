@@ -105,7 +105,7 @@ class CustomAssistantManager {
     /**
      * @param {localStorageCustomAssistantItem} assistantData
      */
-    updateAssistant(assistantData) {
+    async updateAssistant(assistantData) {
         let oldAssistant = this._customAssistants.get(assistantData.id);
         if (!oldAssistant) {
             throw new Error("Custom assistant not found: " + assistantData.id);
@@ -116,18 +116,22 @@ class CustomAssistantManager {
         if (!isRunning) {
             return newAssistant;
         }
-
+        /** @type {Promise<boolean | null>[]} */
+        const promises = [];
         this._paragraphsStack.forEach((value, paraId) => {
-            newAssistant.onChangeParagraph(
+            const promise = newAssistant.onChangeParagraph(
                 paraId,
                 value.recalcId,
                 value.text,
                 value.annotations,
             );
+            promises.push(promise);
         });
+        await Promise.all(promises);
+        
         const paragraphIdsToUpdate = [...oldAssistant.checked];
         oldAssistant.checked.clear();
-        newAssistant.checkParagraphs(paragraphIdsToUpdate);
+        await newAssistant.checkParagraphs(paragraphIdsToUpdate);
 
         return newAssistant;
     }

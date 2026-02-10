@@ -168,6 +168,7 @@
 	"Not able to perform this action. Please use prompts related to text analysis, editing, or formatting.": "Не удается выполнить это действие. Пожалуйста, используйте запросы, связанные с анализом текста, редактированием или форматированием.",
 	"Processing selection...": "Обработка выделенного фрагмента...",
 	"Processing document...": "Обработка документа...",
+	"Update...": "Обновление...",
 	"Action": "Действие",
 	"Prompt": "Пометка",
 	"Give your tool a short name for the toolbar": "Дайте вашему инструменту короткое имя для панели инструментов",
