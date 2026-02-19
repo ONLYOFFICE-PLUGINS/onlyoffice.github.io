@@ -460,274 +460,265 @@ function _delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var ZoteroSdk = function ZoteroSdk() {
-    this._apiKey = null;
-    this._userId = 0;
-    this._userGroups = [];
-    this._isOnlineAvailable = true;
-    this._fetcher = new RateLimitedFetcher({
-        maxRetries: 5,
-        initialDelay: 5e3
-    });
-};
-
-ZoteroSdk.prototype.ZOTERO_API_VERSION = "3";
-
-ZoteroSdk.prototype.USER_AGENT = "AscDesktopEditor";
-
-ZoteroSdk.prototype.DEFAULT_FORMAT = "csljson";
-
-ZoteroSdk.prototype.STORAGE_KEYS = {
-    USER_ID: "zoteroUserId",
-    API_KEY: "zoteroApiKey"
-};
-
-ZoteroSdk.prototype.API_PATHS = {
-    USERS: "users",
-    GROUPS: "groups",
-    ITEMS: "items",
-    KEYS: "keys"
-};
-
-ZoteroSdk.prototype._getBaseUrl = function() {
-    return this._isOnlineAvailable ? zoteroEnvironment.restApiUrl : zoteroEnvironment.desktopApiUrl;
-};
-
-ZoteroSdk.prototype._getDesktopRequest = function(url) {
-    var self = this;
-    return new Promise(function(resolve, reject) {
-        window.AscSimpleRequest.createRequest({
-            url: url,
-            method: "GET",
-            headers: {
-                "Zotero-API-Version": self.ZOTERO_API_VERSION,
-                "User-Agent": self.USER_AGENT
-            },
-            complete: resolve,
-            error: function error(_error) {
-                if (_error.statusCode === -102) {
-                    _error.statusCode = 404;
-                    _error.message = "Connection to Zotero failed. Make sure Zotero is running";
+class Sdk {
+    constructor(authFlow) {
+        this._mendeleySdk = MendeleySDK(authFlow);
+        this._apiKey = null;
+        this._userId = 0;
+        this._userGroups = [];
+        this._isOnlineAvailable = true;
+        this._fetcher = new RateLimitedFetcher({
+            maxRetries: 5,
+            initialDelay: 5e3
+        });
+        this.ZOTERO_API_VERSION = "3";
+        this.USER_AGENT = "AscDesktopEditor";
+        this.DEFAULT_FORMAT = "csljson";
+        this.STORAGE_KEYS = {
+            USER_ID: "zoteroUserId",
+            API_KEY: "zoteroApiKey"
+        };
+        this.API_PATHS = {
+            USERS: "users",
+            GROUPS: "groups",
+            ITEMS: "items",
+            KEYS: "keys"
+        };
+    }
+    _getBaseUrl() {
+        return this._isOnlineAvailable ? zoteroEnvironment.restApiUrl : zoteroEnvironment.desktopApiUrl;
+    }
+    _getDesktopRequest(url) {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            window.AscSimpleRequest.createRequest({
+                url: url,
+                method: "GET",
+                headers: {
+                    "Zotero-API-Version": self.ZOTERO_API_VERSION,
+                    "User-Agent": self.USER_AGENT
+                },
+                complete: resolve,
+                error: function error(_error) {
+                    if (_error.statusCode === -102) {
+                        _error.statusCode = 404;
+                        _error.message = "Connection to Zotero failed. Make sure Zotero is running";
+                    }
+                    reject(_error);
                 }
-                reject(_error);
+            });
+        });
+    }
+    _getOnlineRequest(url) {
+        var headers = {
+            "Zotero-API-Version": this.ZOTERO_API_VERSION,
+            "Zotero-API-Key": this._apiKey || ""
+        };
+        return fetch(url, {
+            headers: headers
+        }).then(function(response) {
+            if (!response.ok) {
+                var message = response.status + " " + response.statusText;
+                console.error(message);
+                throw new Error(message);
+            }
+            return response;
+        }).catch(function(error) {
+            if (typeof error === "object") {
+                error.message = "Connection to Zotero failed";
+            }
+            throw error;
+        });
+    }
+    _getRequestWithOfflineSupport(url) {
+        return this._isOnlineAvailable ? this._getOnlineRequest(url) : this._getDesktopRequest(url.href);
+    }
+    _buildGetRequest(path, queryParams) {
+        queryParams = queryParams || {};
+        var url = new URL(path, this._getBaseUrl());
+        Object.keys(queryParams).forEach(function(key) {
+            if (queryParams[key] !== undefined && queryParams[key] !== null) {
+                url.searchParams.append(key, queryParams[key]);
             }
         });
-    });
-};
-
-ZoteroSdk.prototype._getOnlineRequest = function(url) {
-    var headers = {
-        "Zotero-API-Version": this.ZOTERO_API_VERSION,
-        "Zotero-API-Key": this._apiKey || ""
-    };
-    return fetch(url, {
-        headers: headers
-    }).then(function(response) {
-        if (!response.ok) {
-            var message = response.status + " " + response.statusText;
-            console.error(message);
-            throw new Error(message);
-        }
-        return response;
-    }).catch(function(error) {
-        if (typeof error === "object") {
-            error.message = "Connection to Zotero failed";
-        }
-        throw error;
-    });
-};
-
-ZoteroSdk.prototype._getRequestWithOfflineSupport = function(url) {
-    return this._isOnlineAvailable ? this._getOnlineRequest(url) : this._getDesktopRequest(url.href);
-};
-
-ZoteroSdk.prototype._buildGetRequest = function(path, queryParams) {
-    queryParams = queryParams || {};
-    var url = new URL(path, this._getBaseUrl());
-    Object.keys(queryParams).forEach(function(key) {
-        if (queryParams[key] !== undefined && queryParams[key] !== null) {
-            url.searchParams.append(key, queryParams[key]);
-        }
-    });
-    return this._getRequestWithOfflineSupport(url);
-};
-
-ZoteroSdk.prototype._parseLinkHeader = function(headerValue) {
-    var links = {};
-    var linkHeaderRegex = /<(.*?)>; rel="(.*?)"/g;
-    if (!headerValue) return links;
-    var match;
-    while ((match = linkHeaderRegex.exec(headerValue.trim())) !== null) {
-        links[match[2]] = match[1];
+        return this._getRequestWithOfflineSupport(url);
     }
-    return links;
-};
-
-ZoteroSdk.prototype._parseDesktopItemsResponse = function(promise, resolve, reject, id) {
-    return promise.then(function(response) {
-        return {
-            items: JSON.parse(response.responseText),
-            id: id
-        };
-    }).then(resolve).catch(reject);
-};
-
-ZoteroSdk.prototype._parseItemsResponse = function(promise, resolve, reject, id) {
-    var self = this;
-    return promise.then(function(response) {
-        return Promise.all([ response.json(), response ]);
-    }).then(function(results) {
-        var json = results[0];
-        var response = results[1];
-        var links = self._parseLinkHeader(response.headers.get("Link") || "");
-        var result = {
-            items: json,
-            id: id
-        };
-        if (typeof json === "object" && json.items) {
-            result.items = json.items;
+    _parseLinkHeader(headerValue) {
+        var links = {};
+        var linkHeaderRegex = /<(.*?)>; rel="(.*?)"/g;
+        if (!headerValue) return links;
+        var match;
+        while ((match = linkHeaderRegex.exec(headerValue.trim())) !== null) {
+            links[match[2]] = match[1];
         }
-        if (links.next) {
-            result.next = function() {
-                return new Promise(function(rs, rj) {
-                    self._parseItemsResponse(self._getOnlineRequest(new URL(links.next)), rs, rj, id);
-                });
+        return links;
+    }
+    _parseDesktopItemsResponse(promise, resolve, reject, id) {
+        return promise.then(function(response) {
+            return {
+                items: JSON.parse(response.responseText),
+                id: id
             };
-        }
-        resolve(result);
-    }).catch(reject);
-};
-
-ZoteroSdk.prototype._parseResponse = function(promise, resolve, reject, id) {
-    if (this._isOnlineAvailable) {
-        var fetchPromise = promise;
-        this._parseItemsResponse(fetchPromise, resolve, reject, id);
-    } else {
-        var ascSimplePromise = promise;
-        this._parseDesktopItemsResponse(ascSimplePromise, resolve, reject, id);
+        }).then(resolve).catch(reject);
     }
-};
-
-ZoteroSdk.prototype.getItems = function(search, itemsID, format) {
-    var self = this;
-    format = format || self.DEFAULT_FORMAT;
-    return new Promise(function(resolve, reject) {
-        var queryParams = {
-            format: format,
-            itemType: "-attachment"
-        };
-        if (search) {
-            queryParams.q = search;
-        } else if (itemsID) {
-            queryParams.itemKey = itemsID.join(",");
-        } else {
-            queryParams.limit = 20;
-        }
-        var path = self.API_PATHS.USERS + "/" + self._userId + "/" + self.API_PATHS.ITEMS;
-        var request = self._buildGetRequest(path, queryParams);
-        return self._parseResponse(request, resolve, reject, self._userId);
-    });
-};
-
-ZoteroSdk.prototype.getGroupItems = function(search, groupId, itemsID, format) {
-    var self = this;
-    format = format || self.DEFAULT_FORMAT;
-    return new Promise(function(resolve, reject) {
-        var queryParams = {
-            format: format
-        };
-        if (search) {
-            queryParams.q = search;
-        } else if (itemsID) {
-            queryParams.itemKey = itemsID.join(",");
-        }
-        var path = self.API_PATHS.GROUPS + "/" + groupId + "/" + self.API_PATHS.ITEMS;
-        var request = self._buildGetRequest(path, queryParams);
-        return self._parseResponse(request, resolve, reject, groupId);
-    });
-};
-
-ZoteroSdk.prototype.getUserGroups = function() {
-    var self = this;
-    return new Promise(function(resolve, reject) {
-        if (self._userGroups.length > 0) {
-            resolve(self._userGroups);
-            return;
-        }
-        var path = self.API_PATHS.USERS + "/" + self._userId + "/groups";
-        self._buildGetRequest(path).then(function(response) {
-            if (self._isOnlineAvailable) {
-                var fetchResponse = response;
-                if (!fetchResponse.ok) {
-                    throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
-                }
-                return fetchResponse.json();
+    _parseItemsResponse(promise, resolve, reject, id) {
+        var self = this;
+        return promise.then(function(response) {
+            return Promise.all([ response.json(), response ]);
+        }).then(function(results) {
+            var json = results[0];
+            var response = results[1];
+            var links = self._parseLinkHeader(response.headers.get("Link") || "");
+            var result = {
+                items: json,
+                id: id
+            };
+            if (typeof json === "object" && json.items) {
+                result.items = json.items;
             }
-            var ascSimpleResponse = response;
-            return JSON.parse(ascSimpleResponse.responseText);
-        }).then(function(groups) {
-            self._userGroups = groups.map(function(group) {
-                return {
-                    id: group.id,
-                    name: group.data.name
+            if (links.next) {
+                result.next = function() {
+                    return new Promise(function(rs, rj) {
+                        self._parseItemsResponse(self._getOnlineRequest(new URL(links.next)), rs, rj, id);
+                    });
                 };
-            });
-            resolve(self._userGroups);
+            }
+            resolve(result);
         }).catch(reject);
-    });
-};
-
-ZoteroSdk.prototype.setApiKey = function(key) {
-    var self = this;
-    var path = this.API_PATHS.KEYS + "/" + key;
-    return this._buildGetRequest(path).then(function(response) {
-        var fetchResponse = response;
-        if (!fetchResponse.ok) {
-            throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
-        }
-        return fetchResponse.json();
-    }).then(function(keyData) {
-        self._saveSettings(keyData.userID, key);
-        return true;
-    });
-};
-
-ZoteroSdk.prototype._applySettings = function(userId, apiKey) {
-    this._userId = userId;
-    this._apiKey = apiKey;
-};
-
-ZoteroSdk.prototype._saveSettings = function(userId, apiKey) {
-    this._applySettings(userId, apiKey);
-    localStorage.setItem(this.STORAGE_KEYS.USER_ID, String(userId));
-    localStorage.setItem(this.STORAGE_KEYS.API_KEY, apiKey);
-};
-
-ZoteroSdk.prototype.hasSettings = function() {
-    var userId = localStorage.getItem(this.STORAGE_KEYS.USER_ID);
-    var apiKey = localStorage.getItem(this.STORAGE_KEYS.API_KEY);
-    if (userId && apiKey) {
-        this._applySettings(Number(userId), apiKey);
-        return true;
     }
-    return false;
-};
-
-ZoteroSdk.prototype.clearSettings = function() {
-    localStorage.removeItem(this.STORAGE_KEYS.USER_ID);
-    localStorage.removeItem(this.STORAGE_KEYS.API_KEY);
-    this._userGroups = [];
-    this._userId = 0;
-    this._apiKey = null;
-};
-
-ZoteroSdk.prototype.getUserId = function() {
-    return this._userId;
-};
-
-ZoteroSdk.prototype.setIsOnlineAvailable = function(isOnline) {
-    this._isOnlineAvailable = isOnline;
-};
+    _parseResponse(promise, resolve, reject, id) {
+        if (this._isOnlineAvailable) {
+            var fetchPromise = promise;
+            this._parseItemsResponse(fetchPromise, resolve, reject, id);
+        } else {
+            var ascSimplePromise = promise;
+            this._parseDesktopItemsResponse(ascSimplePromise, resolve, reject, id);
+        }
+    }
+    getItems(search, itemsID, format) {
+        var self = this;
+        format = format || self.DEFAULT_FORMAT;
+        if (search) {
+            return this._mendeleySdk.documents.search({
+                query: search,
+                limit: 20,
+                view: "bib"
+            });
+        } else if (itemsID) ; else {
+            return this._mendeleySdk.documents.list({
+                limit: 20,
+                view: "bib"
+            });
+        }
+        return new Promise(function(resolve, reject) {
+            var queryParams = {
+                format: format,
+                itemType: "-attachment"
+            };
+            if (search) {
+                queryParams.q = search;
+            } else if (itemsID) {
+                queryParams.itemKey = itemsID.join(",");
+            } else {
+                queryParams.limit = 20;
+            }
+            var path = self.API_PATHS.USERS + "/" + self._userId + "/" + self.API_PATHS.ITEMS;
+            var request = self._buildGetRequest(path, queryParams);
+            return self._parseResponse(request, resolve, reject, self._userId);
+        });
+    }
+    getGroupItems(search, groupId, itemsID, format) {
+        var self = this;
+        format = format || self.DEFAULT_FORMAT;
+        return new Promise(function(resolve, reject) {
+            var queryParams = {
+                format: format
+            };
+            if (search) {
+                queryParams.q = search;
+            } else if (itemsID) {
+                queryParams.itemKey = itemsID.join(",");
+            }
+            var path = self.API_PATHS.GROUPS + "/" + groupId + "/" + self.API_PATHS.ITEMS;
+            var request = self._buildGetRequest(path, queryParams);
+            return self._parseResponse(request, resolve, reject, groupId);
+        });
+    }
+    getUserGroups() {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            if (self._userGroups.length > 0) {
+                resolve(self._userGroups);
+                return;
+            }
+            var path = self.API_PATHS.USERS + "/" + self._userId + "/groups";
+            self._buildGetRequest(path).then(function(response) {
+                if (self._isOnlineAvailable) {
+                    var fetchResponse = response;
+                    if (!fetchResponse.ok) {
+                        throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
+                    }
+                    return fetchResponse.json();
+                }
+                var ascSimpleResponse = response;
+                return JSON.parse(ascSimpleResponse.responseText);
+            }).then(function(groups) {
+                self._userGroups = groups.map(function(group) {
+                    return {
+                        id: group.id,
+                        name: group.data.name
+                    };
+                });
+                resolve(self._userGroups);
+            }).catch(reject);
+        });
+    }
+    setApiKey(key) {
+        var self = this;
+        var path = this.API_PATHS.KEYS + "/" + key;
+        return this._buildGetRequest(path).then(function(response) {
+            var fetchResponse = response;
+            if (!fetchResponse.ok) {
+                throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
+            }
+            return fetchResponse.json();
+        }).then(function(keyData) {
+            self._saveSettings(keyData.userID, key);
+            return true;
+        });
+    }
+    _applySettings(userId, apiKey) {
+        this._userId = userId;
+        this._apiKey = apiKey;
+    }
+    _saveSettings(userId, apiKey) {
+        this._applySettings(userId, apiKey);
+        localStorage.setItem(this.STORAGE_KEYS.USER_ID, String(userId));
+        localStorage.setItem(this.STORAGE_KEYS.API_KEY, apiKey);
+    }
+    hasSettings() {
+        var userId = localStorage.getItem(this.STORAGE_KEYS.USER_ID);
+        var apiKey = localStorage.getItem(this.STORAGE_KEYS.API_KEY);
+        if (userId && apiKey) {
+            this._applySettings(Number(userId), apiKey);
+            return true;
+        }
+        return false;
+    }
+    clearSettings() {
+        localStorage.removeItem(this.STORAGE_KEYS.USER_ID);
+        localStorage.removeItem(this.STORAGE_KEYS.API_KEY);
+        this._userGroups = [];
+        this._userId = 0;
+        this._apiKey = null;
+    }
+    getUserId() {
+        return this._userId;
+    }
+    setIsOnlineAvailable(isOnline) {
+        this._isOnlineAvailable = isOnline;
+    }
+}
 
 function InputField(input, options) {
     var self = this;
@@ -6504,25 +6495,21 @@ class LoginPage {
     constructor(router) {
         this._router = router;
         this._redirectConfigField = new InputField("redirectConfig", {
-            readonly: true
+            readonly: true,
+            showClear: false
         });
-        this._redirectUrlCopyBtn = new Button("redirectUrlCopy", {});
+        this._redirectUrlCopyBtn = new Button("redirectUrlCopy", {
+            variant: "secondary"
+        });
         this._appIdField = new InputField("appIdField", {
             autofocus: true,
             autocomplete: "on"
         });
-        this._saveConfigBtn = new Button("saveConfigBtn", {
-            disabled: true
+        this._loginBtn = new Button("loginBtn", {
+            variant: "primary"
         });
-        this._saveConfigMessage = new Message("saveConfigMessage", {
-            type: "error"
-        });
-        this._loginBtn = new Button("loginBtn", {});
         this._loginMessage = new Message("loginMessage", {
             type: "error"
-        });
-        this._reconfigBtn = new Button("reconfigBtn", {
-            variant: "secondary"
         });
         this._logoutLink = document.getElementById("logoutLink");
         if (!this._logoutLink) {
@@ -6550,16 +6537,15 @@ class LoginPage {
             }
         };
         if (this._mendAppId) {
+            this._appIdField.setValue(this._mendAppId);
             var token = localStorage.getItem("mendToken");
             if (token) {
-                self._hide(true);
+                self._hide();
                 Promise.resolve().then(() => {
                     self._onAuthorized();
                 });
                 return triggers;
             }
-        } else {
-            switchAuthState("config");
         }
         self._show();
         Promise.resolve().then(() => {
@@ -6579,7 +6565,23 @@ class LoginPage {
         }
         localStorage.setItem("mendToken", answer);
         this._onAuthorized();
+        this._hideLoader();
+        this._hide();
         return true;
+    }
+    getAuthFlow() {
+        return {
+            authenticate: () => {
+                this._show();
+                this._authenticate();
+            },
+            getToken: function getToken() {
+                return localStorage.getItem("mendToken");
+            },
+            refreshToken: function refreshToken() {
+                return false;
+            }
+        };
     }
     _addEventListeners() {
         var self = this;
@@ -6587,9 +6589,9 @@ class LoginPage {
             if (event.type !== "inputfield:submit") ;
             if (event.type === "inputfield:input") {
                 if (self._appIdField.getValue()) {
-                    self._saveConfigBtn.enable();
+                    self._loginBtn.enable();
                 } else {
-                    self._saveConfigBtn.disable();
+                    self._loginBtn.disable();
                 }
             }
         });
@@ -6600,33 +6602,27 @@ class LoginPage {
             navigator.clipboard.writeText(self._redirectConfigField.getValue());
             window.open("https://dev.mendeley.com/myapps.html", "_blank");
         });
-        this._saveConfigBtn.subscribe(function(event) {
-            if (event.type !== "button:click") {
-                return;
-            }
-            self._saveConfig();
-        });
         this._loginBtn.subscribe(function(event) {
             if (event.type !== "button:click") {
                 return;
             }
             self._authenticate();
         });
-        this._reconfigBtn.subscribe(function(event) {
-            if (event.type !== "button:click") {
-                return;
-            }
-            self._showLoader();
-            self._hideLoader();
-        });
         this._logoutLink.onclick = function(e) {
-            self._sdk.clearSettings();
+            document.cookie = "mendToken=; max-age=0";
+            localStorage.removeItem("mendToken");
             self._show();
             return true;
         };
     }
     _authenticate() {
-        var self = this;
+        var appid = this._appIdField.getValue();
+        if (!appid) {
+            this._loginMessage.show(translate("AppId is empty"));
+            return;
+        }
+        this._mendAppId = appid;
+        localStorage.setItem("mendAppId", appid);
         if (!this._mendAppId) {
             this._loginMessage.show(translate("Please enter your Mendeley App ID"));
             return;
@@ -6639,41 +6635,28 @@ class LoginPage {
             this._hideLoader();
             return;
         }
-        wnd.addEventListener("beforeunload", function() {
-            self._hideLoader();
-        });
-    }
-    _saveConfig() {
-        var appid = this._appIdField.getValue();
-        if (appid) {
-            this._mendAppId = appid;
-            localStorage.setItem("mendAppId", appid);
-            switchAuthState("login");
-        } else {
-            this._saveConfigMessage.show(translate("AppId is empty"));
-        }
+        var timer = setInterval(() => {
+            if (!wnd || wnd.closed) {
+                clearInterval(timer);
+                this._hideLoader();
+            }
+        }, 500);
     }
     _hideAllMessages() {}
-    _hide(bShowLogoutLink) {
+    _hide() {
         this._router.openMain();
-        if (bShowLogoutLink) {
-            this._logoutLink.classList.remove("hidden");
-        }
+        this._logoutLink.classList.remove("hidden");
     }
     _show() {
         this._router.openLogin();
         this._logoutLink.classList.add("hidden");
     }
     _showLoader() {
-        this._saveConfigBtn.disable();
         this._loginBtn.disable();
-        this._reconfigBtn.disable();
         this._appIdField.disable();
     }
     _hideLoader() {
-        this._saveConfigBtn.enable();
         this._loginBtn.enable();
-        this._reconfigBtn.enable();
         this._appIdField.enable();
     }
 }
@@ -7341,7 +7324,6 @@ SelectCitationsComponent.prototype.count = function() {
         };
     }
     window.Asc.plugin.init = function() {
-        console.warn(window.Asc);
         if (isLocal) {
             var message = "This plugin doesn't work into Desktop Editors.";
             var content = document.getElementById("content");
@@ -7355,20 +7337,23 @@ SelectCitationsComponent.prototype.count = function() {
         Loader.show();
         initElements();
         router = new Router;
-        sdk = new ZoteroSdk;
         loginPage = new LoginPage(router);
+        sdk = new Sdk({
+            authFlow: loginPage.getAuthFlow()
+        });
         settings = new SettingsPage(router, displayNoneClass);
         citationService = new CitationService(settings.getLocalesManager(), settings.getStyleManager(), sdk);
         var isInit = false;
         addEventListeners();
         loginPage.init().onOpen(function() {
             Loader.hide();
-        }).onAuthorized(function(apis) {
+        }).onAuthorized(function() {
             if (isInit) return;
             isInit = true;
             Loader.show();
             Promise.all([ settings.init() ]).then(function() {
                 Loader.hide();
+                showCitationsAtTheStartFromMyLibrary();
             });
         });
         window.Asc.plugin.onTranslate = applyTranslations;
@@ -7385,32 +7370,40 @@ SelectCitationsComponent.prototype.count = function() {
     window.OAuthCallback = function(token, state) {
         loginPage.onAuthCallback(token, state);
     };
+    function showCitationsAtTheStartFromMyLibrary() {
+        libLoader.show();
+        var promise = sdk.getItems(null).then(res => {
+            delete res.next;
+            return res;
+        });
+        loadLibrary(promise, false).then(res => {
+            if (res > 0) {
+                updateHeaderText("started");
+            } else {
+                updateHeaderText("empty");
+            }
+        }).finally(() => {
+            libLoader.hide();
+        });
+    }
     function addEventListeners() {
         selectCitation.subscribe(checkSelected);
         function searchFor(text, selectedGroups, groupsHash) {
             selectCitation.clearLibrary();
             var promises = [];
-            return sdk.getUserGroups().then(function(userGroups) {
-                var groups = selectedGroups.filter(function(group) {
-                    return group !== "my_library" && group !== "group_libraries";
-                });
-                if (selectedGroups.indexOf("my_library") !== -1) {
-                    promises.push(loadLibrary(sdk.getItems(text), false));
-                }
-                for (var i = 0; i < groups.length; i++) {
-                    promises.push(loadLibrary(sdk.getGroupItems(text, groups[i]), true));
-                }
+            return new Promise(resolve => {
+                promises.push(loadLibrary(sdk.getItems(text), false));
                 lastSearch.text = text;
                 lastSearch.obj = null;
                 lastSearch.groups = [];
                 lastSearch.groupsHash = groupsHash;
-                return promises;
+                resolve(promises);
             });
         }
         searchFilter.subscribe(function(text, selectedGroups) {
             text = text.trim();
             var groupsHash = selectedGroups.join(",");
-            if (elements.mainState.classList.contains(displayNoneClass) || !text || text == lastSearch.text && groupsHash === lastSearch.groupsHash || selectedGroups.length === 0) return;
+            if (elements.mainState.classList.contains(displayNoneClass) || !text || text == lastSearch.text && groupsHash === lastSearch.groupsHash) return;
             searchFor(text, selectedGroups, groupsHash).catch(() => []).then(function(promises) {
                 if (promises.length) {
                     libLoader.show();
