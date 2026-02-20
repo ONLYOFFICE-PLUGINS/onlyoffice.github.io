@@ -327,7 +327,7 @@
         }
     }
     var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
-    var es_array_filter = {};
+    var es_array_includes = {};
     var globalThis_1;
     var hasRequiredGlobalThis;
     function requireGlobalThis() {
@@ -1484,291 +1484,6 @@
         };
         return _export;
     }
-    var functionUncurryThisClause;
-    var hasRequiredFunctionUncurryThisClause;
-    function requireFunctionUncurryThisClause() {
-        if (hasRequiredFunctionUncurryThisClause) return functionUncurryThisClause;
-        hasRequiredFunctionUncurryThisClause = 1;
-        var classofRaw = requireClassofRaw();
-        var uncurryThis = requireFunctionUncurryThis();
-        functionUncurryThisClause = function(fn) {
-            if (classofRaw(fn) === "Function") return uncurryThis(fn);
-        };
-        return functionUncurryThisClause;
-    }
-    var functionBindContext;
-    var hasRequiredFunctionBindContext;
-    function requireFunctionBindContext() {
-        if (hasRequiredFunctionBindContext) return functionBindContext;
-        hasRequiredFunctionBindContext = 1;
-        var uncurryThis = requireFunctionUncurryThisClause();
-        var aCallable = requireACallable();
-        var NATIVE_BIND = requireFunctionBindNative();
-        var bind = uncurryThis(uncurryThis.bind);
-        functionBindContext = function(fn, that) {
-            aCallable(fn);
-            return that === undefined ? fn : NATIVE_BIND ? bind(fn, that) : function() {
-                return fn.apply(that, arguments);
-            };
-        };
-        return functionBindContext;
-    }
-    var isArray;
-    var hasRequiredIsArray;
-    function requireIsArray() {
-        if (hasRequiredIsArray) return isArray;
-        hasRequiredIsArray = 1;
-        var classof = requireClassofRaw();
-        isArray = Array.isArray || function isArray(argument) {
-            return classof(argument) === "Array";
-        };
-        return isArray;
-    }
-    var toStringTagSupport;
-    var hasRequiredToStringTagSupport;
-    function requireToStringTagSupport() {
-        if (hasRequiredToStringTagSupport) return toStringTagSupport;
-        hasRequiredToStringTagSupport = 1;
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var TO_STRING_TAG = wellKnownSymbol("toStringTag");
-        var test = {};
-        test[TO_STRING_TAG] = "z";
-        toStringTagSupport = String(test) === "[object z]";
-        return toStringTagSupport;
-    }
-    var classof;
-    var hasRequiredClassof;
-    function requireClassof() {
-        if (hasRequiredClassof) return classof;
-        hasRequiredClassof = 1;
-        var TO_STRING_TAG_SUPPORT = requireToStringTagSupport();
-        var isCallable = requireIsCallable();
-        var classofRaw = requireClassofRaw();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var TO_STRING_TAG = wellKnownSymbol("toStringTag");
-        var $Object = Object;
-        var CORRECT_ARGUMENTS = classofRaw(function() {
-            return arguments;
-        }()) === "Arguments";
-        var tryGet = function(it, key) {
-            try {
-                return it[key];
-            } catch (error) {}
-        };
-        classof = TO_STRING_TAG_SUPPORT ? classofRaw : function(it) {
-            var O, tag, result;
-            return it === undefined ? "Undefined" : it === null ? "Null" : typeof (tag = tryGet(O = $Object(it), TO_STRING_TAG)) == "string" ? tag : CORRECT_ARGUMENTS ? classofRaw(O) : (result = classofRaw(O)) === "Object" && isCallable(O.callee) ? "Arguments" : result;
-        };
-        return classof;
-    }
-    var isConstructor;
-    var hasRequiredIsConstructor;
-    function requireIsConstructor() {
-        if (hasRequiredIsConstructor) return isConstructor;
-        hasRequiredIsConstructor = 1;
-        var uncurryThis = requireFunctionUncurryThis();
-        var fails = requireFails();
-        var isCallable = requireIsCallable();
-        var classof = requireClassof();
-        var getBuiltIn = requireGetBuiltIn();
-        var inspectSource = requireInspectSource();
-        var noop = function() {};
-        var construct = getBuiltIn("Reflect", "construct");
-        var constructorRegExp = /^\s*(?:class|function)\b/;
-        var exec = uncurryThis(constructorRegExp.exec);
-        var INCORRECT_TO_STRING = !constructorRegExp.test(noop);
-        var isConstructorModern = function isConstructor(argument) {
-            if (!isCallable(argument)) return false;
-            try {
-                construct(noop, [], argument);
-                return true;
-            } catch (error) {
-                return false;
-            }
-        };
-        var isConstructorLegacy = function isConstructor(argument) {
-            if (!isCallable(argument)) return false;
-            switch (classof(argument)) {
-              case "AsyncFunction":
-              case "GeneratorFunction":
-              case "AsyncGeneratorFunction":
-                return false;
-            }
-            try {
-                return INCORRECT_TO_STRING || !!exec(constructorRegExp, inspectSource(argument));
-            } catch (error) {
-                return true;
-            }
-        };
-        isConstructorLegacy.sham = true;
-        isConstructor = !construct || fails(function() {
-            var called;
-            return isConstructorModern(isConstructorModern.call) || !isConstructorModern(Object) || !isConstructorModern(function() {
-                called = true;
-            }) || called;
-        }) ? isConstructorLegacy : isConstructorModern;
-        return isConstructor;
-    }
-    var arraySpeciesConstructor;
-    var hasRequiredArraySpeciesConstructor;
-    function requireArraySpeciesConstructor() {
-        if (hasRequiredArraySpeciesConstructor) return arraySpeciesConstructor;
-        hasRequiredArraySpeciesConstructor = 1;
-        var isArray = requireIsArray();
-        var isConstructor = requireIsConstructor();
-        var isObject = requireIsObject();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var SPECIES = wellKnownSymbol("species");
-        var $Array = Array;
-        arraySpeciesConstructor = function(originalArray) {
-            var C;
-            if (isArray(originalArray)) {
-                C = originalArray.constructor;
-                if (isConstructor(C) && (C === $Array || isArray(C.prototype))) C = undefined; else if (isObject(C)) {
-                    C = C[SPECIES];
-                    if (C === null) C = undefined;
-                }
-            }
-            return C === undefined ? $Array : C;
-        };
-        return arraySpeciesConstructor;
-    }
-    var arraySpeciesCreate;
-    var hasRequiredArraySpeciesCreate;
-    function requireArraySpeciesCreate() {
-        if (hasRequiredArraySpeciesCreate) return arraySpeciesCreate;
-        hasRequiredArraySpeciesCreate = 1;
-        var arraySpeciesConstructor = requireArraySpeciesConstructor();
-        arraySpeciesCreate = function(originalArray, length) {
-            return new (arraySpeciesConstructor(originalArray))(length === 0 ? 0 : length);
-        };
-        return arraySpeciesCreate;
-    }
-    var createProperty;
-    var hasRequiredCreateProperty;
-    function requireCreateProperty() {
-        if (hasRequiredCreateProperty) return createProperty;
-        hasRequiredCreateProperty = 1;
-        var DESCRIPTORS = requireDescriptors();
-        var definePropertyModule = requireObjectDefineProperty();
-        var createPropertyDescriptor = requireCreatePropertyDescriptor();
-        createProperty = function(object, key, value) {
-            if (DESCRIPTORS) definePropertyModule.f(object, key, createPropertyDescriptor(0, value)); else object[key] = value;
-        };
-        return createProperty;
-    }
-    var arrayIteration;
-    var hasRequiredArrayIteration;
-    function requireArrayIteration() {
-        if (hasRequiredArrayIteration) return arrayIteration;
-        hasRequiredArrayIteration = 1;
-        var bind = requireFunctionBindContext();
-        var IndexedObject = requireIndexedObject();
-        var toObject = requireToObject();
-        var lengthOfArrayLike = requireLengthOfArrayLike();
-        var arraySpeciesCreate = requireArraySpeciesCreate();
-        var createProperty = requireCreateProperty();
-        var createMethod = function(TYPE) {
-            var IS_MAP = TYPE === 1;
-            var IS_FILTER = TYPE === 2;
-            var IS_SOME = TYPE === 3;
-            var IS_EVERY = TYPE === 4;
-            var IS_FIND_INDEX = TYPE === 6;
-            var IS_FILTER_REJECT = TYPE === 7;
-            var NO_HOLES = TYPE === 5 || IS_FIND_INDEX;
-            return function($this, callbackfn, that) {
-                var O = toObject($this);
-                var self = IndexedObject(O);
-                var length = lengthOfArrayLike(self);
-                var boundFunction = bind(callbackfn, that);
-                var index = 0;
-                var resIndex = 0;
-                var target = IS_MAP ? arraySpeciesCreate($this, length) : IS_FILTER || IS_FILTER_REJECT ? arraySpeciesCreate($this, 0) : undefined;
-                var value, result;
-                for (;length > index; index++) if (NO_HOLES || index in self) {
-                    value = self[index];
-                    result = boundFunction(value, index, O);
-                    if (TYPE) {
-                        if (IS_MAP) createProperty(target, index, result); else if (result) switch (TYPE) {
-                          case 3:
-                            return true;
-
-                          case 5:
-                            return value;
-
-                          case 6:
-                            return index;
-
-                          case 2:
-                            createProperty(target, resIndex++, value);
-                        } else switch (TYPE) {
-                          case 4:
-                            return false;
-
-                          case 7:
-                            createProperty(target, resIndex++, value);
-                        }
-                    }
-                }
-                return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : target;
-            };
-        };
-        arrayIteration = {
-            forEach: createMethod(0),
-            map: createMethod(1),
-            filter: createMethod(2),
-            some: createMethod(3),
-            every: createMethod(4),
-            find: createMethod(5),
-            findIndex: createMethod(6),
-            filterReject: createMethod(7)
-        };
-        return arrayIteration;
-    }
-    var arrayMethodHasSpeciesSupport;
-    var hasRequiredArrayMethodHasSpeciesSupport;
-    function requireArrayMethodHasSpeciesSupport() {
-        if (hasRequiredArrayMethodHasSpeciesSupport) return arrayMethodHasSpeciesSupport;
-        hasRequiredArrayMethodHasSpeciesSupport = 1;
-        var fails = requireFails();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var V8_VERSION = requireEnvironmentV8Version();
-        var SPECIES = wellKnownSymbol("species");
-        arrayMethodHasSpeciesSupport = function(METHOD_NAME) {
-            return V8_VERSION >= 51 || !fails(function() {
-                var array = [];
-                var constructor = array.constructor = {};
-                constructor[SPECIES] = function() {
-                    return {
-                        foo: 1
-                    };
-                };
-                return array[METHOD_NAME](Boolean).foo !== 1;
-            });
-        };
-        return arrayMethodHasSpeciesSupport;
-    }
-    var hasRequiredEs_array_filter;
-    function requireEs_array_filter() {
-        if (hasRequiredEs_array_filter) return es_array_filter;
-        hasRequiredEs_array_filter = 1;
-        var $ = require_export();
-        var $filter = requireArrayIteration().filter;
-        var arrayMethodHasSpeciesSupport = requireArrayMethodHasSpeciesSupport();
-        var HAS_SPECIES_SUPPORT = arrayMethodHasSpeciesSupport("filter");
-        $({
-            target: "Array",
-            proto: true,
-            forced: !HAS_SPECIES_SUPPORT
-        }, {
-            filter: function filter(callbackfn) {
-                return $filter(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
-            }
-        });
-        return es_array_filter;
-    }
-    requireEs_array_filter();
-    var es_array_includes = {};
     var objectDefineProperties = {};
     var objectKeys;
     var hasRequiredObjectKeys;
@@ -2384,6 +2099,43 @@
     }
     requireEs_function_name();
     var es_object_toString = {};
+    var toStringTagSupport;
+    var hasRequiredToStringTagSupport;
+    function requireToStringTagSupport() {
+        if (hasRequiredToStringTagSupport) return toStringTagSupport;
+        hasRequiredToStringTagSupport = 1;
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var TO_STRING_TAG = wellKnownSymbol("toStringTag");
+        var test = {};
+        test[TO_STRING_TAG] = "z";
+        toStringTagSupport = String(test) === "[object z]";
+        return toStringTagSupport;
+    }
+    var classof;
+    var hasRequiredClassof;
+    function requireClassof() {
+        if (hasRequiredClassof) return classof;
+        hasRequiredClassof = 1;
+        var TO_STRING_TAG_SUPPORT = requireToStringTagSupport();
+        var isCallable = requireIsCallable();
+        var classofRaw = requireClassofRaw();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var TO_STRING_TAG = wellKnownSymbol("toStringTag");
+        var $Object = Object;
+        var CORRECT_ARGUMENTS = classofRaw(function() {
+            return arguments;
+        }()) === "Arguments";
+        var tryGet = function(it, key) {
+            try {
+                return it[key];
+            } catch (error) {}
+        };
+        classof = TO_STRING_TAG_SUPPORT ? classofRaw : function(it) {
+            var O, tag, result;
+            return it === undefined ? "Undefined" : it === null ? "Null" : typeof (tag = tryGet(O = $Object(it), TO_STRING_TAG)) == "string" ? tag : CORRECT_ARGUMENTS ? classofRaw(O) : (result = classofRaw(O)) === "Object" && isCallable(O.callee) ? "Arguments" : result;
+        };
+        return classof;
+    }
     var objectToString;
     var hasRequiredObjectToString;
     function requireObjectToString() {
@@ -2491,6 +2243,54 @@
         };
         return anInstance;
     }
+    var isConstructor;
+    var hasRequiredIsConstructor;
+    function requireIsConstructor() {
+        if (hasRequiredIsConstructor) return isConstructor;
+        hasRequiredIsConstructor = 1;
+        var uncurryThis = requireFunctionUncurryThis();
+        var fails = requireFails();
+        var isCallable = requireIsCallable();
+        var classof = requireClassof();
+        var getBuiltIn = requireGetBuiltIn();
+        var inspectSource = requireInspectSource();
+        var noop = function() {};
+        var construct = getBuiltIn("Reflect", "construct");
+        var constructorRegExp = /^\s*(?:class|function)\b/;
+        var exec = uncurryThis(constructorRegExp.exec);
+        var INCORRECT_TO_STRING = !constructorRegExp.test(noop);
+        var isConstructorModern = function isConstructor(argument) {
+            if (!isCallable(argument)) return false;
+            try {
+                construct(noop, [], argument);
+                return true;
+            } catch (error) {
+                return false;
+            }
+        };
+        var isConstructorLegacy = function isConstructor(argument) {
+            if (!isCallable(argument)) return false;
+            switch (classof(argument)) {
+              case "AsyncFunction":
+              case "GeneratorFunction":
+              case "AsyncGeneratorFunction":
+                return false;
+            }
+            try {
+                return INCORRECT_TO_STRING || !!exec(constructorRegExp, inspectSource(argument));
+            } catch (error) {
+                return true;
+            }
+        };
+        isConstructorLegacy.sham = true;
+        isConstructor = !construct || fails(function() {
+            var called;
+            return isConstructorModern(isConstructorModern.call) || !isConstructorModern(Object) || !isConstructorModern(function() {
+                called = true;
+            }) || called;
+        }) ? isConstructorLegacy : isConstructorModern;
+        return isConstructor;
+    }
     var aConstructor;
     var hasRequiredAConstructor;
     function requireAConstructor() {
@@ -2535,6 +2335,35 @@
             return call.apply(apply, arguments);
         });
         return functionApply;
+    }
+    var functionUncurryThisClause;
+    var hasRequiredFunctionUncurryThisClause;
+    function requireFunctionUncurryThisClause() {
+        if (hasRequiredFunctionUncurryThisClause) return functionUncurryThisClause;
+        hasRequiredFunctionUncurryThisClause = 1;
+        var classofRaw = requireClassofRaw();
+        var uncurryThis = requireFunctionUncurryThis();
+        functionUncurryThisClause = function(fn) {
+            if (classofRaw(fn) === "Function") return uncurryThis(fn);
+        };
+        return functionUncurryThisClause;
+    }
+    var functionBindContext;
+    var hasRequiredFunctionBindContext;
+    function requireFunctionBindContext() {
+        if (hasRequiredFunctionBindContext) return functionBindContext;
+        hasRequiredFunctionBindContext = 1;
+        var uncurryThis = requireFunctionUncurryThisClause();
+        var aCallable = requireACallable();
+        var NATIVE_BIND = requireFunctionBindNative();
+        var bind = uncurryThis(uncurryThis.bind);
+        functionBindContext = function(fn, that) {
+            aCallable(fn);
+            return that === undefined ? fn : NATIVE_BIND ? bind(fn, that) : function() {
+                return fn.apply(that, arguments);
+            };
+        };
+        return functionBindContext;
     }
     var arraySlice;
     var hasRequiredArraySlice;
@@ -4622,6 +4451,133 @@
         domTokenListPrototype = DOMTokenListPrototype === Object.prototype ? undefined : DOMTokenListPrototype;
         return domTokenListPrototype;
     }
+    var isArray;
+    var hasRequiredIsArray;
+    function requireIsArray() {
+        if (hasRequiredIsArray) return isArray;
+        hasRequiredIsArray = 1;
+        var classof = requireClassofRaw();
+        isArray = Array.isArray || function isArray(argument) {
+            return classof(argument) === "Array";
+        };
+        return isArray;
+    }
+    var arraySpeciesConstructor;
+    var hasRequiredArraySpeciesConstructor;
+    function requireArraySpeciesConstructor() {
+        if (hasRequiredArraySpeciesConstructor) return arraySpeciesConstructor;
+        hasRequiredArraySpeciesConstructor = 1;
+        var isArray = requireIsArray();
+        var isConstructor = requireIsConstructor();
+        var isObject = requireIsObject();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var SPECIES = wellKnownSymbol("species");
+        var $Array = Array;
+        arraySpeciesConstructor = function(originalArray) {
+            var C;
+            if (isArray(originalArray)) {
+                C = originalArray.constructor;
+                if (isConstructor(C) && (C === $Array || isArray(C.prototype))) C = undefined; else if (isObject(C)) {
+                    C = C[SPECIES];
+                    if (C === null) C = undefined;
+                }
+            }
+            return C === undefined ? $Array : C;
+        };
+        return arraySpeciesConstructor;
+    }
+    var arraySpeciesCreate;
+    var hasRequiredArraySpeciesCreate;
+    function requireArraySpeciesCreate() {
+        if (hasRequiredArraySpeciesCreate) return arraySpeciesCreate;
+        hasRequiredArraySpeciesCreate = 1;
+        var arraySpeciesConstructor = requireArraySpeciesConstructor();
+        arraySpeciesCreate = function(originalArray, length) {
+            return new (arraySpeciesConstructor(originalArray))(length === 0 ? 0 : length);
+        };
+        return arraySpeciesCreate;
+    }
+    var createProperty;
+    var hasRequiredCreateProperty;
+    function requireCreateProperty() {
+        if (hasRequiredCreateProperty) return createProperty;
+        hasRequiredCreateProperty = 1;
+        var DESCRIPTORS = requireDescriptors();
+        var definePropertyModule = requireObjectDefineProperty();
+        var createPropertyDescriptor = requireCreatePropertyDescriptor();
+        createProperty = function(object, key, value) {
+            if (DESCRIPTORS) definePropertyModule.f(object, key, createPropertyDescriptor(0, value)); else object[key] = value;
+        };
+        return createProperty;
+    }
+    var arrayIteration;
+    var hasRequiredArrayIteration;
+    function requireArrayIteration() {
+        if (hasRequiredArrayIteration) return arrayIteration;
+        hasRequiredArrayIteration = 1;
+        var bind = requireFunctionBindContext();
+        var IndexedObject = requireIndexedObject();
+        var toObject = requireToObject();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var arraySpeciesCreate = requireArraySpeciesCreate();
+        var createProperty = requireCreateProperty();
+        var createMethod = function(TYPE) {
+            var IS_MAP = TYPE === 1;
+            var IS_FILTER = TYPE === 2;
+            var IS_SOME = TYPE === 3;
+            var IS_EVERY = TYPE === 4;
+            var IS_FIND_INDEX = TYPE === 6;
+            var IS_FILTER_REJECT = TYPE === 7;
+            var NO_HOLES = TYPE === 5 || IS_FIND_INDEX;
+            return function($this, callbackfn, that) {
+                var O = toObject($this);
+                var self = IndexedObject(O);
+                var length = lengthOfArrayLike(self);
+                var boundFunction = bind(callbackfn, that);
+                var index = 0;
+                var resIndex = 0;
+                var target = IS_MAP ? arraySpeciesCreate($this, length) : IS_FILTER || IS_FILTER_REJECT ? arraySpeciesCreate($this, 0) : undefined;
+                var value, result;
+                for (;length > index; index++) if (NO_HOLES || index in self) {
+                    value = self[index];
+                    result = boundFunction(value, index, O);
+                    if (TYPE) {
+                        if (IS_MAP) createProperty(target, index, result); else if (result) switch (TYPE) {
+                          case 3:
+                            return true;
+
+                          case 5:
+                            return value;
+
+                          case 6:
+                            return index;
+
+                          case 2:
+                            createProperty(target, resIndex++, value);
+                        } else switch (TYPE) {
+                          case 4:
+                            return false;
+
+                          case 7:
+                            createProperty(target, resIndex++, value);
+                        }
+                    }
+                }
+                return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : target;
+            };
+        };
+        arrayIteration = {
+            forEach: createMethod(0),
+            map: createMethod(1),
+            filter: createMethod(2),
+            some: createMethod(3),
+            every: createMethod(4),
+            find: createMethod(5),
+            findIndex: createMethod(6),
+            filterReject: createMethod(7)
+        };
+        return arrayIteration;
+    }
     var arrayForEach;
     var hasRequiredArrayForEach;
     function requireArrayForEach() {
@@ -4830,6 +4786,29 @@
         }
     };
     var es_array_map = {};
+    var arrayMethodHasSpeciesSupport;
+    var hasRequiredArrayMethodHasSpeciesSupport;
+    function requireArrayMethodHasSpeciesSupport() {
+        if (hasRequiredArrayMethodHasSpeciesSupport) return arrayMethodHasSpeciesSupport;
+        hasRequiredArrayMethodHasSpeciesSupport = 1;
+        var fails = requireFails();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var V8_VERSION = requireEnvironmentV8Version();
+        var SPECIES = wellKnownSymbol("species");
+        arrayMethodHasSpeciesSupport = function(METHOD_NAME) {
+            return V8_VERSION >= 51 || !fails(function() {
+                var array = [];
+                var constructor = array.constructor = {};
+                constructor[SPECIES] = function() {
+                    return {
+                        foo: 1
+                    };
+                };
+                return array[METHOD_NAME](Boolean).foo !== 1;
+            });
+        };
+        return arrayMethodHasSpeciesSupport;
+    }
     var hasRequiredEs_array_map;
     function requireEs_array_map() {
         if (hasRequiredEs_array_map) return es_array_map;
@@ -4879,3125 +4858,50 @@
     Router.prototype.openSettings = function() {
         this._setCurrentRoute("settings");
     };
-    var zoteroEnvironment = {
-        restApiUrl: "https://api.zotero.org/",
-        desktopApiUrl: "http://127.0.0.1:23119/api/"
-    };
-    ({
-        _desktopVersion: function() {
-            if (window.navigator && window.navigator.userAgent.toLowerCase().indexOf("ascdesktopeditor") < 0) return false;
-            if (window.location && window.location.protocol == "file:") return true;
-            var src = window.document.currentScript ? window.document.currentScript.getAttribute("src") : "";
-            if (src && 0 == src.indexOf("file:///")) return true;
-            return false;
-        }()
-    });
-    var es_number_constructor = {};
-    var inheritIfRequired;
-    var hasRequiredInheritIfRequired;
-    function requireInheritIfRequired() {
-        if (hasRequiredInheritIfRequired) return inheritIfRequired;
-        hasRequiredInheritIfRequired = 1;
-        var isCallable = requireIsCallable();
-        var isObject = requireIsObject();
-        var setPrototypeOf = requireObjectSetPrototypeOf();
-        inheritIfRequired = function($this, dummy, Wrapper) {
-            var NewTarget, NewTargetPrototype;
-            if (setPrototypeOf && isCallable(NewTarget = dummy.constructor) && NewTarget !== Wrapper && isObject(NewTargetPrototype = NewTarget.prototype) && NewTargetPrototype !== Wrapper.prototype) setPrototypeOf($this, NewTargetPrototype);
-            return $this;
+    var es_string_search = {};
+    var sameValue;
+    var hasRequiredSameValue;
+    function requireSameValue() {
+        if (hasRequiredSameValue) return sameValue;
+        hasRequiredSameValue = 1;
+        sameValue = Object.is || function is(x, y) {
+            return x === y ? x !== 0 || 1 / x === 1 / y : x !== x && y !== y;
         };
-        return inheritIfRequired;
+        return sameValue;
     }
-    var thisNumberValue;
-    var hasRequiredThisNumberValue;
-    function requireThisNumberValue() {
-        if (hasRequiredThisNumberValue) return thisNumberValue;
-        hasRequiredThisNumberValue = 1;
-        var uncurryThis = requireFunctionUncurryThis();
-        thisNumberValue = uncurryThis(1.1.valueOf);
-        return thisNumberValue;
-    }
-    var hasRequiredEs_number_constructor;
-    function requireEs_number_constructor() {
-        if (hasRequiredEs_number_constructor) return es_number_constructor;
-        hasRequiredEs_number_constructor = 1;
-        var $ = require_export();
-        var IS_PURE = requireIsPure();
-        var DESCRIPTORS = requireDescriptors();
-        var globalThis = requireGlobalThis();
-        var path = requirePath();
-        var uncurryThis = requireFunctionUncurryThis();
-        var isForced = requireIsForced();
-        var hasOwn = requireHasOwnProperty();
-        var inheritIfRequired = requireInheritIfRequired();
-        var isPrototypeOf = requireObjectIsPrototypeOf();
-        var isSymbol = requireIsSymbol();
-        var toPrimitive = requireToPrimitive();
-        var fails = requireFails();
-        var getOwnPropertyNames = requireObjectGetOwnPropertyNames().f;
-        var getOwnPropertyDescriptor = requireObjectGetOwnPropertyDescriptor().f;
-        var defineProperty = requireObjectDefineProperty().f;
-        var thisNumberValue = requireThisNumberValue();
-        var trim = requireStringTrim().trim;
-        var NUMBER = "Number";
-        var NativeNumber = globalThis[NUMBER];
-        var PureNumberNamespace = path[NUMBER];
-        var NumberPrototype = NativeNumber.prototype;
-        var TypeError = globalThis.TypeError;
-        var stringSlice = uncurryThis("".slice);
-        var charCodeAt = uncurryThis("".charCodeAt);
-        var toNumeric = function(value) {
-            var primValue = toPrimitive(value, "number");
-            return typeof primValue == "bigint" ? primValue : toNumber(primValue);
-        };
-        var toNumber = function(argument) {
-            var it = toPrimitive(argument, "number");
-            var first, third, radix, maxCode, digits, length, index, code;
-            if (isSymbol(it)) throw new TypeError("Cannot convert a Symbol value to a number");
-            if (typeof it == "string" && it.length > 2) {
-                it = trim(it);
-                first = charCodeAt(it, 0);
-                if (first === 43 || first === 45) {
-                    third = charCodeAt(it, 2);
-                    if (third === 88 || third === 120) return NaN;
-                } else if (first === 48) {
-                    switch (charCodeAt(it, 1)) {
-                      case 66:
-                      case 98:
-                        radix = 2;
-                        maxCode = 49;
-                        break;
-
-                      case 79:
-                      case 111:
-                        radix = 8;
-                        maxCode = 55;
-                        break;
-
-                      default:
-                        return +it;
-                    }
-                    digits = stringSlice(it, 2);
-                    length = digits.length;
-                    for (index = 0; index < length; index++) {
-                        code = charCodeAt(digits, index);
-                        if (code < 48 || code > maxCode) return NaN;
-                    }
-                    return parseInt(digits, radix);
-                }
-            }
-            return +it;
-        };
-        var FORCED = isForced(NUMBER, !NativeNumber(" 0o1") || !NativeNumber("0b1") || NativeNumber("+0x1"));
-        var calledWithNew = function(dummy) {
-            return isPrototypeOf(NumberPrototype, dummy) && fails(function() {
-                thisNumberValue(dummy);
-            });
-        };
-        var NumberWrapper = function Number(value) {
-            var n = arguments.length < 1 ? 0 : NativeNumber(toNumeric(value));
-            return calledWithNew(this) ? inheritIfRequired(Object(n), this, NumberWrapper) : n;
-        };
-        NumberWrapper.prototype = NumberPrototype;
-        if (FORCED && !IS_PURE) NumberPrototype.constructor = NumberWrapper;
-        $({
-            global: true,
-            constructor: true,
-            wrap: true,
-            forced: FORCED
-        }, {
-            Number: NumberWrapper
-        });
-        var copyConstructorProperties = function(target, source) {
-            for (var keys = DESCRIPTORS ? getOwnPropertyNames(source) : ("MAX_VALUE,MIN_VALUE,NaN,NEGATIVE_INFINITY,POSITIVE_INFINITY," + "EPSILON,MAX_SAFE_INTEGER,MIN_SAFE_INTEGER,isFinite,isInteger,isNaN,isSafeInteger,parseFloat,parseInt," + "fromString,range").split(","), j = 0, key; keys.length > j; j++) {
-                if (hasOwn(source, key = keys[j]) && !hasOwn(target, key)) {
-                    defineProperty(target, key, getOwnPropertyDescriptor(source, key));
-                }
-            }
-        };
-        if (IS_PURE && PureNumberNamespace) copyConstructorProperties(path[NUMBER], PureNumberNamespace);
-        if (FORCED || IS_PURE) copyConstructorProperties(path[NUMBER], NativeNumber);
-        return es_number_constructor;
-    }
-    requireEs_number_constructor();
-    var es_object_keys = {};
-    var hasRequiredEs_object_keys;
-    function requireEs_object_keys() {
-        if (hasRequiredEs_object_keys) return es_object_keys;
-        hasRequiredEs_object_keys = 1;
-        var $ = require_export();
-        var toObject = requireToObject();
-        var nativeKeys = requireObjectKeys();
-        var fails = requireFails();
-        var FAILS_ON_PRIMITIVES = fails(function() {
-            nativeKeys(1);
-        });
-        $({
-            target: "Object",
-            stat: true,
-            forced: FAILS_ON_PRIMITIVES
-        }, {
-            keys: function keys(it) {
-                return nativeKeys(toObject(it));
-            }
-        });
-        return es_object_keys;
-    }
-    requireEs_object_keys();
-    var web_url = {};
-    var web_url_constructor = {};
-    var urlConstructorDetection;
-    var hasRequiredUrlConstructorDetection;
-    function requireUrlConstructorDetection() {
-        if (hasRequiredUrlConstructorDetection) return urlConstructorDetection;
-        hasRequiredUrlConstructorDetection = 1;
-        var fails = requireFails();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var DESCRIPTORS = requireDescriptors();
-        var IS_PURE = requireIsPure();
-        var ITERATOR = wellKnownSymbol("iterator");
-        urlConstructorDetection = !fails(function() {
-            var url = new URL("b?a=1&b=2&c=3", "https://a");
-            var params = url.searchParams;
-            var params2 = new URLSearchParams("a=1&a=2&b=3");
-            var result = "";
-            url.pathname = "c%20d";
-            params.forEach(function(value, key) {
-                params["delete"]("b");
-                result += key + value;
-            });
-            params2["delete"]("a", 2);
-            params2["delete"]("b", undefined);
-            return IS_PURE && (!url.toJSON || !params2.has("a", 1) || params2.has("a", 2) || !params2.has("a", undefined) || params2.has("b")) || !params.size && (IS_PURE || !DESCRIPTORS) || !params.sort || url.href !== "https://a/c%20d?a=1&c=3" || params.get("c") !== "3" || String(new URLSearchParams("?a=1")) !== "a=1" || !params[ITERATOR] || new URL("https://a@b").username !== "a" || new URLSearchParams(new URLSearchParams("a=b")).get("a") !== "b" || new URL("https://тест").host !== "xn--e1aybc" || new URL("https://a#б").hash !== "#%D0%B1" || result !== "a1c3" || new URL("https://x", undefined).host !== "x";
-        });
-        return urlConstructorDetection;
-    }
-    var objectAssign;
-    var hasRequiredObjectAssign;
-    function requireObjectAssign() {
-        if (hasRequiredObjectAssign) return objectAssign;
-        hasRequiredObjectAssign = 1;
-        var DESCRIPTORS = requireDescriptors();
-        var uncurryThis = requireFunctionUncurryThis();
+    var hasRequiredEs_string_search;
+    function requireEs_string_search() {
+        if (hasRequiredEs_string_search) return es_string_search;
+        hasRequiredEs_string_search = 1;
         var call = requireFunctionCall();
-        var fails = requireFails();
-        var objectKeys = requireObjectKeys();
-        var getOwnPropertySymbolsModule = requireObjectGetOwnPropertySymbols();
-        var propertyIsEnumerableModule = requireObjectPropertyIsEnumerable();
-        var toObject = requireToObject();
-        var IndexedObject = requireIndexedObject();
-        var $assign = Object.assign;
-        var defineProperty = Object.defineProperty;
-        var concat = uncurryThis([].concat);
-        objectAssign = !$assign || fails(function() {
-            if (DESCRIPTORS && $assign({
-                b: 1
-            }, $assign(defineProperty({}, "a", {
-                enumerable: true,
-                get: function() {
-                    defineProperty(this, "b", {
-                        value: 3,
-                        enumerable: false
-                    });
-                }
-            }), {
-                b: 2
-            })).b !== 1) return true;
-            var A = {};
-            var B = {};
-            var symbol = Symbol("assign detection");
-            var alphabet = "abcdefghijklmnopqrst";
-            A[symbol] = 7;
-            alphabet.split("").forEach(function(chr) {
-                B[chr] = chr;
-            });
-            return $assign({}, A)[symbol] !== 7 || objectKeys($assign({}, B)).join("") !== alphabet;
-        }) ? function assign(target, source) {
-            var T = toObject(target);
-            var argumentsLength = arguments.length;
-            var index = 1;
-            var getOwnPropertySymbols = getOwnPropertySymbolsModule.f;
-            var propertyIsEnumerable = propertyIsEnumerableModule.f;
-            while (argumentsLength > index) {
-                var S = IndexedObject(arguments[index++]);
-                var keys = getOwnPropertySymbols ? concat(objectKeys(S), getOwnPropertySymbols(S)) : objectKeys(S);
-                var length = keys.length;
-                var j = 0;
-                var key;
-                while (length > j) {
-                    key = keys[j++];
-                    if (!DESCRIPTORS || call(propertyIsEnumerable, S, key)) T[key] = S[key];
-                }
-            }
-            return T;
-        } : $assign;
-        return objectAssign;
-    }
-    var callWithSafeIterationClosing;
-    var hasRequiredCallWithSafeIterationClosing;
-    function requireCallWithSafeIterationClosing() {
-        if (hasRequiredCallWithSafeIterationClosing) return callWithSafeIterationClosing;
-        hasRequiredCallWithSafeIterationClosing = 1;
-        var anObject = requireAnObject();
-        var iteratorClose = requireIteratorClose();
-        callWithSafeIterationClosing = function(iterator, fn, value, ENTRIES) {
-            try {
-                return ENTRIES ? fn(anObject(value)[0], value[1]) : fn(value);
-            } catch (error) {
-                iteratorClose(iterator, "throw", error);
-            }
-        };
-        return callWithSafeIterationClosing;
-    }
-    var arraySetLength;
-    var hasRequiredArraySetLength;
-    function requireArraySetLength() {
-        if (hasRequiredArraySetLength) return arraySetLength;
-        hasRequiredArraySetLength = 1;
-        var DESCRIPTORS = requireDescriptors();
-        var isArray = requireIsArray();
-        var $TypeError = TypeError;
-        var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-        var SILENT_ON_NON_WRITABLE_LENGTH_SET = DESCRIPTORS && !function() {
-            if (this !== undefined) return true;
-            try {
-                Object.defineProperty([], "length", {
-                    writable: false
-                }).length = 1;
-            } catch (error) {
-                return error instanceof TypeError;
-            }
-        }();
-        arraySetLength = SILENT_ON_NON_WRITABLE_LENGTH_SET ? function(O, length) {
-            if (isArray(O) && !getOwnPropertyDescriptor(O, "length").writable) {
-                throw new $TypeError("Cannot set read only .length");
-            }
-            return O.length = length;
-        } : function(O, length) {
-            return O.length = length;
-        };
-        return arraySetLength;
-    }
-    var arrayFrom;
-    var hasRequiredArrayFrom;
-    function requireArrayFrom() {
-        if (hasRequiredArrayFrom) return arrayFrom;
-        hasRequiredArrayFrom = 1;
-        var bind = requireFunctionBindContext();
-        var call = requireFunctionCall();
-        var toObject = requireToObject();
-        var callWithSafeIterationClosing = requireCallWithSafeIterationClosing();
-        var isArrayIteratorMethod = requireIsArrayIteratorMethod();
-        var isConstructor = requireIsConstructor();
-        var lengthOfArrayLike = requireLengthOfArrayLike();
-        var createProperty = requireCreateProperty();
-        var setArrayLength = requireArraySetLength();
-        var getIterator = requireGetIterator();
-        var getIteratorMethod = requireGetIteratorMethod();
-        var $Array = Array;
-        arrayFrom = function from(arrayLike) {
-            var O = toObject(arrayLike);
-            var IS_CONSTRUCTOR = isConstructor(this);
-            var argumentsLength = arguments.length;
-            var mapfn = argumentsLength > 1 ? arguments[1] : undefined;
-            var mapping = mapfn !== undefined;
-            if (mapping) mapfn = bind(mapfn, argumentsLength > 2 ? arguments[2] : undefined);
-            var iteratorMethod = getIteratorMethod(O);
-            var index = 0;
-            var length, result, step, iterator, next, value;
-            if (iteratorMethod && !(this === $Array && isArrayIteratorMethod(iteratorMethod))) {
-                result = IS_CONSTRUCTOR ? new this : [];
-                iterator = getIterator(O, iteratorMethod);
-                next = iterator.next;
-                for (;!(step = call(next, iterator)).done; index++) {
-                    value = mapping ? callWithSafeIterationClosing(iterator, mapfn, [ step.value, index ], true) : step.value;
-                    createProperty(result, index, value);
-                }
-            } else {
-                length = lengthOfArrayLike(O);
-                result = IS_CONSTRUCTOR ? new this(length) : $Array(length);
-                for (;length > index; index++) {
-                    value = mapping ? mapfn(O[index], index) : O[index];
-                    createProperty(result, index, value);
-                }
-            }
-            setArrayLength(result, index);
-            return result;
-        };
-        return arrayFrom;
-    }
-    var stringPunycodeToAscii;
-    var hasRequiredStringPunycodeToAscii;
-    function requireStringPunycodeToAscii() {
-        if (hasRequiredStringPunycodeToAscii) return stringPunycodeToAscii;
-        hasRequiredStringPunycodeToAscii = 1;
-        var uncurryThis = requireFunctionUncurryThis();
-        var maxInt = 2147483647;
-        var base = 36;
-        var tMin = 1;
-        var tMax = 26;
-        var skew = 38;
-        var damp = 700;
-        var initialBias = 72;
-        var initialN = 128;
-        var delimiter = "-";
-        var regexNonASCII = /[^\0-\u007E]/;
-        var regexSeparators = /[.\u3002\uFF0E\uFF61]/g;
-        var OVERFLOW_ERROR = "Overflow: input needs wider integers to process";
-        var baseMinusTMin = base - tMin;
-        var $RangeError = RangeError;
-        var exec = uncurryThis(regexSeparators.exec);
-        var floor = Math.floor;
-        var fromCharCode = String.fromCharCode;
-        var charCodeAt = uncurryThis("".charCodeAt);
-        var join = uncurryThis([].join);
-        var push = uncurryThis([].push);
-        var replace = uncurryThis("".replace);
-        var split = uncurryThis("".split);
-        var toLowerCase = uncurryThis("".toLowerCase);
-        var ucs2decode = function(string) {
-            var output = [];
-            var counter = 0;
-            var length = string.length;
-            while (counter < length) {
-                var value = charCodeAt(string, counter++);
-                if (value >= 55296 && value <= 56319 && counter < length) {
-                    var extra = charCodeAt(string, counter++);
-                    if ((extra & 64512) === 56320) {
-                        push(output, ((value & 1023) << 10) + (extra & 1023) + 65536);
-                    } else {
-                        push(output, value);
-                        counter--;
-                    }
-                } else {
-                    push(output, value);
-                }
-            }
-            return output;
-        };
-        var digitToBasic = function(digit) {
-            return digit + 22 + 75 * (digit < 26);
-        };
-        var adapt = function(delta, numPoints, firstTime) {
-            var k = 0;
-            delta = firstTime ? floor(delta / damp) : delta >> 1;
-            delta += floor(delta / numPoints);
-            while (delta > baseMinusTMin * tMax >> 1) {
-                delta = floor(delta / baseMinusTMin);
-                k += base;
-            }
-            return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
-        };
-        var encode = function(input) {
-            var output = [];
-            input = ucs2decode(input);
-            var inputLength = input.length;
-            var n = initialN;
-            var delta = 0;
-            var bias = initialBias;
-            var i, currentValue;
-            for (i = 0; i < input.length; i++) {
-                currentValue = input[i];
-                if (currentValue < 128) {
-                    push(output, fromCharCode(currentValue));
-                }
-            }
-            var basicLength = output.length;
-            var handledCPCount = basicLength;
-            if (basicLength) {
-                push(output, delimiter);
-            }
-            while (handledCPCount < inputLength) {
-                var m = maxInt;
-                for (i = 0; i < input.length; i++) {
-                    currentValue = input[i];
-                    if (currentValue >= n && currentValue < m) {
-                        m = currentValue;
-                    }
-                }
-                var handledCPCountPlusOne = handledCPCount + 1;
-                if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
-                    throw new $RangeError(OVERFLOW_ERROR);
-                }
-                delta += (m - n) * handledCPCountPlusOne;
-                n = m;
-                for (i = 0; i < input.length; i++) {
-                    currentValue = input[i];
-                    if (currentValue < n && ++delta > maxInt) {
-                        throw new $RangeError(OVERFLOW_ERROR);
-                    }
-                    if (currentValue === n) {
-                        var q = delta;
-                        var k = base;
-                        while (true) {
-                            var t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
-                            if (q < t) break;
-                            var qMinusT = q - t;
-                            var baseMinusT = base - t;
-                            push(output, fromCharCode(digitToBasic(t + qMinusT % baseMinusT)));
-                            q = floor(qMinusT / baseMinusT);
-                            k += base;
-                        }
-                        push(output, fromCharCode(digitToBasic(q)));
-                        bias = adapt(delta, handledCPCountPlusOne, handledCPCount === basicLength);
-                        delta = 0;
-                        handledCPCount++;
-                    }
-                }
-                delta++;
-                n++;
-            }
-            return join(output, "");
-        };
-        stringPunycodeToAscii = function(input) {
-            var encoded = [];
-            var labels = split(replace(toLowerCase(input), regexSeparators, "."), ".");
-            var i, label;
-            for (i = 0; i < labels.length; i++) {
-                label = labels[i];
-                push(encoded, exec(regexNonASCII, label) ? "xn--" + encode(label) : label);
-            }
-            return join(encoded, ".");
-        };
-        return stringPunycodeToAscii;
-    }
-    var es_string_fromCodePoint = {};
-    var hasRequiredEs_string_fromCodePoint;
-    function requireEs_string_fromCodePoint() {
-        if (hasRequiredEs_string_fromCodePoint) return es_string_fromCodePoint;
-        hasRequiredEs_string_fromCodePoint = 1;
-        var $ = require_export();
-        var uncurryThis = requireFunctionUncurryThis();
-        var toAbsoluteIndex = requireToAbsoluteIndex();
-        var $RangeError = RangeError;
-        var fromCharCode = String.fromCharCode;
-        var $fromCodePoint = String.fromCodePoint;
-        var join = uncurryThis([].join);
-        var INCORRECT_LENGTH = !!$fromCodePoint && $fromCodePoint.length !== 1;
-        $({
-            target: "String",
-            stat: true,
-            arity: 1,
-            forced: INCORRECT_LENGTH
-        }, {
-            fromCodePoint: function fromCodePoint(x) {
-                var elements = [];
-                var length = arguments.length;
-                var i = 0;
-                var code;
-                while (length > i) {
-                    code = +arguments[i++];
-                    if (toAbsoluteIndex(code, 1114111) !== code) throw new $RangeError(code + " is not a valid code point");
-                    elements[i] = code < 65536 ? fromCharCode(code) : fromCharCode(((code -= 65536) >> 10) + 55296, code % 1024 + 56320);
-                }
-                return join(elements, "");
-            }
-        });
-        return es_string_fromCodePoint;
-    }
-    var defineBuiltIns;
-    var hasRequiredDefineBuiltIns;
-    function requireDefineBuiltIns() {
-        if (hasRequiredDefineBuiltIns) return defineBuiltIns;
-        hasRequiredDefineBuiltIns = 1;
-        var defineBuiltIn = requireDefineBuiltIn();
-        defineBuiltIns = function(target, src, options) {
-            for (var key in src) defineBuiltIn(target, key, src[key], options);
-            return target;
-        };
-        return defineBuiltIns;
-    }
-    var arraySort;
-    var hasRequiredArraySort;
-    function requireArraySort() {
-        if (hasRequiredArraySort) return arraySort;
-        hasRequiredArraySort = 1;
-        var arraySlice = requireArraySlice();
-        var floor = Math.floor;
-        var sort = function(array, comparefn) {
-            var length = array.length;
-            if (length < 8) {
-                var i = 1;
-                var element, j;
-                while (i < length) {
-                    j = i;
-                    element = array[i];
-                    while (j && comparefn(array[j - 1], element) > 0) {
-                        array[j] = array[--j];
-                    }
-                    if (j !== i++) array[j] = element;
-                }
-            } else {
-                var middle = floor(length / 2);
-                var left = sort(arraySlice(array, 0, middle), comparefn);
-                var right = sort(arraySlice(array, middle), comparefn);
-                var llength = left.length;
-                var rlength = right.length;
-                var lindex = 0;
-                var rindex = 0;
-                while (lindex < llength || rindex < rlength) {
-                    array[lindex + rindex] = lindex < llength && rindex < rlength ? comparefn(left[lindex], right[rindex]) <= 0 ? left[lindex++] : right[rindex++] : lindex < llength ? left[lindex++] : right[rindex++];
-                }
-            }
-            return array;
-        };
-        arraySort = sort;
-        return arraySort;
-    }
-    var web_urlSearchParams_constructor;
-    var hasRequiredWeb_urlSearchParams_constructor;
-    function requireWeb_urlSearchParams_constructor() {
-        if (hasRequiredWeb_urlSearchParams_constructor) return web_urlSearchParams_constructor;
-        hasRequiredWeb_urlSearchParams_constructor = 1;
-        requireEs_array_iterator();
-        requireEs_string_fromCodePoint();
-        var $ = require_export();
-        var globalThis = requireGlobalThis();
-        var safeGetBuiltIn = requireSafeGetBuiltIn();
-        var getBuiltIn = requireGetBuiltIn();
-        var call = requireFunctionCall();
-        var uncurryThis = requireFunctionUncurryThis();
-        var DESCRIPTORS = requireDescriptors();
-        var USE_NATIVE_URL = requireUrlConstructorDetection();
-        var defineBuiltIn = requireDefineBuiltIn();
-        var defineBuiltInAccessor = requireDefineBuiltInAccessor();
-        var defineBuiltIns = requireDefineBuiltIns();
-        var setToStringTag = requireSetToStringTag();
-        var createIteratorConstructor = requireIteratorCreateConstructor();
-        var InternalStateModule = requireInternalState();
-        var anInstance = requireAnInstance();
-        var isCallable = requireIsCallable();
-        var hasOwn = requireHasOwnProperty();
-        var bind = requireFunctionBindContext();
-        var classof = requireClassof();
+        var fixRegExpWellKnownSymbolLogic = requireFixRegexpWellKnownSymbolLogic();
         var anObject = requireAnObject();
         var isObject = requireIsObject();
-        var $toString = requireToString();
-        var create = requireObjectCreate();
-        var createPropertyDescriptor = requireCreatePropertyDescriptor();
-        var getIterator = requireGetIterator();
-        var getIteratorMethod = requireGetIteratorMethod();
-        var createIterResultObject = requireCreateIterResultObject();
-        var validateArgumentsLength = requireValidateArgumentsLength();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var arraySort = requireArraySort();
-        var ITERATOR = wellKnownSymbol("iterator");
-        var URL_SEARCH_PARAMS = "URLSearchParams";
-        var URL_SEARCH_PARAMS_ITERATOR = URL_SEARCH_PARAMS + "Iterator";
-        var setInternalState = InternalStateModule.set;
-        var getInternalParamsState = InternalStateModule.getterFor(URL_SEARCH_PARAMS);
-        var getInternalIteratorState = InternalStateModule.getterFor(URL_SEARCH_PARAMS_ITERATOR);
-        var nativeFetch = safeGetBuiltIn("fetch");
-        var NativeRequest = safeGetBuiltIn("Request");
-        var Headers = safeGetBuiltIn("Headers");
-        var RequestPrototype = NativeRequest && NativeRequest.prototype;
-        var HeadersPrototype = Headers && Headers.prototype;
-        var TypeError = globalThis.TypeError;
-        var encodeURIComponent = globalThis.encodeURIComponent;
-        var fromCharCode = String.fromCharCode;
-        var fromCodePoint = getBuiltIn("String", "fromCodePoint");
-        var $parseInt = parseInt;
-        var charAt = uncurryThis("".charAt);
-        var join = uncurryThis([].join);
-        var push = uncurryThis([].push);
-        var replace = uncurryThis("".replace);
-        var shift = uncurryThis([].shift);
-        var splice = uncurryThis([].splice);
-        var split = uncurryThis("".split);
-        var stringSlice = uncurryThis("".slice);
-        var exec = uncurryThis(/./.exec);
-        var plus = /\+/g;
-        var FALLBACK_REPLACER = "�";
-        var VALID_HEX = /^[0-9a-f]+$/i;
-        var parseHexOctet = function(string, start) {
-            var substr = stringSlice(string, start, start + 2);
-            if (!exec(VALID_HEX, substr)) return NaN;
-            return $parseInt(substr, 16);
-        };
-        var getLeadingOnes = function(octet) {
-            var count = 0;
-            for (var mask = 128; mask > 0 && (octet & mask) !== 0; mask >>= 1) {
-                count++;
-            }
-            return count;
-        };
-        var utf8Decode = function(octets) {
-            var codePoint = null;
-            switch (octets.length) {
-              case 1:
-                codePoint = octets[0];
-                break;
-
-              case 2:
-                codePoint = (octets[0] & 31) << 6 | octets[1] & 63;
-                break;
-
-              case 3:
-                codePoint = (octets[0] & 15) << 12 | (octets[1] & 63) << 6 | octets[2] & 63;
-                break;
-
-              case 4:
-                codePoint = (octets[0] & 7) << 18 | (octets[1] & 63) << 12 | (octets[2] & 63) << 6 | octets[3] & 63;
-                break;
-            }
-            return codePoint > 1114111 ? null : codePoint;
-        };
-        var decode = function(input) {
-            input = replace(input, plus, " ");
-            var length = input.length;
-            var result = "";
-            var i = 0;
-            while (i < length) {
-                var decodedChar = charAt(input, i);
-                if (decodedChar === "%") {
-                    if (charAt(input, i + 1) === "%" || i + 3 > length) {
-                        result += "%";
-                        i++;
-                        continue;
-                    }
-                    var octet = parseHexOctet(input, i + 1);
-                    if (octet !== octet) {
-                        result += decodedChar;
-                        i++;
-                        continue;
-                    }
-                    i += 2;
-                    var byteSequenceLength = getLeadingOnes(octet);
-                    if (byteSequenceLength === 0) {
-                        decodedChar = fromCharCode(octet);
-                    } else {
-                        if (byteSequenceLength === 1 || byteSequenceLength > 4) {
-                            result += FALLBACK_REPLACER;
-                            i++;
-                            continue;
-                        }
-                        var octets = [ octet ];
-                        var sequenceIndex = 1;
-                        while (sequenceIndex < byteSequenceLength) {
-                            i++;
-                            if (i + 3 > length || charAt(input, i) !== "%") break;
-                            var nextByte = parseHexOctet(input, i + 1);
-                            if (nextByte !== nextByte) {
-                                i += 3;
-                                break;
-                            }
-                            if (nextByte > 191 || nextByte < 128) break;
-                            push(octets, nextByte);
-                            i += 2;
-                            sequenceIndex++;
-                        }
-                        if (octets.length !== byteSequenceLength) {
-                            result += FALLBACK_REPLACER;
-                            continue;
-                        }
-                        var codePoint = utf8Decode(octets);
-                        if (codePoint === null) {
-                            result += FALLBACK_REPLACER;
-                        } else {
-                            decodedChar = fromCodePoint(codePoint);
-                        }
-                    }
-                }
-                result += decodedChar;
-                i++;
-            }
-            return result;
-        };
-        var find = /[!'()~]|%20/g;
-        var replacements = {
-            "!": "%21",
-            "'": "%27",
-            "(": "%28",
-            ")": "%29",
-            "~": "%7E",
-            "%20": "+"
-        };
-        var replacer = function(match) {
-            return replacements[match];
-        };
-        var serialize = function(it) {
-            return replace(encodeURIComponent(it), find, replacer);
-        };
-        var URLSearchParamsIterator = createIteratorConstructor(function Iterator(params, kind) {
-            setInternalState(this, {
-                type: URL_SEARCH_PARAMS_ITERATOR,
-                target: getInternalParamsState(params).entries,
-                index: 0,
-                kind: kind
-            });
-        }, URL_SEARCH_PARAMS, function next() {
-            var state = getInternalIteratorState(this);
-            var target = state.target;
-            var index = state.index++;
-            if (!target || index >= target.length) {
-                state.target = null;
-                return createIterResultObject(undefined, true);
-            }
-            var entry = target[index];
-            switch (state.kind) {
-              case "keys":
-                return createIterResultObject(entry.key, false);
-
-              case "values":
-                return createIterResultObject(entry.value, false);
-            }
-            return createIterResultObject([ entry.key, entry.value ], false);
-        }, true);
-        var URLSearchParamsState = function(init) {
-            this.entries = [];
-            this.url = null;
-            if (init !== undefined) {
-                if (isObject(init)) this.parseObject(init); else this.parseQuery(typeof init == "string" ? charAt(init, 0) === "?" ? stringSlice(init, 1) : init : $toString(init));
-            }
-        };
-        URLSearchParamsState.prototype = {
-            type: URL_SEARCH_PARAMS,
-            bindURL: function(url) {
-                this.url = url;
-                this.update();
-            },
-            parseObject: function(object) {
-                var entries = this.entries;
-                var iteratorMethod = getIteratorMethod(object);
-                var iterator, next, step, entryIterator, entryNext, first, second;
-                if (iteratorMethod) {
-                    iterator = getIterator(object, iteratorMethod);
-                    next = iterator.next;
-                    while (!(step = call(next, iterator)).done) {
-                        entryIterator = getIterator(anObject(step.value));
-                        entryNext = entryIterator.next;
-                        if ((first = call(entryNext, entryIterator)).done || (second = call(entryNext, entryIterator)).done || !call(entryNext, entryIterator).done) throw new TypeError("Expected sequence with length 2");
-                        push(entries, {
-                            key: $toString(first.value),
-                            value: $toString(second.value)
-                        });
-                    }
-                } else for (var key in object) if (hasOwn(object, key)) {
-                    push(entries, {
-                        key: key,
-                        value: $toString(object[key])
-                    });
-                }
-            },
-            parseQuery: function(query) {
-                if (query) {
-                    var entries = this.entries;
-                    var attributes = split(query, "&");
-                    var index = 0;
-                    var attribute, entry;
-                    while (index < attributes.length) {
-                        attribute = attributes[index++];
-                        if (attribute.length) {
-                            entry = split(attribute, "=");
-                            push(entries, {
-                                key: decode(shift(entry)),
-                                value: decode(join(entry, "="))
-                            });
-                        }
-                    }
-                }
-            },
-            serialize: function() {
-                var entries = this.entries;
-                var result = [];
-                var index = 0;
-                var entry;
-                while (index < entries.length) {
-                    entry = entries[index++];
-                    push(result, serialize(entry.key) + "=" + serialize(entry.value));
-                }
-                return join(result, "&");
-            },
-            update: function() {
-                this.entries.length = 0;
-                this.parseQuery(this.url.query);
-            },
-            updateURL: function() {
-                if (this.url) this.url.update();
-            }
-        };
-        var URLSearchParamsConstructor = function URLSearchParams() {
-            anInstance(this, URLSearchParamsPrototype);
-            var init = arguments.length > 0 ? arguments[0] : undefined;
-            var state = setInternalState(this, new URLSearchParamsState(init));
-            if (!DESCRIPTORS) this.size = state.entries.length;
-        };
-        var URLSearchParamsPrototype = URLSearchParamsConstructor.prototype;
-        defineBuiltIns(URLSearchParamsPrototype, {
-            append: function append(name, value) {
-                var state = getInternalParamsState(this);
-                validateArgumentsLength(arguments.length, 2);
-                push(state.entries, {
-                    key: $toString(name),
-                    value: $toString(value)
-                });
-                if (!DESCRIPTORS) this.size++;
-                state.updateURL();
-            },
-            delete: function(name) {
-                var state = getInternalParamsState(this);
-                var length = validateArgumentsLength(arguments.length, 1);
-                var entries = state.entries;
-                var key = $toString(name);
-                var $value = length < 2 ? undefined : arguments[1];
-                var value = $value === undefined ? $value : $toString($value);
-                var index = 0;
-                while (index < entries.length) {
-                    var entry = entries[index];
-                    if (entry.key === key && (value === undefined || entry.value === value)) {
-                        splice(entries, index, 1);
-                        if (value !== undefined) break;
-                    } else index++;
-                }
-                if (!DESCRIPTORS) this.size = entries.length;
-                state.updateURL();
-            },
-            get: function get(name) {
-                var entries = getInternalParamsState(this).entries;
-                validateArgumentsLength(arguments.length, 1);
-                var key = $toString(name);
-                var index = 0;
-                for (;index < entries.length; index++) {
-                    if (entries[index].key === key) return entries[index].value;
-                }
-                return null;
-            },
-            getAll: function getAll(name) {
-                var entries = getInternalParamsState(this).entries;
-                validateArgumentsLength(arguments.length, 1);
-                var key = $toString(name);
-                var result = [];
-                var index = 0;
-                for (;index < entries.length; index++) {
-                    if (entries[index].key === key) push(result, entries[index].value);
-                }
-                return result;
-            },
-            has: function has(name) {
-                var entries = getInternalParamsState(this).entries;
-                var length = validateArgumentsLength(arguments.length, 1);
-                var key = $toString(name);
-                var $value = length < 2 ? undefined : arguments[1];
-                var value = $value === undefined ? $value : $toString($value);
-                var index = 0;
-                while (index < entries.length) {
-                    var entry = entries[index++];
-                    if (entry.key === key && (value === undefined || entry.value === value)) return true;
-                }
-                return false;
-            },
-            set: function set(name, value) {
-                var state = getInternalParamsState(this);
-                validateArgumentsLength(arguments.length, 1);
-                var entries = state.entries;
-                var found = false;
-                var key = $toString(name);
-                var val = $toString(value);
-                var index = 0;
-                var entry;
-                for (;index < entries.length; index++) {
-                    entry = entries[index];
-                    if (entry.key === key) {
-                        if (found) splice(entries, index--, 1); else {
-                            found = true;
-                            entry.value = val;
-                        }
-                    }
-                }
-                if (!found) push(entries, {
-                    key: key,
-                    value: val
-                });
-                if (!DESCRIPTORS) this.size = entries.length;
-                state.updateURL();
-            },
-            sort: function sort() {
-                var state = getInternalParamsState(this);
-                arraySort(state.entries, function(a, b) {
-                    return a.key > b.key ? 1 : -1;
-                });
-                state.updateURL();
-            },
-            forEach: function forEach(callback) {
-                var entries = getInternalParamsState(this).entries;
-                var boundFunction = bind(callback, arguments.length > 1 ? arguments[1] : undefined);
-                var index = 0;
-                var entry;
-                while (index < entries.length) {
-                    entry = entries[index++];
-                    boundFunction(entry.value, entry.key, this);
-                }
-            },
-            keys: function keys() {
-                return new URLSearchParamsIterator(this, "keys");
-            },
-            values: function values() {
-                return new URLSearchParamsIterator(this, "values");
-            },
-            entries: function entries() {
-                return new URLSearchParamsIterator(this, "entries");
-            }
-        }, {
-            enumerable: true
-        });
-        defineBuiltIn(URLSearchParamsPrototype, ITERATOR, URLSearchParamsPrototype.entries, {
-            name: "entries"
-        });
-        defineBuiltIn(URLSearchParamsPrototype, "toString", function toString() {
-            return getInternalParamsState(this).serialize();
-        }, {
-            enumerable: true
-        });
-        if (DESCRIPTORS) defineBuiltInAccessor(URLSearchParamsPrototype, "size", {
-            get: function size() {
-                return getInternalParamsState(this).entries.length;
-            },
-            configurable: true,
-            enumerable: true
-        });
-        setToStringTag(URLSearchParamsConstructor, URL_SEARCH_PARAMS);
-        $({
-            global: true,
-            constructor: true,
-            forced: !USE_NATIVE_URL
-        }, {
-            URLSearchParams: URLSearchParamsConstructor
-        });
-        if (!USE_NATIVE_URL && isCallable(Headers)) {
-            var headersHas = uncurryThis(HeadersPrototype.has);
-            var headersSet = uncurryThis(HeadersPrototype.set);
-            var wrapRequestOptions = function(init) {
-                if (isObject(init)) {
-                    var body = init.body;
-                    var headers;
-                    if (classof(body) === URL_SEARCH_PARAMS) {
-                        headers = init.headers ? new Headers(init.headers) : new Headers;
-                        if (!headersHas(headers, "content-type")) {
-                            headersSet(headers, "content-type", "application/x-www-form-urlencoded;charset=UTF-8");
-                        }
-                        return create(init, {
-                            body: createPropertyDescriptor(0, $toString(body)),
-                            headers: createPropertyDescriptor(0, headers)
-                        });
-                    }
-                }
-                return init;
-            };
-            if (isCallable(nativeFetch)) {
-                $({
-                    global: true,
-                    enumerable: true,
-                    dontCallGetSet: true,
-                    forced: true
-                }, {
-                    fetch: function fetch(input) {
-                        return nativeFetch(input, arguments.length > 1 ? wrapRequestOptions(arguments[1]) : {});
-                    }
-                });
-            }
-            if (isCallable(NativeRequest)) {
-                var RequestConstructor = function Request(input) {
-                    anInstance(this, RequestPrototype);
-                    return new NativeRequest(input, arguments.length > 1 ? wrapRequestOptions(arguments[1]) : {});
-                };
-                RequestPrototype.constructor = RequestConstructor;
-                RequestConstructor.prototype = RequestPrototype;
-                $({
-                    global: true,
-                    constructor: true,
-                    dontCallGetSet: true,
-                    forced: true
-                }, {
-                    Request: RequestConstructor
-                });
-            }
-        }
-        web_urlSearchParams_constructor = {
-            URLSearchParams: URLSearchParamsConstructor,
-            getState: getInternalParamsState
-        };
-        return web_urlSearchParams_constructor;
-    }
-    var hasRequiredWeb_url_constructor;
-    function requireWeb_url_constructor() {
-        if (hasRequiredWeb_url_constructor) return web_url_constructor;
-        hasRequiredWeb_url_constructor = 1;
-        requireEs_string_iterator();
-        var $ = require_export();
-        var DESCRIPTORS = requireDescriptors();
-        var USE_NATIVE_URL = requireUrlConstructorDetection();
-        var globalThis = requireGlobalThis();
-        var bind = requireFunctionBindContext();
-        var uncurryThis = requireFunctionUncurryThis();
-        var defineBuiltIn = requireDefineBuiltIn();
-        var defineBuiltInAccessor = requireDefineBuiltInAccessor();
-        var anInstance = requireAnInstance();
-        var hasOwn = requireHasOwnProperty();
-        var assign = requireObjectAssign();
-        var arrayFrom = requireArrayFrom();
-        var arraySlice = requireArraySlice();
-        var codeAt = requireStringMultibyte().codeAt;
-        var toASCII = requireStringPunycodeToAscii();
-        var $toString = requireToString();
-        var setToStringTag = requireSetToStringTag();
-        var validateArgumentsLength = requireValidateArgumentsLength();
-        var URLSearchParamsModule = requireWeb_urlSearchParams_constructor();
-        var InternalStateModule = requireInternalState();
-        var setInternalState = InternalStateModule.set;
-        var getInternalURLState = InternalStateModule.getterFor("URL");
-        var URLSearchParams = URLSearchParamsModule.URLSearchParams;
-        var getInternalSearchParamsState = URLSearchParamsModule.getState;
-        var NativeURL = globalThis.URL;
-        var TypeError = globalThis.TypeError;
-        var parseInt = globalThis.parseInt;
-        var floor = Math.floor;
-        var pow = Math.pow;
-        var charAt = uncurryThis("".charAt);
-        var exec = uncurryThis(/./.exec);
-        var join = uncurryThis([].join);
-        var numberToString = uncurryThis(1.1.toString);
-        var pop = uncurryThis([].pop);
-        var push = uncurryThis([].push);
-        var replace = uncurryThis("".replace);
-        var shift = uncurryThis([].shift);
-        var split = uncurryThis("".split);
-        var stringSlice = uncurryThis("".slice);
-        var toLowerCase = uncurryThis("".toLowerCase);
-        var unshift = uncurryThis([].unshift);
-        var INVALID_AUTHORITY = "Invalid authority";
-        var INVALID_SCHEME = "Invalid scheme";
-        var INVALID_HOST = "Invalid host";
-        var INVALID_PORT = "Invalid port";
-        var ALPHA = /[a-z]/i;
-        var ALPHANUMERIC = /[\d+-.a-z]/i;
-        var DIGIT = /\d/;
-        var HEX_START = /^0x/i;
-        var OCT = /^[0-7]+$/;
-        var DEC = /^\d+$/;
-        var HEX = /^[\da-f]+$/i;
-        var FORBIDDEN_HOST_CODE_POINT = /[\0\t\n\r #%/:<>?@[\\\]^|]/;
-        var FORBIDDEN_HOST_CODE_POINT_EXCLUDING_PERCENT = /[\0\t\n\r #/:<>?@[\\\]^|]/;
-        var LEADING_C0_CONTROL_OR_SPACE = /^[\u0000-\u0020]+/;
-        var TRAILING_C0_CONTROL_OR_SPACE = /(^|[^\u0000-\u0020])[\u0000-\u0020]+$/;
-        var TAB_AND_NEW_LINE = /[\t\n\r]/g;
-        var EOF;
-        var parseIPv4 = function(input) {
-            var parts = split(input, ".");
-            var partsLength, numbers, index, part, radix, number, ipv4;
-            if (parts.length && parts[parts.length - 1] === "") {
-                parts.length--;
-            }
-            partsLength = parts.length;
-            if (partsLength > 4) return input;
-            numbers = [];
-            for (index = 0; index < partsLength; index++) {
-                part = parts[index];
-                if (part === "") return input;
-                radix = 10;
-                if (part.length > 1 && charAt(part, 0) === "0") {
-                    radix = exec(HEX_START, part) ? 16 : 8;
-                    part = stringSlice(part, radix === 8 ? 1 : 2);
-                }
-                if (part === "") {
-                    number = 0;
-                } else {
-                    if (!exec(radix === 10 ? DEC : radix === 8 ? OCT : HEX, part)) return input;
-                    number = parseInt(part, radix);
-                }
-                push(numbers, number);
-            }
-            for (index = 0; index < partsLength; index++) {
-                number = numbers[index];
-                if (index === partsLength - 1) {
-                    if (number >= pow(256, 5 - partsLength)) return null;
-                } else if (number > 255) return null;
-            }
-            ipv4 = pop(numbers);
-            for (index = 0; index < numbers.length; index++) {
-                ipv4 += numbers[index] * pow(256, 3 - index);
-            }
-            return ipv4;
-        };
-        var parseIPv6 = function(input) {
-            var address = [ 0, 0, 0, 0, 0, 0, 0, 0 ];
-            var pieceIndex = 0;
-            var compress = null;
-            var pointer = 0;
-            var value, length, numbersSeen, ipv4Piece, number, swaps, swap;
-            var chr = function() {
-                return charAt(input, pointer);
-            };
-            if (chr() === ":") {
-                if (charAt(input, 1) !== ":") return;
-                pointer += 2;
-                pieceIndex++;
-                compress = pieceIndex;
-            }
-            while (chr()) {
-                if (pieceIndex === 8) return;
-                if (chr() === ":") {
-                    if (compress !== null) return;
-                    pointer++;
-                    pieceIndex++;
-                    compress = pieceIndex;
-                    continue;
-                }
-                value = length = 0;
-                while (length < 4 && exec(HEX, chr())) {
-                    value = value * 16 + parseInt(chr(), 16);
-                    pointer++;
-                    length++;
-                }
-                if (chr() === ".") {
-                    if (length === 0) return;
-                    pointer -= length;
-                    if (pieceIndex > 6) return;
-                    numbersSeen = 0;
-                    while (chr()) {
-                        ipv4Piece = null;
-                        if (numbersSeen > 0) {
-                            if (chr() === "." && numbersSeen < 4) pointer++; else return;
-                        }
-                        if (!exec(DIGIT, chr())) return;
-                        while (exec(DIGIT, chr())) {
-                            number = parseInt(chr(), 10);
-                            if (ipv4Piece === null) ipv4Piece = number; else if (ipv4Piece === 0) return; else ipv4Piece = ipv4Piece * 10 + number;
-                            if (ipv4Piece > 255) return;
-                            pointer++;
-                        }
-                        address[pieceIndex] = address[pieceIndex] * 256 + ipv4Piece;
-                        numbersSeen++;
-                        if (numbersSeen === 2 || numbersSeen === 4) pieceIndex++;
-                    }
-                    if (numbersSeen !== 4) return;
-                    break;
-                } else if (chr() === ":") {
-                    pointer++;
-                    if (!chr()) return;
-                } else if (chr()) return;
-                address[pieceIndex++] = value;
-            }
-            if (compress !== null) {
-                swaps = pieceIndex - compress;
-                pieceIndex = 7;
-                while (pieceIndex !== 0 && swaps > 0) {
-                    swap = address[pieceIndex];
-                    address[pieceIndex--] = address[compress + swaps - 1];
-                    address[compress + --swaps] = swap;
-                }
-            } else if (pieceIndex !== 8) return;
-            return address;
-        };
-        var findLongestZeroSequence = function(ipv6) {
-            var maxIndex = null;
-            var maxLength = 1;
-            var currStart = null;
-            var currLength = 0;
-            var index = 0;
-            for (;index < 8; index++) {
-                if (ipv6[index] !== 0) {
-                    if (currLength > maxLength) {
-                        maxIndex = currStart;
-                        maxLength = currLength;
-                    }
-                    currStart = null;
-                    currLength = 0;
-                } else {
-                    if (currStart === null) currStart = index;
-                    ++currLength;
-                }
-            }
-            return currLength > maxLength ? currStart : maxIndex;
-        };
-        var serializeHost = function(host) {
-            var result, index, compress, ignore0;
-            if (typeof host == "number") {
-                result = [];
-                for (index = 0; index < 4; index++) {
-                    unshift(result, host % 256);
-                    host = floor(host / 256);
-                }
-                return join(result, ".");
-            }
-            if (typeof host == "object") {
-                result = "";
-                compress = findLongestZeroSequence(host);
-                for (index = 0; index < 8; index++) {
-                    if (ignore0 && host[index] === 0) continue;
-                    if (ignore0) ignore0 = false;
-                    if (compress === index) {
-                        result += index ? ":" : "::";
-                        ignore0 = true;
-                    } else {
-                        result += numberToString(host[index], 16);
-                        if (index < 7) result += ":";
-                    }
-                }
-                return "[" + result + "]";
-            }
-            return host;
-        };
-        var C0ControlPercentEncodeSet = {};
-        var fragmentPercentEncodeSet = assign({}, C0ControlPercentEncodeSet, {
-            " ": 1,
-            '"': 1,
-            "<": 1,
-            ">": 1,
-            "`": 1
-        });
-        var pathPercentEncodeSet = assign({}, fragmentPercentEncodeSet, {
-            "#": 1,
-            "?": 1,
-            "{": 1,
-            "}": 1
-        });
-        var userinfoPercentEncodeSet = assign({}, pathPercentEncodeSet, {
-            "/": 1,
-            ":": 1,
-            ";": 1,
-            "=": 1,
-            "@": 1,
-            "[": 1,
-            "\\": 1,
-            "]": 1,
-            "^": 1,
-            "|": 1
-        });
-        var percentEncode = function(chr, set) {
-            var code = codeAt(chr, 0);
-            return code > 32 && code < 127 && !hasOwn(set, chr) ? chr : encodeURIComponent(chr);
-        };
-        var specialSchemes = {
-            ftp: 21,
-            file: null,
-            http: 80,
-            https: 443,
-            ws: 80,
-            wss: 443
-        };
-        var isWindowsDriveLetter = function(string, normalized) {
-            var second;
-            return string.length === 2 && exec(ALPHA, charAt(string, 0)) && ((second = charAt(string, 1)) === ":" || !normalized && second === "|");
-        };
-        var startsWithWindowsDriveLetter = function(string) {
-            var third;
-            return string.length > 1 && isWindowsDriveLetter(stringSlice(string, 0, 2)) && (string.length === 2 || ((third = charAt(string, 2)) === "/" || third === "\\" || third === "?" || third === "#"));
-        };
-        var isSingleDot = function(segment) {
-            return segment === "." || toLowerCase(segment) === "%2e";
-        };
-        var isDoubleDot = function(segment) {
-            segment = toLowerCase(segment);
-            return segment === ".." || segment === "%2e." || segment === ".%2e" || segment === "%2e%2e";
-        };
-        var SCHEME_START = {};
-        var SCHEME = {};
-        var NO_SCHEME = {};
-        var SPECIAL_RELATIVE_OR_AUTHORITY = {};
-        var PATH_OR_AUTHORITY = {};
-        var RELATIVE = {};
-        var RELATIVE_SLASH = {};
-        var SPECIAL_AUTHORITY_SLASHES = {};
-        var SPECIAL_AUTHORITY_IGNORE_SLASHES = {};
-        var AUTHORITY = {};
-        var HOST = {};
-        var HOSTNAME = {};
-        var PORT = {};
-        var FILE = {};
-        var FILE_SLASH = {};
-        var FILE_HOST = {};
-        var PATH_START = {};
-        var PATH = {};
-        var CANNOT_BE_A_BASE_URL_PATH = {};
-        var QUERY = {};
-        var FRAGMENT = {};
-        var URLState = function(url, isBase, base) {
-            var urlString = $toString(url);
-            var baseState, failure, searchParams;
-            if (isBase) {
-                failure = this.parse(urlString);
-                if (failure) throw new TypeError(failure);
-                this.searchParams = null;
-            } else {
-                if (base !== undefined) baseState = new URLState(base, true);
-                failure = this.parse(urlString, null, baseState);
-                if (failure) throw new TypeError(failure);
-                searchParams = getInternalSearchParamsState(new URLSearchParams);
-                searchParams.bindURL(this);
-                this.searchParams = searchParams;
-            }
-        };
-        URLState.prototype = {
-            type: "URL",
-            parse: function(input, stateOverride, base) {
-                var url = this;
-                var state = stateOverride || SCHEME_START;
-                var pointer = 0;
-                var buffer = "";
-                var seenAt = false;
-                var seenBracket = false;
-                var seenPasswordToken = false;
-                var codePoints, chr, bufferCodePoints, failure;
-                input = $toString(input);
-                if (!stateOverride) {
-                    url.scheme = "";
-                    url.username = "";
-                    url.password = "";
-                    url.host = null;
-                    url.port = null;
-                    url.path = [];
-                    url.query = null;
-                    url.fragment = null;
-                    url.cannotBeABaseURL = false;
-                    input = replace(input, LEADING_C0_CONTROL_OR_SPACE, "");
-                    input = replace(input, TRAILING_C0_CONTROL_OR_SPACE, "$1");
-                }
-                input = replace(input, TAB_AND_NEW_LINE, "");
-                codePoints = arrayFrom(input);
-                while (pointer <= codePoints.length) {
-                    chr = codePoints[pointer];
-                    switch (state) {
-                      case SCHEME_START:
-                        if (chr && exec(ALPHA, chr)) {
-                            buffer += toLowerCase(chr);
-                            state = SCHEME;
-                        } else if (!stateOverride) {
-                            state = NO_SCHEME;
-                            continue;
-                        } else return INVALID_SCHEME;
-                        break;
-
-                      case SCHEME:
-                        if (chr && (exec(ALPHANUMERIC, chr) || chr === "+" || chr === "-" || chr === ".")) {
-                            buffer += toLowerCase(chr);
-                        } else if (chr === ":") {
-                            if (stateOverride && (url.isSpecial() !== hasOwn(specialSchemes, buffer) || buffer === "file" && (url.includesCredentials() || url.port !== null) || url.scheme === "file" && !url.host)) return;
-                            url.scheme = buffer;
-                            if (stateOverride) {
-                                if (url.isSpecial() && specialSchemes[url.scheme] === url.port) url.port = null;
-                                return;
-                            }
-                            buffer = "";
-                            if (url.scheme === "file") {
-                                state = FILE;
-                            } else if (url.isSpecial() && base && base.scheme === url.scheme) {
-                                state = SPECIAL_RELATIVE_OR_AUTHORITY;
-                            } else if (url.isSpecial()) {
-                                state = SPECIAL_AUTHORITY_SLASHES;
-                            } else if (codePoints[pointer + 1] === "/") {
-                                state = PATH_OR_AUTHORITY;
-                                pointer++;
-                            } else {
-                                url.cannotBeABaseURL = true;
-                                push(url.path, "");
-                                state = CANNOT_BE_A_BASE_URL_PATH;
-                            }
-                        } else if (!stateOverride) {
-                            buffer = "";
-                            state = NO_SCHEME;
-                            pointer = 0;
-                            continue;
-                        } else return INVALID_SCHEME;
-                        break;
-
-                      case NO_SCHEME:
-                        if (!base || base.cannotBeABaseURL && chr !== "#") return INVALID_SCHEME;
-                        if (base.cannotBeABaseURL && chr === "#") {
-                            url.scheme = base.scheme;
-                            url.path = arraySlice(base.path);
-                            url.query = base.query;
-                            url.fragment = "";
-                            url.cannotBeABaseURL = true;
-                            state = FRAGMENT;
-                            break;
-                        }
-                        state = base.scheme === "file" ? FILE : RELATIVE;
-                        continue;
-
-                      case SPECIAL_RELATIVE_OR_AUTHORITY:
-                        if (chr === "/" && codePoints[pointer + 1] === "/") {
-                            state = SPECIAL_AUTHORITY_IGNORE_SLASHES;
-                            pointer++;
-                        } else {
-                            state = RELATIVE;
-                            continue;
-                        }
-                        break;
-
-                      case PATH_OR_AUTHORITY:
-                        if (chr === "/") {
-                            state = AUTHORITY;
-                            break;
-                        } else {
-                            state = PATH;
-                            continue;
-                        }
-
-                      case RELATIVE:
-                        url.scheme = base.scheme;
-                        if (chr === EOF) {
-                            url.username = base.username;
-                            url.password = base.password;
-                            url.host = base.host;
-                            url.port = base.port;
-                            url.path = arraySlice(base.path);
-                            url.query = base.query;
-                        } else if (chr === "/" || chr === "\\" && url.isSpecial()) {
-                            state = RELATIVE_SLASH;
-                        } else if (chr === "?") {
-                            url.username = base.username;
-                            url.password = base.password;
-                            url.host = base.host;
-                            url.port = base.port;
-                            url.path = arraySlice(base.path);
-                            url.query = "";
-                            state = QUERY;
-                        } else if (chr === "#") {
-                            url.username = base.username;
-                            url.password = base.password;
-                            url.host = base.host;
-                            url.port = base.port;
-                            url.path = arraySlice(base.path);
-                            url.query = base.query;
-                            url.fragment = "";
-                            state = FRAGMENT;
-                        } else {
-                            url.username = base.username;
-                            url.password = base.password;
-                            url.host = base.host;
-                            url.port = base.port;
-                            url.path = arraySlice(base.path);
-                            url.path.length--;
-                            state = PATH;
-                            continue;
-                        }
-                        break;
-
-                      case RELATIVE_SLASH:
-                        if (url.isSpecial() && (chr === "/" || chr === "\\")) {
-                            state = SPECIAL_AUTHORITY_IGNORE_SLASHES;
-                        } else if (chr === "/") {
-                            state = AUTHORITY;
-                        } else {
-                            url.username = base.username;
-                            url.password = base.password;
-                            url.host = base.host;
-                            url.port = base.port;
-                            state = PATH;
-                            continue;
-                        }
-                        break;
-
-                      case SPECIAL_AUTHORITY_SLASHES:
-                        state = SPECIAL_AUTHORITY_IGNORE_SLASHES;
-                        if (chr !== "/" || charAt(buffer, pointer + 1) !== "/") continue;
-                        pointer++;
-                        break;
-
-                      case SPECIAL_AUTHORITY_IGNORE_SLASHES:
-                        if (chr !== "/" && chr !== "\\") {
-                            state = AUTHORITY;
-                            continue;
-                        }
-                        break;
-
-                      case AUTHORITY:
-                        if (chr === "@") {
-                            if (seenAt) buffer = "%40" + buffer;
-                            seenAt = true;
-                            bufferCodePoints = arrayFrom(buffer);
-                            for (var i = 0; i < bufferCodePoints.length; i++) {
-                                var codePoint = bufferCodePoints[i];
-                                if (codePoint === ":" && !seenPasswordToken) {
-                                    seenPasswordToken = true;
-                                    continue;
-                                }
-                                var encodedCodePoints = percentEncode(codePoint, userinfoPercentEncodeSet);
-                                if (seenPasswordToken) url.password += encodedCodePoints; else url.username += encodedCodePoints;
-                            }
-                            buffer = "";
-                        } else if (chr === EOF || chr === "/" || chr === "?" || chr === "#" || chr === "\\" && url.isSpecial()) {
-                            if (seenAt && buffer === "") return INVALID_AUTHORITY;
-                            pointer -= arrayFrom(buffer).length + 1;
-                            buffer = "";
-                            state = HOST;
-                        } else buffer += chr;
-                        break;
-
-                      case HOST:
-                      case HOSTNAME:
-                        if (stateOverride && url.scheme === "file") {
-                            state = FILE_HOST;
-                            continue;
-                        } else if (chr === ":" && !seenBracket) {
-                            if (buffer === "") return INVALID_HOST;
-                            failure = url.parseHost(buffer);
-                            if (failure) return failure;
-                            buffer = "";
-                            state = PORT;
-                            if (stateOverride === HOSTNAME) return;
-                        } else if (chr === EOF || chr === "/" || chr === "?" || chr === "#" || chr === "\\" && url.isSpecial()) {
-                            if (url.isSpecial() && buffer === "") return INVALID_HOST;
-                            if (stateOverride && buffer === "" && (url.includesCredentials() || url.port !== null)) return;
-                            failure = url.parseHost(buffer);
-                            if (failure) return failure;
-                            buffer = "";
-                            state = PATH_START;
-                            if (stateOverride) return;
-                            continue;
-                        } else {
-                            if (chr === "[") seenBracket = true; else if (chr === "]") seenBracket = false;
-                            buffer += chr;
-                        }
-                        break;
-
-                      case PORT:
-                        if (exec(DIGIT, chr)) {
-                            buffer += chr;
-                        } else if (chr === EOF || chr === "/" || chr === "?" || chr === "#" || chr === "\\" && url.isSpecial() || stateOverride) {
-                            if (buffer !== "") {
-                                var port = parseInt(buffer, 10);
-                                if (port > 65535) return INVALID_PORT;
-                                url.port = url.isSpecial() && port === specialSchemes[url.scheme] ? null : port;
-                                buffer = "";
-                            }
-                            if (stateOverride) return;
-                            state = PATH_START;
-                            continue;
-                        } else return INVALID_PORT;
-                        break;
-
-                      case FILE:
-                        url.scheme = "file";
-                        if (chr === "/" || chr === "\\") state = FILE_SLASH; else if (base && base.scheme === "file") {
-                            switch (chr) {
-                              case EOF:
-                                url.host = base.host;
-                                url.path = arraySlice(base.path);
-                                url.query = base.query;
-                                break;
-
-                              case "?":
-                                url.host = base.host;
-                                url.path = arraySlice(base.path);
-                                url.query = "";
-                                state = QUERY;
-                                break;
-
-                              case "#":
-                                url.host = base.host;
-                                url.path = arraySlice(base.path);
-                                url.query = base.query;
-                                url.fragment = "";
-                                state = FRAGMENT;
-                                break;
-
-                              default:
-                                if (!startsWithWindowsDriveLetter(join(arraySlice(codePoints, pointer), ""))) {
-                                    url.host = base.host;
-                                    url.path = arraySlice(base.path);
-                                    url.shortenPath();
-                                }
-                                state = PATH;
-                                continue;
-                            }
-                        } else {
-                            state = PATH;
-                            continue;
-                        }
-                        break;
-
-                      case FILE_SLASH:
-                        if (chr === "/" || chr === "\\") {
-                            state = FILE_HOST;
-                            break;
-                        }
-                        if (base && base.scheme === "file" && !startsWithWindowsDriveLetter(join(arraySlice(codePoints, pointer), ""))) {
-                            if (isWindowsDriveLetter(base.path[0], true)) push(url.path, base.path[0]); else url.host = base.host;
-                        }
-                        state = PATH;
-                        continue;
-
-                      case FILE_HOST:
-                        if (chr === EOF || chr === "/" || chr === "\\" || chr === "?" || chr === "#") {
-                            if (!stateOverride && isWindowsDriveLetter(buffer)) {
-                                state = PATH;
-                            } else if (buffer === "") {
-                                url.host = "";
-                                if (stateOverride) return;
-                                state = PATH_START;
-                            } else {
-                                failure = url.parseHost(buffer);
-                                if (failure) return failure;
-                                if (url.host === "localhost") url.host = "";
-                                if (stateOverride) return;
-                                buffer = "";
-                                state = PATH_START;
-                            }
-                            continue;
-                        } else buffer += chr;
-                        break;
-
-                      case PATH_START:
-                        if (url.isSpecial()) {
-                            state = PATH;
-                            if (chr !== "/" && chr !== "\\") continue;
-                        } else if (!stateOverride && chr === "?") {
-                            url.query = "";
-                            state = QUERY;
-                        } else if (!stateOverride && chr === "#") {
-                            url.fragment = "";
-                            state = FRAGMENT;
-                        } else if (chr !== EOF) {
-                            state = PATH;
-                            if (chr !== "/") continue;
-                        }
-                        break;
-
-                      case PATH:
-                        if (chr === EOF || chr === "/" || chr === "\\" && url.isSpecial() || !stateOverride && (chr === "?" || chr === "#")) {
-                            if (isDoubleDot(buffer)) {
-                                url.shortenPath();
-                                if (chr !== "/" && !(chr === "\\" && url.isSpecial())) {
-                                    push(url.path, "");
-                                }
-                            } else if (isSingleDot(buffer)) {
-                                if (chr !== "/" && !(chr === "\\" && url.isSpecial())) {
-                                    push(url.path, "");
-                                }
-                            } else {
-                                if (url.scheme === "file" && !url.path.length && isWindowsDriveLetter(buffer)) {
-                                    if (url.host) url.host = "";
-                                    buffer = charAt(buffer, 0) + ":";
-                                }
-                                push(url.path, buffer);
-                            }
-                            buffer = "";
-                            if (url.scheme === "file" && (chr === EOF || chr === "?" || chr === "#")) {
-                                while (url.path.length > 1 && url.path[0] === "") {
-                                    shift(url.path);
-                                }
-                            }
-                            if (chr === "?") {
-                                url.query = "";
-                                state = QUERY;
-                            } else if (chr === "#") {
-                                url.fragment = "";
-                                state = FRAGMENT;
-                            }
-                        } else {
-                            buffer += percentEncode(chr, pathPercentEncodeSet);
-                        }
-                        break;
-
-                      case CANNOT_BE_A_BASE_URL_PATH:
-                        if (chr === "?") {
-                            url.query = "";
-                            state = QUERY;
-                        } else if (chr === "#") {
-                            url.fragment = "";
-                            state = FRAGMENT;
-                        } else if (chr !== EOF) {
-                            url.path[0] += percentEncode(chr, C0ControlPercentEncodeSet);
-                        }
-                        break;
-
-                      case QUERY:
-                        if (!stateOverride && chr === "#") {
-                            url.fragment = "";
-                            state = FRAGMENT;
-                        } else if (chr !== EOF) {
-                            if (chr === "'" && url.isSpecial()) url.query += "%27"; else if (chr === "#") url.query += "%23"; else url.query += percentEncode(chr, C0ControlPercentEncodeSet);
-                        }
-                        break;
-
-                      case FRAGMENT:
-                        if (chr !== EOF) url.fragment += percentEncode(chr, fragmentPercentEncodeSet);
-                        break;
-                    }
-                    pointer++;
-                }
-            },
-            parseHost: function(input) {
-                var result, codePoints, index;
-                if (charAt(input, 0) === "[") {
-                    if (charAt(input, input.length - 1) !== "]") return INVALID_HOST;
-                    result = parseIPv6(stringSlice(input, 1, -1));
-                    if (!result) return INVALID_HOST;
-                    this.host = result;
-                } else if (!this.isSpecial()) {
-                    if (exec(FORBIDDEN_HOST_CODE_POINT_EXCLUDING_PERCENT, input)) return INVALID_HOST;
-                    result = "";
-                    codePoints = arrayFrom(input);
-                    for (index = 0; index < codePoints.length; index++) {
-                        result += percentEncode(codePoints[index], C0ControlPercentEncodeSet);
-                    }
-                    this.host = result;
-                } else {
-                    input = toASCII(input);
-                    if (exec(FORBIDDEN_HOST_CODE_POINT, input)) return INVALID_HOST;
-                    result = parseIPv4(input);
-                    if (result === null) return INVALID_HOST;
-                    this.host = result;
-                }
-            },
-            cannotHaveUsernamePasswordPort: function() {
-                return !this.host || this.cannotBeABaseURL || this.scheme === "file";
-            },
-            includesCredentials: function() {
-                return this.username !== "" || this.password !== "";
-            },
-            isSpecial: function() {
-                return hasOwn(specialSchemes, this.scheme);
-            },
-            shortenPath: function() {
-                var path = this.path;
-                var pathSize = path.length;
-                if (pathSize && (this.scheme !== "file" || pathSize !== 1 || !isWindowsDriveLetter(path[0], true))) {
-                    path.length--;
-                }
-            },
-            serialize: function() {
-                var url = this;
-                var scheme = url.scheme;
-                var username = url.username;
-                var password = url.password;
-                var host = url.host;
-                var port = url.port;
-                var path = url.path;
-                var query = url.query;
-                var fragment = url.fragment;
-                var output = scheme + ":";
-                if (host !== null) {
-                    output += "//";
-                    if (url.includesCredentials()) {
-                        output += username + (password ? ":" + password : "") + "@";
-                    }
-                    output += serializeHost(host);
-                    if (port !== null) output += ":" + port;
-                } else if (scheme === "file") output += "//";
-                output += url.cannotBeABaseURL ? path[0] : path.length ? "/" + join(path, "/") : "";
-                if (query !== null) output += "?" + query;
-                if (fragment !== null) output += "#" + fragment;
-                return output;
-            },
-            setHref: function(href) {
-                var failure = this.parse(href);
-                if (failure) throw new TypeError(failure);
-                this.searchParams.update();
-            },
-            getOrigin: function() {
-                var scheme = this.scheme;
-                var port = this.port;
-                if (scheme === "blob") try {
-                    return new URLConstructor(scheme.path[0]).origin;
-                } catch (error) {
-                    return "null";
-                }
-                if (scheme === "file" || !this.isSpecial()) return "null";
-                return scheme + "://" + serializeHost(this.host) + (port !== null ? ":" + port : "");
-            },
-            getProtocol: function() {
-                return this.scheme + ":";
-            },
-            setProtocol: function(protocol) {
-                this.parse($toString(protocol) + ":", SCHEME_START);
-            },
-            getUsername: function() {
-                return this.username;
-            },
-            setUsername: function(username) {
-                var codePoints = arrayFrom($toString(username));
-                if (this.cannotHaveUsernamePasswordPort()) return;
-                this.username = "";
-                for (var i = 0; i < codePoints.length; i++) {
-                    this.username += percentEncode(codePoints[i], userinfoPercentEncodeSet);
-                }
-            },
-            getPassword: function() {
-                return this.password;
-            },
-            setPassword: function(password) {
-                var codePoints = arrayFrom($toString(password));
-                if (this.cannotHaveUsernamePasswordPort()) return;
-                this.password = "";
-                for (var i = 0; i < codePoints.length; i++) {
-                    this.password += percentEncode(codePoints[i], userinfoPercentEncodeSet);
-                }
-            },
-            getHost: function() {
-                var host = this.host;
-                var port = this.port;
-                return host === null ? "" : port === null ? serializeHost(host) : serializeHost(host) + ":" + port;
-            },
-            setHost: function(host) {
-                if (this.cannotBeABaseURL) return;
-                this.parse(host, HOST);
-            },
-            getHostname: function() {
-                var host = this.host;
-                return host === null ? "" : serializeHost(host);
-            },
-            setHostname: function(hostname) {
-                if (this.cannotBeABaseURL) return;
-                this.parse(hostname, HOSTNAME);
-            },
-            getPort: function() {
-                var port = this.port;
-                return port === null ? "" : $toString(port);
-            },
-            setPort: function(port) {
-                if (this.cannotHaveUsernamePasswordPort()) return;
-                port = $toString(port);
-                if (port === "") this.port = null; else this.parse(port, PORT);
-            },
-            getPathname: function() {
-                var path = this.path;
-                return this.cannotBeABaseURL ? path[0] : path.length ? "/" + join(path, "/") : "";
-            },
-            setPathname: function(pathname) {
-                if (this.cannotBeABaseURL) return;
-                this.path = [];
-                this.parse(pathname, PATH_START);
-            },
-            getSearch: function() {
-                var query = this.query;
-                return query ? "?" + query : "";
-            },
-            setSearch: function(search) {
-                search = $toString(search);
-                if (search === "") {
-                    this.query = null;
-                } else {
-                    if (charAt(search, 0) === "?") search = stringSlice(search, 1);
-                    this.query = "";
-                    this.parse(search, QUERY);
-                }
-                this.searchParams.update();
-            },
-            getSearchParams: function() {
-                return this.searchParams.facade;
-            },
-            getHash: function() {
-                var fragment = this.fragment;
-                return fragment ? "#" + fragment : "";
-            },
-            setHash: function(hash) {
-                hash = $toString(hash);
-                if (hash === "") {
-                    this.fragment = null;
-                    return;
-                }
-                if (charAt(hash, 0) === "#") hash = stringSlice(hash, 1);
-                this.fragment = "";
-                this.parse(hash, FRAGMENT);
-            },
-            update: function() {
-                this.query = this.searchParams.serialize() || null;
-            }
-        };
-        var URLConstructor = function URL(url) {
-            var that = anInstance(this, URLPrototype);
-            var base = validateArgumentsLength(arguments.length, 1) > 1 ? arguments[1] : undefined;
-            var state = setInternalState(that, new URLState(url, false, base));
-            if (!DESCRIPTORS) {
-                that.href = state.serialize();
-                that.origin = state.getOrigin();
-                that.protocol = state.getProtocol();
-                that.username = state.getUsername();
-                that.password = state.getPassword();
-                that.host = state.getHost();
-                that.hostname = state.getHostname();
-                that.port = state.getPort();
-                that.pathname = state.getPathname();
-                that.search = state.getSearch();
-                that.searchParams = state.getSearchParams();
-                that.hash = state.getHash();
-            }
-        };
-        var URLPrototype = URLConstructor.prototype;
-        var accessorDescriptor = function(getter, setter) {
-            return {
-                get: function() {
-                    return getInternalURLState(this)[getter]();
-                },
-                set: setter && function(value) {
-                    return getInternalURLState(this)[setter](value);
-                },
-                configurable: true,
-                enumerable: true
-            };
-        };
-        if (DESCRIPTORS) {
-            defineBuiltInAccessor(URLPrototype, "href", accessorDescriptor("serialize", "setHref"));
-            defineBuiltInAccessor(URLPrototype, "origin", accessorDescriptor("getOrigin"));
-            defineBuiltInAccessor(URLPrototype, "protocol", accessorDescriptor("getProtocol", "setProtocol"));
-            defineBuiltInAccessor(URLPrototype, "username", accessorDescriptor("getUsername", "setUsername"));
-            defineBuiltInAccessor(URLPrototype, "password", accessorDescriptor("getPassword", "setPassword"));
-            defineBuiltInAccessor(URLPrototype, "host", accessorDescriptor("getHost", "setHost"));
-            defineBuiltInAccessor(URLPrototype, "hostname", accessorDescriptor("getHostname", "setHostname"));
-            defineBuiltInAccessor(URLPrototype, "port", accessorDescriptor("getPort", "setPort"));
-            defineBuiltInAccessor(URLPrototype, "pathname", accessorDescriptor("getPathname", "setPathname"));
-            defineBuiltInAccessor(URLPrototype, "search", accessorDescriptor("getSearch", "setSearch"));
-            defineBuiltInAccessor(URLPrototype, "searchParams", accessorDescriptor("getSearchParams"));
-            defineBuiltInAccessor(URLPrototype, "hash", accessorDescriptor("getHash", "setHash"));
-        }
-        defineBuiltIn(URLPrototype, "toJSON", function toJSON() {
-            return getInternalURLState(this).serialize();
-        }, {
-            enumerable: true
-        });
-        defineBuiltIn(URLPrototype, "toString", function toString() {
-            return getInternalURLState(this).serialize();
-        }, {
-            enumerable: true
-        });
-        if (NativeURL) {
-            var nativeCreateObjectURL = NativeURL.createObjectURL;
-            var nativeRevokeObjectURL = NativeURL.revokeObjectURL;
-            if (nativeCreateObjectURL) defineBuiltIn(URLConstructor, "createObjectURL", bind(nativeCreateObjectURL, NativeURL));
-            if (nativeRevokeObjectURL) defineBuiltIn(URLConstructor, "revokeObjectURL", bind(nativeRevokeObjectURL, NativeURL));
-        }
-        setToStringTag(URLConstructor, "URL");
-        $({
-            global: true,
-            constructor: true,
-            forced: !USE_NATIVE_URL,
-            sham: !DESCRIPTORS
-        }, {
-            URL: URLConstructor
-        });
-        return web_url_constructor;
-    }
-    var hasRequiredWeb_url;
-    function requireWeb_url() {
-        if (hasRequiredWeb_url) return web_url;
-        hasRequiredWeb_url = 1;
-        requireWeb_url_constructor();
-        return web_url;
-    }
-    requireWeb_url();
-    var web_url_toJson = {};
-    var hasRequiredWeb_url_toJson;
-    function requireWeb_url_toJson() {
-        if (hasRequiredWeb_url_toJson) return web_url_toJson;
-        hasRequiredWeb_url_toJson = 1;
-        var $ = require_export();
-        var call = requireFunctionCall();
-        $({
-            target: "URL",
-            proto: true,
-            enumerable: true
-        }, {
-            toJSON: function toJSON() {
-                return call(URL.prototype.toString, this);
-            }
-        });
-        return web_url_toJson;
-    }
-    requireWeb_url_toJson();
-    var web_urlSearchParams = {};
-    var hasRequiredWeb_urlSearchParams;
-    function requireWeb_urlSearchParams() {
-        if (hasRequiredWeb_urlSearchParams) return web_urlSearchParams;
-        hasRequiredWeb_urlSearchParams = 1;
-        requireWeb_urlSearchParams_constructor();
-        return web_urlSearchParams;
-    }
-    requireWeb_urlSearchParams();
-    var es_array_concat = {};
-    var doesNotExceedSafeInteger;
-    var hasRequiredDoesNotExceedSafeInteger;
-    function requireDoesNotExceedSafeInteger() {
-        if (hasRequiredDoesNotExceedSafeInteger) return doesNotExceedSafeInteger;
-        hasRequiredDoesNotExceedSafeInteger = 1;
-        var $TypeError = TypeError;
-        var MAX_SAFE_INTEGER = 9007199254740991;
-        doesNotExceedSafeInteger = function(it) {
-            if (it > MAX_SAFE_INTEGER) throw $TypeError("Maximum allowed index exceeded");
-            return it;
-        };
-        return doesNotExceedSafeInteger;
-    }
-    var hasRequiredEs_array_concat;
-    function requireEs_array_concat() {
-        if (hasRequiredEs_array_concat) return es_array_concat;
-        hasRequiredEs_array_concat = 1;
-        var $ = require_export();
-        var fails = requireFails();
-        var isArray = requireIsArray();
-        var isObject = requireIsObject();
-        var toObject = requireToObject();
-        var lengthOfArrayLike = requireLengthOfArrayLike();
-        var doesNotExceedSafeInteger = requireDoesNotExceedSafeInteger();
-        var createProperty = requireCreateProperty();
-        var setArrayLength = requireArraySetLength();
-        var arraySpeciesCreate = requireArraySpeciesCreate();
-        var arrayMethodHasSpeciesSupport = requireArrayMethodHasSpeciesSupport();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var V8_VERSION = requireEnvironmentV8Version();
-        var IS_CONCAT_SPREADABLE = wellKnownSymbol("isConcatSpreadable");
-        var IS_CONCAT_SPREADABLE_SUPPORT = V8_VERSION >= 51 || !fails(function() {
-            var array = [];
-            array[IS_CONCAT_SPREADABLE] = false;
-            return array.concat()[0] !== array;
-        });
-        var isConcatSpreadable = function(O) {
-            if (!isObject(O)) return false;
-            var spreadable = O[IS_CONCAT_SPREADABLE];
-            return spreadable !== undefined ? !!spreadable : isArray(O);
-        };
-        var FORCED = !IS_CONCAT_SPREADABLE_SUPPORT || !arrayMethodHasSpeciesSupport("concat");
-        $({
-            target: "Array",
-            proto: true,
-            arity: 1,
-            forced: FORCED
-        }, {
-            concat: function concat(arg) {
-                var O = toObject(this);
-                var A = arraySpeciesCreate(O, 0);
-                var n = 0;
-                var i, k, length, len, E;
-                for (i = -1, length = arguments.length; i < length; i++) {
-                    E = i === -1 ? O : arguments[i];
-                    if (isConcatSpreadable(E)) {
-                        len = lengthOfArrayLike(E);
-                        doesNotExceedSafeInteger(n + len);
-                        for (k = 0; k < len; k++, n++) if (k in E) createProperty(A, n, E[k]);
-                    } else {
-                        doesNotExceedSafeInteger(n + 1);
-                        createProperty(A, n++, E);
-                    }
-                }
-                setArrayLength(A, n);
-                return A;
-            }
-        });
-        return es_array_concat;
-    }
-    requireEs_array_concat();
-    var es_string_includes = {};
-    var isRegexp;
-    var hasRequiredIsRegexp;
-    function requireIsRegexp() {
-        if (hasRequiredIsRegexp) return isRegexp;
-        hasRequiredIsRegexp = 1;
-        var isObject = requireIsObject();
-        var classof = requireClassofRaw();
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var MATCH = wellKnownSymbol("match");
-        isRegexp = function(it) {
-            var isRegExp;
-            return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classof(it) === "RegExp");
-        };
-        return isRegexp;
-    }
-    var notARegexp;
-    var hasRequiredNotARegexp;
-    function requireNotARegexp() {
-        if (hasRequiredNotARegexp) return notARegexp;
-        hasRequiredNotARegexp = 1;
-        var isRegExp = requireIsRegexp();
-        var $TypeError = TypeError;
-        notARegexp = function(it) {
-            if (isRegExp(it)) {
-                throw new $TypeError("The method doesn't accept regular expressions");
-            }
-            return it;
-        };
-        return notARegexp;
-    }
-    var correctIsRegexpLogic;
-    var hasRequiredCorrectIsRegexpLogic;
-    function requireCorrectIsRegexpLogic() {
-        if (hasRequiredCorrectIsRegexpLogic) return correctIsRegexpLogic;
-        hasRequiredCorrectIsRegexpLogic = 1;
-        var wellKnownSymbol = requireWellKnownSymbol();
-        var MATCH = wellKnownSymbol("match");
-        correctIsRegexpLogic = function(METHOD_NAME) {
-            var regexp = /./;
-            try {
-                "/./"[METHOD_NAME](regexp);
-            } catch (error1) {
-                try {
-                    regexp[MATCH] = false;
-                    return "/./"[METHOD_NAME](regexp);
-                } catch (error2) {}
-            }
-            return false;
-        };
-        return correctIsRegexpLogic;
-    }
-    var hasRequiredEs_string_includes;
-    function requireEs_string_includes() {
-        if (hasRequiredEs_string_includes) return es_string_includes;
-        hasRequiredEs_string_includes = 1;
-        var $ = require_export();
-        var uncurryThis = requireFunctionUncurryThis();
-        var notARegExp = requireNotARegexp();
         var requireObjectCoercible = requireRequireObjectCoercible();
+        var sameValue = requireSameValue();
         var toString = requireToString();
-        var correctIsRegExpLogic = requireCorrectIsRegexpLogic();
-        var stringIndexOf = uncurryThis("".indexOf);
-        $({
-            target: "String",
-            proto: true,
-            forced: !correctIsRegExpLogic("includes")
-        }, {
-            includes: function includes(searchString) {
-                return !!~stringIndexOf(toString(requireObjectCoercible(this)), toString(notARegExp(searchString)), arguments.length > 1 ? arguments[1] : undefined);
-            }
+        var getMethod = requireGetMethod();
+        var regExpExec = requireRegexpExecAbstract();
+        fixRegExpWellKnownSymbolLogic("search", function(SEARCH, nativeSearch, maybeCallNative) {
+            return [ function search(regexp) {
+                var O = requireObjectCoercible(this);
+                var searcher = isObject(regexp) ? getMethod(regexp, SEARCH) : undefined;
+                return searcher ? call(searcher, regexp, O) : new RegExp(regexp)[SEARCH](toString(O));
+            }, function(string) {
+                var rx = anObject(this);
+                var S = toString(string);
+                var res = maybeCallNative(nativeSearch, rx, S);
+                if (res.done) return res.value;
+                var previousLastIndex = rx.lastIndex;
+                if (!sameValue(previousLastIndex, 0)) rx.lastIndex = 0;
+                var result = regExpExec(rx, S);
+                if (!sameValue(rx.lastIndex, previousLastIndex)) rx.lastIndex = previousLastIndex;
+                return result === null ? -1 : result.index;
+            } ];
         });
-        return es_string_includes;
+        return es_string_search;
     }
-    requireEs_string_includes();
-    var es_weakMap = {};
-    var es_weakMap_constructor = {};
-    var freezing;
-    var hasRequiredFreezing;
-    function requireFreezing() {
-        if (hasRequiredFreezing) return freezing;
-        hasRequiredFreezing = 1;
-        var fails = requireFails();
-        freezing = !fails(function() {
-            return Object.isExtensible(Object.preventExtensions({}));
-        });
-        return freezing;
-    }
-    var internalMetadata = {
-        exports: {}
-    };
-    var objectGetOwnPropertyNamesExternal = {};
-    var hasRequiredObjectGetOwnPropertyNamesExternal;
-    function requireObjectGetOwnPropertyNamesExternal() {
-        if (hasRequiredObjectGetOwnPropertyNamesExternal) return objectGetOwnPropertyNamesExternal;
-        hasRequiredObjectGetOwnPropertyNamesExternal = 1;
-        var classof = requireClassofRaw();
-        var toIndexedObject = requireToIndexedObject();
-        var $getOwnPropertyNames = requireObjectGetOwnPropertyNames().f;
-        var arraySlice = requireArraySlice();
-        var windowNames = typeof window == "object" && window && Object.getOwnPropertyNames ? Object.getOwnPropertyNames(window) : [];
-        var getWindowNames = function(it) {
-            try {
-                return $getOwnPropertyNames(it);
-            } catch (error) {
-                return arraySlice(windowNames);
-            }
-        };
-        objectGetOwnPropertyNamesExternal.f = function getOwnPropertyNames(it) {
-            return windowNames && classof(it) === "Window" ? getWindowNames(it) : $getOwnPropertyNames(toIndexedObject(it));
-        };
-        return objectGetOwnPropertyNamesExternal;
-    }
-    var arrayBufferNonExtensible;
-    var hasRequiredArrayBufferNonExtensible;
-    function requireArrayBufferNonExtensible() {
-        if (hasRequiredArrayBufferNonExtensible) return arrayBufferNonExtensible;
-        hasRequiredArrayBufferNonExtensible = 1;
-        var fails = requireFails();
-        arrayBufferNonExtensible = fails(function() {
-            if (typeof ArrayBuffer == "function") {
-                var buffer = new ArrayBuffer(8);
-                if (Object.isExtensible(buffer)) Object.defineProperty(buffer, "a", {
-                    value: 8
-                });
-            }
-        });
-        return arrayBufferNonExtensible;
-    }
-    var objectIsExtensible;
-    var hasRequiredObjectIsExtensible;
-    function requireObjectIsExtensible() {
-        if (hasRequiredObjectIsExtensible) return objectIsExtensible;
-        hasRequiredObjectIsExtensible = 1;
-        var fails = requireFails();
-        var isObject = requireIsObject();
-        var classof = requireClassofRaw();
-        var ARRAY_BUFFER_NON_EXTENSIBLE = requireArrayBufferNonExtensible();
-        var $isExtensible = Object.isExtensible;
-        var FAILS_ON_PRIMITIVES = fails(function() {});
-        objectIsExtensible = FAILS_ON_PRIMITIVES || ARRAY_BUFFER_NON_EXTENSIBLE ? function isExtensible(it) {
-            if (!isObject(it)) return false;
-            if (ARRAY_BUFFER_NON_EXTENSIBLE && classof(it) === "ArrayBuffer") return false;
-            return $isExtensible ? $isExtensible(it) : true;
-        } : $isExtensible;
-        return objectIsExtensible;
-    }
-    var hasRequiredInternalMetadata;
-    function requireInternalMetadata() {
-        if (hasRequiredInternalMetadata) return internalMetadata.exports;
-        hasRequiredInternalMetadata = 1;
-        var $ = require_export();
-        var uncurryThis = requireFunctionUncurryThis();
-        var hiddenKeys = requireHiddenKeys();
-        var isObject = requireIsObject();
-        var hasOwn = requireHasOwnProperty();
-        var defineProperty = requireObjectDefineProperty().f;
-        var getOwnPropertyNamesModule = requireObjectGetOwnPropertyNames();
-        var getOwnPropertyNamesExternalModule = requireObjectGetOwnPropertyNamesExternal();
-        var isExtensible = requireObjectIsExtensible();
-        var uid = requireUid();
-        var FREEZING = requireFreezing();
-        var REQUIRED = false;
-        var METADATA = uid("meta");
-        var id = 0;
-        var setMetadata = function(it) {
-            defineProperty(it, METADATA, {
-                value: {
-                    objectID: "O" + id++,
-                    weakData: {}
-                }
-            });
-        };
-        var fastKey = function(it, create) {
-            if (!isObject(it)) return typeof it == "symbol" ? it : (typeof it == "string" ? "S" : "P") + it;
-            if (!hasOwn(it, METADATA)) {
-                if (!isExtensible(it)) return "F";
-                if (!create) return "E";
-                setMetadata(it);
-            }
-            return it[METADATA].objectID;
-        };
-        var getWeakData = function(it, create) {
-            if (!hasOwn(it, METADATA)) {
-                if (!isExtensible(it)) return true;
-                if (!create) return false;
-                setMetadata(it);
-            }
-            return it[METADATA].weakData;
-        };
-        var onFreeze = function(it) {
-            if (FREEZING && REQUIRED && isExtensible(it) && !hasOwn(it, METADATA)) setMetadata(it);
-            return it;
-        };
-        var enable = function() {
-            meta.enable = function() {};
-            REQUIRED = true;
-            var getOwnPropertyNames = getOwnPropertyNamesModule.f;
-            var splice = uncurryThis([].splice);
-            var test = {};
-            test[METADATA] = 1;
-            if (getOwnPropertyNames(test).length) {
-                getOwnPropertyNamesModule.f = function(it) {
-                    var result = getOwnPropertyNames(it);
-                    for (var i = 0, length = result.length; i < length; i++) {
-                        if (result[i] === METADATA) {
-                            splice(result, i, 1);
-                            break;
-                        }
-                    }
-                    return result;
-                };
-                $({
-                    target: "Object",
-                    stat: true,
-                    forced: true
-                }, {
-                    getOwnPropertyNames: getOwnPropertyNamesExternalModule.f
-                });
-            }
-        };
-        var meta = internalMetadata.exports = {
-            enable: enable,
-            fastKey: fastKey,
-            getWeakData: getWeakData,
-            onFreeze: onFreeze
-        };
-        hiddenKeys[METADATA] = true;
-        return internalMetadata.exports;
-    }
-    var collection;
-    var hasRequiredCollection;
-    function requireCollection() {
-        if (hasRequiredCollection) return collection;
-        hasRequiredCollection = 1;
-        var $ = require_export();
-        var globalThis = requireGlobalThis();
-        var uncurryThis = requireFunctionUncurryThis();
-        var isForced = requireIsForced();
-        var defineBuiltIn = requireDefineBuiltIn();
-        var InternalMetadataModule = requireInternalMetadata();
-        var iterate = requireIterate();
-        var anInstance = requireAnInstance();
-        var isCallable = requireIsCallable();
-        var isNullOrUndefined = requireIsNullOrUndefined();
-        var isObject = requireIsObject();
-        var fails = requireFails();
-        var checkCorrectnessOfIteration = requireCheckCorrectnessOfIteration();
-        var setToStringTag = requireSetToStringTag();
-        var inheritIfRequired = requireInheritIfRequired();
-        collection = function(CONSTRUCTOR_NAME, wrapper, common) {
-            var IS_MAP = CONSTRUCTOR_NAME.indexOf("Map") !== -1;
-            var IS_WEAK = CONSTRUCTOR_NAME.indexOf("Weak") !== -1;
-            var ADDER = IS_MAP ? "set" : "add";
-            var NativeConstructor = globalThis[CONSTRUCTOR_NAME];
-            var NativePrototype = NativeConstructor && NativeConstructor.prototype;
-            var Constructor = NativeConstructor;
-            var exported = {};
-            var fixMethod = function(KEY) {
-                var uncurriedNativeMethod = uncurryThis(NativePrototype[KEY]);
-                defineBuiltIn(NativePrototype, KEY, KEY === "add" ? function add(value) {
-                    uncurriedNativeMethod(this, value === 0 ? 0 : value);
-                    return this;
-                } : KEY === "delete" ? function(key) {
-                    return IS_WEAK && !isObject(key) ? false : uncurriedNativeMethod(this, key === 0 ? 0 : key);
-                } : KEY === "get" ? function get(key) {
-                    return IS_WEAK && !isObject(key) ? undefined : uncurriedNativeMethod(this, key === 0 ? 0 : key);
-                } : KEY === "has" ? function has(key) {
-                    return IS_WEAK && !isObject(key) ? false : uncurriedNativeMethod(this, key === 0 ? 0 : key);
-                } : function set(key, value) {
-                    uncurriedNativeMethod(this, key === 0 ? 0 : key, value);
-                    return this;
-                });
-            };
-            var REPLACE = isForced(CONSTRUCTOR_NAME, !isCallable(NativeConstructor) || !(IS_WEAK || NativePrototype.forEach && !fails(function() {
-                (new NativeConstructor).entries().next();
-            })));
-            if (REPLACE) {
-                Constructor = common.getConstructor(wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER);
-                InternalMetadataModule.enable();
-            } else if (isForced(CONSTRUCTOR_NAME, true)) {
-                var instance = new Constructor;
-                var HASNT_CHAINING = instance[ADDER](IS_WEAK ? {} : -0, 1) !== instance;
-                var THROWS_ON_PRIMITIVES = fails(function() {
-                    instance.has(1);
-                });
-                var ACCEPT_ITERABLES = checkCorrectnessOfIteration(function(iterable) {
-                    new NativeConstructor(iterable);
-                });
-                var BUGGY_ZERO = !IS_WEAK && fails(function() {
-                    var $instance = new NativeConstructor;
-                    var index = 5;
-                    while (index--) $instance[ADDER](index, index);
-                    return !$instance.has(-0);
-                });
-                if (!ACCEPT_ITERABLES) {
-                    Constructor = wrapper(function(dummy, iterable) {
-                        anInstance(dummy, NativePrototype);
-                        var that = inheritIfRequired(new NativeConstructor, dummy, Constructor);
-                        if (!isNullOrUndefined(iterable)) iterate(iterable, that[ADDER], {
-                            that: that,
-                            AS_ENTRIES: IS_MAP
-                        });
-                        return that;
-                    });
-                    Constructor.prototype = NativePrototype;
-                    NativePrototype.constructor = Constructor;
-                }
-                if (THROWS_ON_PRIMITIVES || BUGGY_ZERO) {
-                    fixMethod("delete");
-                    fixMethod("has");
-                    IS_MAP && fixMethod("get");
-                }
-                if (BUGGY_ZERO || HASNT_CHAINING) fixMethod(ADDER);
-                if (IS_WEAK && NativePrototype.clear) delete NativePrototype.clear;
-            }
-            exported[CONSTRUCTOR_NAME] = Constructor;
-            $({
-                global: true,
-                constructor: true,
-                forced: Constructor !== NativeConstructor
-            }, exported);
-            setToStringTag(Constructor, CONSTRUCTOR_NAME);
-            if (!IS_WEAK) common.setStrong(Constructor, CONSTRUCTOR_NAME, IS_MAP);
-            return Constructor;
-        };
-        return collection;
-    }
-    var collectionWeak;
-    var hasRequiredCollectionWeak;
-    function requireCollectionWeak() {
-        if (hasRequiredCollectionWeak) return collectionWeak;
-        hasRequiredCollectionWeak = 1;
-        var uncurryThis = requireFunctionUncurryThis();
-        var defineBuiltIns = requireDefineBuiltIns();
-        var getWeakData = requireInternalMetadata().getWeakData;
-        var anInstance = requireAnInstance();
-        var anObject = requireAnObject();
-        var isNullOrUndefined = requireIsNullOrUndefined();
-        var isObject = requireIsObject();
-        var iterate = requireIterate();
-        var ArrayIterationModule = requireArrayIteration();
-        var hasOwn = requireHasOwnProperty();
-        var InternalStateModule = requireInternalState();
-        var setInternalState = InternalStateModule.set;
-        var internalStateGetterFor = InternalStateModule.getterFor;
-        var find = ArrayIterationModule.find;
-        var findIndex = ArrayIterationModule.findIndex;
-        var splice = uncurryThis([].splice);
-        var id = 0;
-        var uncaughtFrozenStore = function(state) {
-            return state.frozen || (state.frozen = new UncaughtFrozenStore);
-        };
-        var UncaughtFrozenStore = function() {
-            this.entries = [];
-        };
-        var findUncaughtFrozen = function(store, key) {
-            return find(store.entries, function(it) {
-                return it[0] === key;
-            });
-        };
-        UncaughtFrozenStore.prototype = {
-            get: function(key) {
-                var entry = findUncaughtFrozen(this, key);
-                if (entry) return entry[1];
-            },
-            has: function(key) {
-                return !!findUncaughtFrozen(this, key);
-            },
-            set: function(key, value) {
-                var entry = findUncaughtFrozen(this, key);
-                if (entry) entry[1] = value; else this.entries.push([ key, value ]);
-            },
-            delete: function(key) {
-                var index = findIndex(this.entries, function(it) {
-                    return it[0] === key;
-                });
-                if (~index) splice(this.entries, index, 1);
-                return !!~index;
-            }
-        };
-        collectionWeak = {
-            getConstructor: function(wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER) {
-                var Constructor = wrapper(function(that, iterable) {
-                    anInstance(that, Prototype);
-                    setInternalState(that, {
-                        type: CONSTRUCTOR_NAME,
-                        id: id++,
-                        frozen: null
-                    });
-                    if (!isNullOrUndefined(iterable)) iterate(iterable, that[ADDER], {
-                        that: that,
-                        AS_ENTRIES: IS_MAP
-                    });
-                });
-                var Prototype = Constructor.prototype;
-                var getInternalState = internalStateGetterFor(CONSTRUCTOR_NAME);
-                var define = function(that, key, value) {
-                    var state = getInternalState(that);
-                    var data = getWeakData(anObject(key), true);
-                    if (data === true) uncaughtFrozenStore(state).set(key, value); else data[state.id] = value;
-                    return that;
-                };
-                defineBuiltIns(Prototype, {
-                    delete: function(key) {
-                        var state = getInternalState(this);
-                        if (!isObject(key)) return false;
-                        var data = getWeakData(key);
-                        if (data === true) return uncaughtFrozenStore(state)["delete"](key);
-                        return data && hasOwn(data, state.id) && delete data[state.id];
-                    },
-                    has: function has(key) {
-                        var state = getInternalState(this);
-                        if (!isObject(key)) return false;
-                        var data = getWeakData(key);
-                        if (data === true) return uncaughtFrozenStore(state).has(key);
-                        return data && hasOwn(data, state.id);
-                    }
-                });
-                defineBuiltIns(Prototype, IS_MAP ? {
-                    get: function get(key) {
-                        var state = getInternalState(this);
-                        if (isObject(key)) {
-                            var data = getWeakData(key);
-                            if (data === true) return uncaughtFrozenStore(state).get(key);
-                            if (data) return data[state.id];
-                        }
-                    },
-                    set: function set(key, value) {
-                        return define(this, key, value);
-                    }
-                } : {
-                    add: function add(value) {
-                        return define(this, value, true);
-                    }
-                });
-                return Constructor;
-            }
-        };
-        return collectionWeak;
-    }
-    var hasRequiredEs_weakMap_constructor;
-    function requireEs_weakMap_constructor() {
-        if (hasRequiredEs_weakMap_constructor) return es_weakMap_constructor;
-        hasRequiredEs_weakMap_constructor = 1;
-        var FREEZING = requireFreezing();
-        var globalThis = requireGlobalThis();
-        var uncurryThis = requireFunctionUncurryThis();
-        var defineBuiltIns = requireDefineBuiltIns();
-        var InternalMetadataModule = requireInternalMetadata();
-        var collection = requireCollection();
-        var collectionWeak = requireCollectionWeak();
-        var isObject = requireIsObject();
-        var enforceInternalState = requireInternalState().enforce;
-        var fails = requireFails();
-        var NATIVE_WEAK_MAP = requireWeakMapBasicDetection();
-        var $Object = Object;
-        var isArray = Array.isArray;
-        var isExtensible = $Object.isExtensible;
-        var isFrozen = $Object.isFrozen;
-        var isSealed = $Object.isSealed;
-        var freeze = $Object.freeze;
-        var seal = $Object.seal;
-        var IS_IE11 = !globalThis.ActiveXObject && "ActiveXObject" in globalThis;
-        var InternalWeakMap;
-        var wrapper = function(init) {
-            return function WeakMap() {
-                return init(this, arguments.length ? arguments[0] : undefined);
-            };
-        };
-        var $WeakMap = collection("WeakMap", wrapper, collectionWeak);
-        var WeakMapPrototype = $WeakMap.prototype;
-        var nativeSet = uncurryThis(WeakMapPrototype.set);
-        var hasMSEdgeFreezingBug = function() {
-            return FREEZING && fails(function() {
-                var frozenArray = freeze([]);
-                nativeSet(new $WeakMap, frozenArray, 1);
-                return !isFrozen(frozenArray);
-            });
-        };
-        if (NATIVE_WEAK_MAP) if (IS_IE11) {
-            InternalWeakMap = collectionWeak.getConstructor(wrapper, "WeakMap", true);
-            InternalMetadataModule.enable();
-            var nativeDelete = uncurryThis(WeakMapPrototype["delete"]);
-            var nativeHas = uncurryThis(WeakMapPrototype.has);
-            var nativeGet = uncurryThis(WeakMapPrototype.get);
-            defineBuiltIns(WeakMapPrototype, {
-                delete: function(key) {
-                    if (isObject(key) && !isExtensible(key)) {
-                        var state = enforceInternalState(this);
-                        if (!state.frozen) state.frozen = new InternalWeakMap;
-                        return nativeDelete(this, key) || state.frozen["delete"](key);
-                    }
-                    return nativeDelete(this, key);
-                },
-                has: function has(key) {
-                    if (isObject(key) && !isExtensible(key)) {
-                        var state = enforceInternalState(this);
-                        if (!state.frozen) state.frozen = new InternalWeakMap;
-                        return nativeHas(this, key) || state.frozen.has(key);
-                    }
-                    return nativeHas(this, key);
-                },
-                get: function get(key) {
-                    if (isObject(key) && !isExtensible(key)) {
-                        var state = enforceInternalState(this);
-                        if (!state.frozen) state.frozen = new InternalWeakMap;
-                        return nativeHas(this, key) ? nativeGet(this, key) : state.frozen.get(key);
-                    }
-                    return nativeGet(this, key);
-                },
-                set: function set(key, value) {
-                    if (isObject(key) && !isExtensible(key)) {
-                        var state = enforceInternalState(this);
-                        if (!state.frozen) state.frozen = new InternalWeakMap;
-                        nativeHas(this, key) ? nativeSet(this, key, value) : state.frozen.set(key, value);
-                    } else nativeSet(this, key, value);
-                    return this;
-                }
-            });
-        } else if (hasMSEdgeFreezingBug()) {
-            defineBuiltIns(WeakMapPrototype, {
-                set: function set(key, value) {
-                    var arrayIntegrityLevel;
-                    if (isArray(key)) {
-                        if (isFrozen(key)) arrayIntegrityLevel = freeze; else if (isSealed(key)) arrayIntegrityLevel = seal;
-                    }
-                    nativeSet(this, key, value);
-                    if (arrayIntegrityLevel) arrayIntegrityLevel(key);
-                    return this;
-                }
-            });
-        }
-        return es_weakMap_constructor;
-    }
-    var hasRequiredEs_weakMap;
-    function requireEs_weakMap() {
-        if (hasRequiredEs_weakMap) return es_weakMap;
-        hasRequiredEs_weakMap = 1;
-        requireEs_weakMap_constructor();
-        return es_weakMap;
-    }
-    requireEs_weakMap();
-    var es_weakSet = {};
-    var es_weakSet_constructor = {};
-    var hasRequiredEs_weakSet_constructor;
-    function requireEs_weakSet_constructor() {
-        if (hasRequiredEs_weakSet_constructor) return es_weakSet_constructor;
-        hasRequiredEs_weakSet_constructor = 1;
-        var collection = requireCollection();
-        var collectionWeak = requireCollectionWeak();
-        collection("WeakSet", function(init) {
-            return function WeakSet() {
-                return init(this, arguments.length ? arguments[0] : undefined);
-            };
-        }, collectionWeak);
-        return es_weakSet_constructor;
-    }
-    var hasRequiredEs_weakSet;
-    function requireEs_weakSet() {
-        if (hasRequiredEs_weakSet) return es_weakSet;
-        hasRequiredEs_weakSet = 1;
-        requireEs_weakSet_constructor();
-        return es_weakSet;
-    }
-    requireEs_weakSet();
-    var _maxRetries = new WeakMap;
-    var _initialDelay = new WeakMap;
-    var _maxDelay = new WeakMap;
-    var _backoffFactor = new WeakMap;
-    var _retryOn = new WeakMap;
-    var _requestLimit = new WeakMap;
-    var _requestWindow = new WeakMap;
-    var _requestTimestamps = new WeakMap;
-    var _requestCount = new WeakMap;
-    var _lastRequestTime = new WeakMap;
-    var _RateLimitedFetcher_brand = new WeakSet;
-    var RateLimitedFetcher = function() {
-        function RateLimitedFetcher() {
-            var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-            _classCallCheck(this, RateLimitedFetcher);
-            _classPrivateMethodInitSpec(this, _RateLimitedFetcher_brand);
-            _classPrivateFieldInitSpec(this, _maxRetries, void 0);
-            _classPrivateFieldInitSpec(this, _initialDelay, void 0);
-            _classPrivateFieldInitSpec(this, _maxDelay, void 0);
-            _classPrivateFieldInitSpec(this, _backoffFactor, void 0);
-            _classPrivateFieldInitSpec(this, _retryOn, void 0);
-            _classPrivateFieldInitSpec(this, _requestLimit, void 0);
-            _classPrivateFieldInitSpec(this, _requestWindow, void 0);
-            _classPrivateFieldInitSpec(this, _requestTimestamps, void 0);
-            _classPrivateFieldInitSpec(this, _requestCount, void 0);
-            _classPrivateFieldInitSpec(this, _lastRequestTime, void 0);
-            _classPrivateFieldSet2(_maxRetries, this, options.maxRetries || 5);
-            _classPrivateFieldSet2(_initialDelay, this, options.initialDelay || 1e3);
-            _classPrivateFieldSet2(_maxDelay, this, options.maxDelay || 5e3);
-            _classPrivateFieldSet2(_backoffFactor, this, options.backoffFactor || 2);
-            _classPrivateFieldSet2(_retryOn, this, options.retryOn || [ 429, 502, 503, 504 ]);
-            _classPrivateFieldSet2(_requestLimit, this, 10);
-            _classPrivateFieldSet2(_requestWindow, this, 5e3);
-            _classPrivateFieldSet2(_requestTimestamps, this, []);
-            _classPrivateFieldSet2(_requestCount, this, 0);
-            _classPrivateFieldSet2(_lastRequestTime, this, 0);
-        }
-        return _createClass(RateLimitedFetcher, [ {
-            key: "fetchWithRetry",
-            value: function() {
-                var _fetchWithRetry = _asyncToGenerator(_regenerator().m(function _callee(url, headers, attempt) {
-                    var response, delay, message, _delay2, _t;
-                    return _regenerator().w(function(_context) {
-                        while (1) switch (_context.p = _context.n) {
-                          case 0:
-                            _context.p = 0;
-                            _context.n = 1;
-                            return _assertClassBrand(_RateLimitedFetcher_brand, this, _checkAndApplyRateLimit).call(this);
-
-                          case 1:
-                            _context.n = 2;
-                            return fetch(url, {
-                                headers: headers
-                            });
-
-                          case 2:
-                            response = _context.v;
-                            if (!response.ok) {
-                                _context.n = 3;
-                                break;
-                            }
-                            return _context.a(2, response);
-
-                          case 3:
-                            if (!(_classPrivateFieldGet2(_retryOn, this).includes(response.status) && attempt < _classPrivateFieldGet2(_maxRetries, this))) {
-                                _context.n = 5;
-                                break;
-                            }
-                            delay = _assertClassBrand(_RateLimitedFetcher_brand, this, _calculateDelay).call(this, attempt, response);
-                            console.log("Attempt ".concat(attempt + 1, "/").concat(_classPrivateFieldGet2(_maxRetries, this), " failed with ").concat(response.status, ". Retrying in ").concat(delay, "ms"));
-                            _context.n = 4;
-                            return _assertClassBrand(_RateLimitedFetcher_brand, this, _delay).call(this, delay);
-
-                          case 4:
-                            return _context.a(2, this.fetchWithRetry(url, headers, attempt + 1));
-
-                          case 5:
-                            throw new Error("".concat(response.status, " ").concat(response.statusText));
-
-                          case 6:
-                            _context.p = 6;
-                            _t = _context.v;
-                            if (!(attempt >= _classPrivateFieldGet2(_maxRetries, this))) {
-                                _context.n = 7;
-                                break;
-                            }
-                            message = "";
-                            if (_t instanceof Error) {
-                                message = _t.message;
-                            }
-                            throw new Error("Request failed after ".concat(_classPrivateFieldGet2(_maxRetries, this), " attempts: ").concat(message));
-
-                          case 7:
-                            if (!(attempt < _classPrivateFieldGet2(_maxRetries, this))) {
-                                _context.n = 9;
-                                break;
-                            }
-                            _delay2 = _assertClassBrand(_RateLimitedFetcher_brand, this, _calculateDelay).call(this, attempt);
-                            console.log("Network error on attempt ".concat(attempt + 1, ". Retrying in ").concat(_delay2, "ms"));
-                            _context.n = 8;
-                            return _assertClassBrand(_RateLimitedFetcher_brand, this, _delay).call(this, _delay2);
-
-                          case 8:
-                            return _context.a(2, this.fetchWithRetry(url, headers, attempt + 1));
-
-                          case 9:
-                            throw _t;
-
-                          case 10:
-                            return _context.a(2);
-                        }
-                    }, _callee, this, [ [ 0, 6 ] ]);
-                }));
-                function fetchWithRetry(_x, _x2, _x3) {
-                    return _fetchWithRetry.apply(this, arguments);
-                }
-                return fetchWithRetry;
-            }()
-        }, {
-            key: "resetCounter",
-            value: function resetCounter() {
-                _classPrivateFieldSet2(_requestTimestamps, this, []);
-                _classPrivateFieldSet2(_requestCount, this, 0);
-                _classPrivateFieldSet2(_lastRequestTime, this, 0);
-            }
-        } ]);
-    }();
-    function _cleanupOldRequests() {
-        var _this = this;
-        var now = Date.now();
-        _classPrivateFieldSet2(_requestTimestamps, this, _classPrivateFieldGet2(_requestTimestamps, this).filter(function(timestamp) {
-            return now - timestamp < _classPrivateFieldGet2(_requestWindow, _this);
-        }));
-    }
-    function _checkAndApplyRateLimit() {
-        return _checkAndApplyRateLimit2.apply(this, arguments);
-    }
-    function _checkAndApplyRateLimit2() {
-        _checkAndApplyRateLimit2 = _asyncToGenerator(_regenerator().m(function _callee2() {
-            var _this$requestCount;
-            var oldestRequest, timeSinceOldest, waitTime, now, timeSinceLastRequest, minDelay;
-            return _regenerator().w(function(_context2) {
-                while (1) switch (_context2.n) {
-                  case 0:
-                    _assertClassBrand(_RateLimitedFetcher_brand, this, _cleanupOldRequests).call(this);
-                    if (!(_classPrivateFieldGet2(_requestTimestamps, this).length >= _classPrivateFieldGet2(_requestLimit, this))) {
-                        _context2.n = 2;
-                        break;
-                    }
-                    oldestRequest = _classPrivateFieldGet2(_requestTimestamps, this)[0];
-                    timeSinceOldest = Date.now() - oldestRequest;
-                    if (!(timeSinceOldest < _classPrivateFieldGet2(_requestWindow, this))) {
-                        _context2.n = 2;
-                        break;
-                    }
-                    waitTime = 500 * _classPrivateFieldGet2(_requestTimestamps, this).length - _classPrivateFieldGet2(_requestLimit, this);
-                    if (waitTime < 0) {
-                        waitTime = 0;
-                        console.warn("Wait time is less than 0");
-                    }
-                    console.log("Rate limit prevention: ".concat(_classPrivateFieldGet2(_requestTimestamps, this).length, " requests in last ").concat(_classPrivateFieldGet2(_requestWindow, this), "ms. Waiting ").concat(waitTime, "ms..."));
-                    _context2.n = 1;
-                    return _assertClassBrand(_RateLimitedFetcher_brand, this, _delay).call(this, waitTime);
-
-                  case 1:
-                    _assertClassBrand(_RateLimitedFetcher_brand, this, _cleanupOldRequests).call(this);
-
-                  case 2:
-                    _classPrivateFieldGet2(_requestTimestamps, this).push(Date.now());
-                    _classPrivateFieldSet2(_requestCount, this, (_this$requestCount = _classPrivateFieldGet2(_requestCount, this), 
-                    _this$requestCount++, _this$requestCount));
-                    now = Date.now();
-                    timeSinceLastRequest = now - _classPrivateFieldGet2(_lastRequestTime, this);
-                    minDelay = 100;
-                    if (!(timeSinceLastRequest < minDelay && _classPrivateFieldGet2(_lastRequestTime, this) > 0)) {
-                        _context2.n = 3;
-                        break;
-                    }
-                    _context2.n = 3;
-                    return _assertClassBrand(_RateLimitedFetcher_brand, this, _delay).call(this, minDelay - timeSinceLastRequest);
-
-                  case 3:
-                    _classPrivateFieldSet2(_lastRequestTime, this, Date.now());
-
-                  case 4:
-                    return _context2.a(2);
-                }
-            }, _callee2, this);
-        }));
-        return _checkAndApplyRateLimit2.apply(this, arguments);
-    }
-    function _calculateDelay(attempt) {
-        var response = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-        var retryAfterHeader = response === null || response === void 0 ? void 0 : response.headers.get("Retry-After");
-        if (retryAfterHeader) {
-            var seconds = parseInt(retryAfterHeader);
-            if (seconds > 86400) {
-                var timestamp = parseInt(retryAfterHeader) * 1e3;
-                return Math.max(0, timestamp - Date.now());
-            }
-            return seconds * 1e3;
-        }
-        var exponentialDelay = _classPrivateFieldGet2(_initialDelay, this) * Math.pow(_classPrivateFieldGet2(_backoffFactor, this), attempt);
-        var jitter = Math.random() * 1e3;
-        return Math.min(exponentialDelay + jitter, _classPrivateFieldGet2(_maxDelay, this));
-    }
-    function _delay(ms) {
-        return new Promise(function(resolve) {
-            return setTimeout(resolve, ms);
-        });
-    }
-    var ZoteroSdk = function ZoteroSdk() {
-        this._apiKey = null;
-        this._userId = 0;
-        this._userGroups = [];
-        this._isOnlineAvailable = true;
-        this._fetcher = new RateLimitedFetcher({
-            maxRetries: 5,
-            initialDelay: 5e3
-        });
-    };
-    ZoteroSdk.prototype.ZOTERO_API_VERSION = "3";
-    ZoteroSdk.prototype.USER_AGENT = "AscDesktopEditor";
-    ZoteroSdk.prototype.DEFAULT_FORMAT = "csljson";
-    ZoteroSdk.prototype.STORAGE_KEYS = {
-        USER_ID: "zoteroUserId",
-        API_KEY: "zoteroApiKey"
-    };
-    ZoteroSdk.prototype.API_PATHS = {
-        USERS: "users",
-        GROUPS: "groups",
-        ITEMS: "items",
-        KEYS: "keys"
-    };
-    ZoteroSdk.prototype._getBaseUrl = function() {
-        return this._isOnlineAvailable ? zoteroEnvironment.restApiUrl : zoteroEnvironment.desktopApiUrl;
-    };
-    ZoteroSdk.prototype._getDesktopRequest = function(url) {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            window.AscSimpleRequest.createRequest({
-                url: url,
-                method: "GET",
-                headers: {
-                    "Zotero-API-Version": self.ZOTERO_API_VERSION,
-                    "User-Agent": self.USER_AGENT
-                },
-                complete: resolve,
-                error: function error(_error) {
-                    if (_error.statusCode === -102) {
-                        _error.statusCode = 404;
-                        _error.message = "Connection to Zotero failed. Make sure Zotero is running";
-                    }
-                    reject(_error);
-                }
-            });
-        });
-    };
-    ZoteroSdk.prototype._getOnlineRequest = function(url) {
-        var headers = {
-            "Zotero-API-Version": this.ZOTERO_API_VERSION,
-            "Zotero-API-Key": this._apiKey || ""
-        };
-        return fetch(url, {
-            headers: headers
-        }).then(function(response) {
-            if (!response.ok) {
-                var message = response.status + " " + response.statusText;
-                console.error(message);
-                throw new Error(message);
-            }
-            return response;
-        }).catch(function(error) {
-            if (_typeof(error) === "object") {
-                error.message = "Connection to Zotero failed";
-            }
-            throw error;
-        });
-    };
-    ZoteroSdk.prototype._getRequestWithOfflineSupport = function(url) {
-        return this._isOnlineAvailable ? this._getOnlineRequest(url) : this._getDesktopRequest(url.href);
-    };
-    ZoteroSdk.prototype._buildGetRequest = function(path, queryParams) {
-        queryParams = queryParams || {};
-        var url = new URL(path, this._getBaseUrl());
-        Object.keys(queryParams).forEach(function(key) {
-            if (queryParams[key] !== undefined && queryParams[key] !== null) {
-                url.searchParams.append(key, queryParams[key]);
-            }
-        });
-        return this._getRequestWithOfflineSupport(url);
-    };
-    ZoteroSdk.prototype._parseLinkHeader = function(headerValue) {
-        var links = {};
-        var linkHeaderRegex = /<(.*?)>; rel="(.*?)"/g;
-        if (!headerValue) return links;
-        var match;
-        while ((match = linkHeaderRegex.exec(headerValue.trim())) !== null) {
-            links[match[2]] = match[1];
-        }
-        return links;
-    };
-    ZoteroSdk.prototype._parseDesktopItemsResponse = function(promise, resolve, reject, id) {
-        return promise.then(function(response) {
-            return {
-                items: JSON.parse(response.responseText),
-                id: id
-            };
-        }).then(resolve).catch(reject);
-    };
-    ZoteroSdk.prototype._parseItemsResponse = function(promise, resolve, reject, id) {
-        var self = this;
-        return promise.then(function(response) {
-            return Promise.all([ response.json(), response ]);
-        }).then(function(results) {
-            var json = results[0];
-            var response = results[1];
-            var links = self._parseLinkHeader(response.headers.get("Link") || "");
-            var result = {
-                items: json,
-                id: id
-            };
-            if (_typeof(json) === "object" && json.items) {
-                result.items = json.items;
-            }
-            if (links.next) {
-                result.next = function() {
-                    return new Promise(function(rs, rj) {
-                        self._parseItemsResponse(self._getOnlineRequest(new URL(links.next)), rs, rj, id);
-                    });
-                };
-            }
-            resolve(result);
-        }).catch(reject);
-    };
-    ZoteroSdk.prototype._parseResponse = function(promise, resolve, reject, id) {
-        if (this._isOnlineAvailable) {
-            var fetchPromise = promise;
-            this._parseItemsResponse(fetchPromise, resolve, reject, id);
-        } else {
-            var ascSimplePromise = promise;
-            this._parseDesktopItemsResponse(ascSimplePromise, resolve, reject, id);
-        }
-    };
-    ZoteroSdk.prototype.getItems = function(search, itemsID, format) {
-        var self = this;
-        format = format || self.DEFAULT_FORMAT;
-        return new Promise(function(resolve, reject) {
-            var queryParams = {
-                format: format,
-                itemType: "-attachment"
-            };
-            if (search) {
-                queryParams.q = search;
-            } else if (itemsID) {
-                queryParams.itemKey = itemsID.join(",");
-            } else {
-                queryParams.limit = 20;
-            }
-            var path = self.API_PATHS.USERS + "/" + self._userId + "/" + self.API_PATHS.ITEMS;
-            var request = self._buildGetRequest(path, queryParams);
-            return self._parseResponse(request, resolve, reject, self._userId);
-        });
-    };
-    ZoteroSdk.prototype.getGroupItems = function(search, groupId, itemsID, format) {
-        var self = this;
-        format = format || self.DEFAULT_FORMAT;
-        return new Promise(function(resolve, reject) {
-            var queryParams = {
-                format: format
-            };
-            if (search) {
-                queryParams.q = search;
-            } else if (itemsID) {
-                queryParams.itemKey = itemsID.join(",");
-            }
-            var path = self.API_PATHS.GROUPS + "/" + groupId + "/" + self.API_PATHS.ITEMS;
-            var request = self._buildGetRequest(path, queryParams);
-            return self._parseResponse(request, resolve, reject, groupId);
-        });
-    };
-    ZoteroSdk.prototype.getUserGroups = function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            if (self._userGroups.length > 0) {
-                resolve(self._userGroups);
-                return;
-            }
-            var path = self.API_PATHS.USERS + "/" + self._userId + "/groups";
-            self._buildGetRequest(path).then(function(response) {
-                if (self._isOnlineAvailable) {
-                    var fetchResponse = response;
-                    if (!fetchResponse.ok) {
-                        throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
-                    }
-                    return fetchResponse.json();
-                }
-                var ascSimpleResponse = response;
-                return JSON.parse(ascSimpleResponse.responseText);
-            }).then(function(groups) {
-                self._userGroups = groups.map(function(group) {
-                    return {
-                        id: group.id,
-                        name: group.data.name
-                    };
-                });
-                resolve(self._userGroups);
-            }).catch(reject);
-        });
-    };
-    ZoteroSdk.prototype.setApiKey = function(key) {
-        var self = this;
-        var path = this.API_PATHS.KEYS + "/" + key;
-        return this._buildGetRequest(path).then(function(response) {
-            var fetchResponse = response;
-            if (!fetchResponse.ok) {
-                throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
-            }
-            return fetchResponse.json();
-        }).then(function(keyData) {
-            self._saveSettings(keyData.userID, key);
-            return true;
-        });
-    };
-    ZoteroSdk.prototype._applySettings = function(userId, apiKey) {
-        this._userId = userId;
-        this._apiKey = apiKey;
-    };
-    ZoteroSdk.prototype._saveSettings = function(userId, apiKey) {
-        this._applySettings(userId, apiKey);
-        localStorage.setItem(this.STORAGE_KEYS.USER_ID, String(userId));
-        localStorage.setItem(this.STORAGE_KEYS.API_KEY, apiKey);
-    };
-    ZoteroSdk.prototype.hasSettings = function() {
-        var userId = localStorage.getItem(this.STORAGE_KEYS.USER_ID);
-        var apiKey = localStorage.getItem(this.STORAGE_KEYS.API_KEY);
-        if (userId && apiKey) {
-            this._applySettings(Number(userId), apiKey);
-            return true;
-        }
-        return false;
-    };
-    ZoteroSdk.prototype.clearSettings = function() {
-        localStorage.removeItem(this.STORAGE_KEYS.USER_ID);
-        localStorage.removeItem(this.STORAGE_KEYS.API_KEY);
-        this._userGroups = [];
-        this._userId = 0;
-        this._apiKey = null;
-    };
-    ZoteroSdk.prototype.getUserId = function() {
-        return this._userId;
-    };
-    ZoteroSdk.prototype.setIsOnlineAvailable = function(isOnline) {
-        this._isOnlineAvailable = isOnline;
-    };
+    requireEs_string_search();
     var es_regexp_toString = {};
     var hasRequiredEs_regexp_toString;
     function requireEs_regexp_toString() {
@@ -8032,7 +4936,267 @@
         return es_regexp_toString;
     }
     requireEs_regexp_toString();
+    var MendeleyToCls = function() {
+        function MendeleyToCls() {
+            _classCallCheck(this, MendeleyToCls);
+        }
+        return _createClass(MendeleyToCls, null, [ {
+            key: "transform",
+            value: function transform(item) {
+                if (item.citation_key) {
+                    item.id = item.citation_key;
+                    delete item.citation_key;
+                }
+                item.type = this._convertMendeleyTypeToCSLType(item.type);
+                this._convertMendeleyWriter(item, "author", "authors");
+                this._convertMendeleyWriter(item, "editor", "editors");
+                this._convertMendeleyWriter(item, "collection-editor", "editors");
+                this._convertMendeleyWriter(item, "container-author", "editors");
+                this._convertMendeleyWriter(item, "collection-editor", "series_editor");
+                this._convertMendeleyWriter(item, "container-author", "series_editor");
+                this._convertMendeleyWriter(item, "translators", "translators");
+                this._convertMendeleyDate(item, "issued");
+                this._convertMendeleyDate(item, "event-date");
+                if (item.revision || item.series_number) {
+                    item.number = item.revision || item.series_number;
+                    delete item.revision;
+                    delete item.series_number;
+                }
+                if (item.series || item.source) {
+                    item["container-title"] = item.series || item.source;
+                    item["collection-title"] = item.series || item.source;
+                    delete item.series;
+                }
+                if (item.type == "patent" && item.source) {
+                    item.publisher = item.source;
+                }
+                delete item.source;
+                if (item.identifiers) {
+                    if (item.identifiers.doi) item.DOI = item.identifiers.doi;
+                    if (item.identifiers.isbn) item.ISBN = item.identifiers.isbn;
+                    if (item.identifiers.issn) item.ISSN = item.identifiers.issn;
+                    if (item.identifiers.pmid) item.PMID = item.identifiers.pmid;
+                    delete item.identifiers;
+                }
+                if (item.keywords) {
+                    item.keyword = item.keywords.toString();
+                    delete item.keywords;
+                }
+                if (item.websites && item.websites.length > 0) {
+                    item.URL = item.websites[0];
+                    delete item.websites;
+                }
+                if (item.chapter) {
+                    item["chapter-number"] = item.chapter;
+                    delete item.chapter;
+                }
+                if (item.city) {
+                    item["event-place"] = item.city;
+                    item["publisher-place"] = item.city;
+                    delete item.city;
+                }
+                if (item.short_title) {
+                    item["short-title"] = item.short_title;
+                    delete item.short_title;
+                }
+                return item;
+            }
+        }, {
+            key: "_convertMendeleyTypeToCSLType",
+            value: function _convertMendeleyTypeToCSLType(str) {
+                str = str.toLowerCase();
+                switch (str) {
+                  case "bill":
+                  case "book":
+                  case "patent":
+                  case "report":
+                  case "statute":
+                  case "thesis":
+                    return str;
+
+                  case "book_section":
+                    return "chapter";
+
+                  case "conference_proceedings":
+                    return "paper-conference";
+
+                  case "encyclopedia_article":
+                    return "entry-encyclopedia";
+
+                  case "film":
+                    return "motion_picture";
+
+                  case "hearing":
+                    return "speech";
+
+                  case "journal":
+                    return "article-journal";
+
+                  case "magazine_article":
+                    return "article-magazine";
+
+                  case "newspaper_article":
+                    return "article-newspaper";
+
+                  case "television_broadcast":
+                    return "broadcast";
+
+                  case "web_page":
+                    return "webpage";
+
+                  case "case":
+                  case "computer_program":
+                  case "generic":
+                  case "working_paper":
+                  default:
+                    return "article";
+                }
+            }
+        }, {
+            key: "_convertMendeleyWriter",
+            value: function _convertMendeleyWriter(item, fieldTo, fieldFrom) {
+                if (!item[fieldFrom] || item[fieldFrom].length <= 0) return;
+                if (!item[fieldTo]) item[fieldTo] = [];
+                for (var i = 0; i < item[fieldFrom].length; i++) {
+                    item[fieldTo].push({
+                        given: item[fieldFrom][i].first_name,
+                        family: item[fieldFrom][i].last_name
+                    });
+                }
+                delete item[fieldFrom];
+            }
+        }, {
+            key: "_convertMendeleyDate",
+            value: function _convertMendeleyDate(item, field) {
+                if (!item.year) return;
+                var date = [ item.year ];
+                delete item.year;
+                if (item.month) {
+                    date.push(item.month);
+                    delete item.month;
+                    if (item.day) {
+                        date.push(item.day);
+                        delete item.day;
+                    }
+                }
+                item[field] = {
+                    "date-parts": [ date ]
+                };
+            }
+        } ]);
+    }();
+    var Sdk = function() {
+        function Sdk(authFlow) {
+            _classCallCheck(this, Sdk);
+            this._mendeleySdk = MendeleySDK(authFlow);
+            this._userId = 0;
+            this._userGroups = [];
+        }
+        return _createClass(Sdk, [ {
+            key: "getItems",
+            value: function getItems(search, itemsID, format) {
+                var promise = Promise.resolve({
+                    items: []
+                });
+                if (search) {
+                    promise = this._mendeleySdk.documents.search({
+                        query: search,
+                        limit: 20,
+                        view: "bib"
+                    });
+                } else if (itemsID || format) ; else {
+                    promise = this._mendeleySdk.documents.list({
+                        limit: 16,
+                        view: "bib",
+                        sort: "last_modified",
+                        order: "desc"
+                    });
+                }
+                return promise.then(function(response) {
+                    console.warn(response.items);
+                    response.items.forEach(MendeleyToCls.transform.bind(MendeleyToCls));
+                    return response;
+                });
+            }
+        }, {
+            key: "getGroupItems",
+            value: function getGroupItems(search, groupId, itemsID) {
+                return new Promise(function(resolve, reject) {
+                    resolve({
+                        items: []
+                    });
+                });
+            }
+        }, {
+            key: "getUserGroups",
+            value: function getUserGroups() {
+                var self = this;
+                this._mendeleySdk.folders.list({
+                    limit: 6
+                }).then(function(response) {
+                    console.error(response);
+                });
+                return new Promise(function(resolve, reject) {
+                    if (self._userGroups.length > 0) {
+                        resolve(self._userGroups);
+                        return;
+                    }
+                    resolve(self._userGroups);
+                });
+            }
+        } ]);
+    }();
+    var es_array_filter = {};
+    var hasRequiredEs_array_filter;
+    function requireEs_array_filter() {
+        if (hasRequiredEs_array_filter) return es_array_filter;
+        hasRequiredEs_array_filter = 1;
+        var $ = require_export();
+        var $filter = requireArrayIteration().filter;
+        var arrayMethodHasSpeciesSupport = requireArrayMethodHasSpeciesSupport();
+        var HAS_SPECIES_SUPPORT = arrayMethodHasSpeciesSupport("filter");
+        $({
+            target: "Array",
+            proto: true,
+            forced: !HAS_SPECIES_SUPPORT
+        }, {
+            filter: function filter(callbackfn) {
+                return $filter(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+            }
+        });
+        return es_array_filter;
+    }
+    requireEs_array_filter();
     var es_array_slice = {};
+    var arraySetLength;
+    var hasRequiredArraySetLength;
+    function requireArraySetLength() {
+        if (hasRequiredArraySetLength) return arraySetLength;
+        hasRequiredArraySetLength = 1;
+        var DESCRIPTORS = requireDescriptors();
+        var isArray = requireIsArray();
+        var $TypeError = TypeError;
+        var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+        var SILENT_ON_NON_WRITABLE_LENGTH_SET = DESCRIPTORS && !function() {
+            if (this !== undefined) return true;
+            try {
+                Object.defineProperty([], "length", {
+                    writable: false
+                }).length = 1;
+            } catch (error) {
+                return error instanceof TypeError;
+            }
+        }();
+        arraySetLength = SILENT_ON_NON_WRITABLE_LENGTH_SET ? function(O, length) {
+            if (isArray(O) && !getOwnPropertyDescriptor(O, "length").writable) {
+                throw new $TypeError("Cannot set read only .length");
+            }
+            return O.length = length;
+        } : function(O, length) {
+            return O.length = length;
+        };
+        return arraySetLength;
+    }
     var hasRequiredEs_array_slice;
     function requireEs_array_slice() {
         if (hasRequiredEs_array_slice) return es_array_slice;
@@ -8086,6 +5250,36 @@
     }
     requireEs_array_slice();
     var es_regexp_constructor = {};
+    var inheritIfRequired;
+    var hasRequiredInheritIfRequired;
+    function requireInheritIfRequired() {
+        if (hasRequiredInheritIfRequired) return inheritIfRequired;
+        hasRequiredInheritIfRequired = 1;
+        var isCallable = requireIsCallable();
+        var isObject = requireIsObject();
+        var setPrototypeOf = requireObjectSetPrototypeOf();
+        inheritIfRequired = function($this, dummy, Wrapper) {
+            var NewTarget, NewTargetPrototype;
+            if (setPrototypeOf && isCallable(NewTarget = dummy.constructor) && NewTarget !== Wrapper && isObject(NewTargetPrototype = NewTarget.prototype) && NewTargetPrototype !== Wrapper.prototype) setPrototypeOf($this, NewTargetPrototype);
+            return $this;
+        };
+        return inheritIfRequired;
+    }
+    var isRegexp;
+    var hasRequiredIsRegexp;
+    function requireIsRegexp() {
+        if (hasRequiredIsRegexp) return isRegexp;
+        hasRequiredIsRegexp = 1;
+        var isObject = requireIsObject();
+        var classof = requireClassofRaw();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var MATCH = wellKnownSymbol("match");
+        isRegexp = function(it) {
+            var isRegExp;
+            return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classof(it) === "RegExp");
+        };
+        return isRegexp;
+    }
     var proxyAccessor;
     var hasRequiredProxyAccessor;
     function requireProxyAccessor() {
@@ -8283,50 +5477,6 @@
         return es_regexp_constructor;
     }
     requireEs_regexp_constructor();
-    var es_string_search = {};
-    var sameValue;
-    var hasRequiredSameValue;
-    function requireSameValue() {
-        if (hasRequiredSameValue) return sameValue;
-        hasRequiredSameValue = 1;
-        sameValue = Object.is || function is(x, y) {
-            return x === y ? x !== 0 || 1 / x === 1 / y : x !== x && y !== y;
-        };
-        return sameValue;
-    }
-    var hasRequiredEs_string_search;
-    function requireEs_string_search() {
-        if (hasRequiredEs_string_search) return es_string_search;
-        hasRequiredEs_string_search = 1;
-        var call = requireFunctionCall();
-        var fixRegExpWellKnownSymbolLogic = requireFixRegexpWellKnownSymbolLogic();
-        var anObject = requireAnObject();
-        var isObject = requireIsObject();
-        var requireObjectCoercible = requireRequireObjectCoercible();
-        var sameValue = requireSameValue();
-        var toString = requireToString();
-        var getMethod = requireGetMethod();
-        var regExpExec = requireRegexpExecAbstract();
-        fixRegExpWellKnownSymbolLogic("search", function(SEARCH, nativeSearch, maybeCallNative) {
-            return [ function search(regexp) {
-                var O = requireObjectCoercible(this);
-                var searcher = isObject(regexp) ? getMethod(regexp, SEARCH) : undefined;
-                return searcher ? call(searcher, regexp, O) : new RegExp(regexp)[SEARCH](toString(O));
-            }, function(string) {
-                var rx = anObject(this);
-                var S = toString(string);
-                var res = maybeCallNative(nativeSearch, rx, S);
-                if (res.done) return res.value;
-                var previousLastIndex = rx.lastIndex;
-                if (!sameValue(previousLastIndex, 0)) rx.lastIndex = 0;
-                var result = regExpExec(rx, S);
-                if (!sameValue(rx.lastIndex, previousLastIndex)) rx.lastIndex = previousLastIndex;
-                return result === null ? -1 : result.index;
-            } ];
-        });
-        return es_string_search;
-    }
-    requireEs_string_search();
     function InputField(input, options) {
         var self = this;
         options = options || {};
@@ -8780,7 +5930,181 @@
             }).join(" ");
         }
     };
+    var es_number_constructor = {};
+    var thisNumberValue;
+    var hasRequiredThisNumberValue;
+    function requireThisNumberValue() {
+        if (hasRequiredThisNumberValue) return thisNumberValue;
+        hasRequiredThisNumberValue = 1;
+        var uncurryThis = requireFunctionUncurryThis();
+        thisNumberValue = uncurryThis(1.1.valueOf);
+        return thisNumberValue;
+    }
+    var hasRequiredEs_number_constructor;
+    function requireEs_number_constructor() {
+        if (hasRequiredEs_number_constructor) return es_number_constructor;
+        hasRequiredEs_number_constructor = 1;
+        var $ = require_export();
+        var IS_PURE = requireIsPure();
+        var DESCRIPTORS = requireDescriptors();
+        var globalThis = requireGlobalThis();
+        var path = requirePath();
+        var uncurryThis = requireFunctionUncurryThis();
+        var isForced = requireIsForced();
+        var hasOwn = requireHasOwnProperty();
+        var inheritIfRequired = requireInheritIfRequired();
+        var isPrototypeOf = requireObjectIsPrototypeOf();
+        var isSymbol = requireIsSymbol();
+        var toPrimitive = requireToPrimitive();
+        var fails = requireFails();
+        var getOwnPropertyNames = requireObjectGetOwnPropertyNames().f;
+        var getOwnPropertyDescriptor = requireObjectGetOwnPropertyDescriptor().f;
+        var defineProperty = requireObjectDefineProperty().f;
+        var thisNumberValue = requireThisNumberValue();
+        var trim = requireStringTrim().trim;
+        var NUMBER = "Number";
+        var NativeNumber = globalThis[NUMBER];
+        var PureNumberNamespace = path[NUMBER];
+        var NumberPrototype = NativeNumber.prototype;
+        var TypeError = globalThis.TypeError;
+        var stringSlice = uncurryThis("".slice);
+        var charCodeAt = uncurryThis("".charCodeAt);
+        var toNumeric = function(value) {
+            var primValue = toPrimitive(value, "number");
+            return typeof primValue == "bigint" ? primValue : toNumber(primValue);
+        };
+        var toNumber = function(argument) {
+            var it = toPrimitive(argument, "number");
+            var first, third, radix, maxCode, digits, length, index, code;
+            if (isSymbol(it)) throw new TypeError("Cannot convert a Symbol value to a number");
+            if (typeof it == "string" && it.length > 2) {
+                it = trim(it);
+                first = charCodeAt(it, 0);
+                if (first === 43 || first === 45) {
+                    third = charCodeAt(it, 2);
+                    if (third === 88 || third === 120) return NaN;
+                } else if (first === 48) {
+                    switch (charCodeAt(it, 1)) {
+                      case 66:
+                      case 98:
+                        radix = 2;
+                        maxCode = 49;
+                        break;
+
+                      case 79:
+                      case 111:
+                        radix = 8;
+                        maxCode = 55;
+                        break;
+
+                      default:
+                        return +it;
+                    }
+                    digits = stringSlice(it, 2);
+                    length = digits.length;
+                    for (index = 0; index < length; index++) {
+                        code = charCodeAt(digits, index);
+                        if (code < 48 || code > maxCode) return NaN;
+                    }
+                    return parseInt(digits, radix);
+                }
+            }
+            return +it;
+        };
+        var FORCED = isForced(NUMBER, !NativeNumber(" 0o1") || !NativeNumber("0b1") || NativeNumber("+0x1"));
+        var calledWithNew = function(dummy) {
+            return isPrototypeOf(NumberPrototype, dummy) && fails(function() {
+                thisNumberValue(dummy);
+            });
+        };
+        var NumberWrapper = function Number(value) {
+            var n = arguments.length < 1 ? 0 : NativeNumber(toNumeric(value));
+            return calledWithNew(this) ? inheritIfRequired(Object(n), this, NumberWrapper) : n;
+        };
+        NumberWrapper.prototype = NumberPrototype;
+        if (FORCED && !IS_PURE) NumberPrototype.constructor = NumberWrapper;
+        $({
+            global: true,
+            constructor: true,
+            wrap: true,
+            forced: FORCED
+        }, {
+            Number: NumberWrapper
+        });
+        var copyConstructorProperties = function(target, source) {
+            for (var keys = DESCRIPTORS ? getOwnPropertyNames(source) : ("MAX_VALUE,MIN_VALUE,NaN,NEGATIVE_INFINITY,POSITIVE_INFINITY," + "EPSILON,MAX_SAFE_INTEGER,MIN_SAFE_INTEGER,isFinite,isInteger,isNaN,isSafeInteger,parseFloat,parseInt," + "fromString,range").split(","), j = 0, key; keys.length > j; j++) {
+                if (hasOwn(source, key = keys[j]) && !hasOwn(target, key)) {
+                    defineProperty(target, key, getOwnPropertyDescriptor(source, key));
+                }
+            }
+        };
+        if (IS_PURE && PureNumberNamespace) copyConstructorProperties(path[NUMBER], PureNumberNamespace);
+        if (FORCED || IS_PURE) copyConstructorProperties(path[NUMBER], NativeNumber);
+        return es_number_constructor;
+    }
+    requireEs_number_constructor();
     var es_object_assign = {};
+    var objectAssign;
+    var hasRequiredObjectAssign;
+    function requireObjectAssign() {
+        if (hasRequiredObjectAssign) return objectAssign;
+        hasRequiredObjectAssign = 1;
+        var DESCRIPTORS = requireDescriptors();
+        var uncurryThis = requireFunctionUncurryThis();
+        var call = requireFunctionCall();
+        var fails = requireFails();
+        var objectKeys = requireObjectKeys();
+        var getOwnPropertySymbolsModule = requireObjectGetOwnPropertySymbols();
+        var propertyIsEnumerableModule = requireObjectPropertyIsEnumerable();
+        var toObject = requireToObject();
+        var IndexedObject = requireIndexedObject();
+        var $assign = Object.assign;
+        var defineProperty = Object.defineProperty;
+        var concat = uncurryThis([].concat);
+        objectAssign = !$assign || fails(function() {
+            if (DESCRIPTORS && $assign({
+                b: 1
+            }, $assign(defineProperty({}, "a", {
+                enumerable: true,
+                get: function() {
+                    defineProperty(this, "b", {
+                        value: 3,
+                        enumerable: false
+                    });
+                }
+            }), {
+                b: 2
+            })).b !== 1) return true;
+            var A = {};
+            var B = {};
+            var symbol = Symbol("assign detection");
+            var alphabet = "abcdefghijklmnopqrst";
+            A[symbol] = 7;
+            alphabet.split("").forEach(function(chr) {
+                B[chr] = chr;
+            });
+            return $assign({}, A)[symbol] !== 7 || objectKeys($assign({}, B)).join("") !== alphabet;
+        }) ? function assign(target, source) {
+            var T = toObject(target);
+            var argumentsLength = arguments.length;
+            var index = 1;
+            var getOwnPropertySymbols = getOwnPropertySymbolsModule.f;
+            var propertyIsEnumerable = propertyIsEnumerableModule.f;
+            while (argumentsLength > index) {
+                var S = IndexedObject(arguments[index++]);
+                var keys = getOwnPropertySymbols ? concat(objectKeys(S), getOwnPropertySymbols(S)) : objectKeys(S);
+                var length = keys.length;
+                var j = 0;
+                var key;
+                while (length > j) {
+                    key = keys[j++];
+                    if (!DESCRIPTORS || call(propertyIsEnumerable, S, key)) T[key] = S[key];
+                }
+            }
+            return T;
+        } : $assign;
+        return objectAssign;
+    }
     var hasRequiredEs_object_assign;
     function requireEs_object_assign() {
         if (hasRequiredEs_object_assign) return es_object_assign;
@@ -9274,6 +6598,78 @@
             this._container.className = containerClasses;
         }
     };
+    var es_array_concat = {};
+    var doesNotExceedSafeInteger;
+    var hasRequiredDoesNotExceedSafeInteger;
+    function requireDoesNotExceedSafeInteger() {
+        if (hasRequiredDoesNotExceedSafeInteger) return doesNotExceedSafeInteger;
+        hasRequiredDoesNotExceedSafeInteger = 1;
+        var $TypeError = TypeError;
+        var MAX_SAFE_INTEGER = 9007199254740991;
+        doesNotExceedSafeInteger = function(it) {
+            if (it > MAX_SAFE_INTEGER) throw $TypeError("Maximum allowed index exceeded");
+            return it;
+        };
+        return doesNotExceedSafeInteger;
+    }
+    var hasRequiredEs_array_concat;
+    function requireEs_array_concat() {
+        if (hasRequiredEs_array_concat) return es_array_concat;
+        hasRequiredEs_array_concat = 1;
+        var $ = require_export();
+        var fails = requireFails();
+        var isArray = requireIsArray();
+        var isObject = requireIsObject();
+        var toObject = requireToObject();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var doesNotExceedSafeInteger = requireDoesNotExceedSafeInteger();
+        var createProperty = requireCreateProperty();
+        var setArrayLength = requireArraySetLength();
+        var arraySpeciesCreate = requireArraySpeciesCreate();
+        var arrayMethodHasSpeciesSupport = requireArrayMethodHasSpeciesSupport();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var V8_VERSION = requireEnvironmentV8Version();
+        var IS_CONCAT_SPREADABLE = wellKnownSymbol("isConcatSpreadable");
+        var IS_CONCAT_SPREADABLE_SUPPORT = V8_VERSION >= 51 || !fails(function() {
+            var array = [];
+            array[IS_CONCAT_SPREADABLE] = false;
+            return array.concat()[0] !== array;
+        });
+        var isConcatSpreadable = function(O) {
+            if (!isObject(O)) return false;
+            var spreadable = O[IS_CONCAT_SPREADABLE];
+            return spreadable !== undefined ? !!spreadable : isArray(O);
+        };
+        var FORCED = !IS_CONCAT_SPREADABLE_SUPPORT || !arrayMethodHasSpeciesSupport("concat");
+        $({
+            target: "Array",
+            proto: true,
+            arity: 1,
+            forced: FORCED
+        }, {
+            concat: function concat(arg) {
+                var O = toObject(this);
+                var A = arraySpeciesCreate(O, 0);
+                var n = 0;
+                var i, k, length, len, E;
+                for (i = -1, length = arguments.length; i < length; i++) {
+                    E = i === -1 ? O : arguments[i];
+                    if (isConcatSpreadable(E)) {
+                        len = lengthOfArrayLike(E);
+                        doesNotExceedSafeInteger(n + len);
+                        for (k = 0; k < len; k++, n++) if (k in E) createProperty(A, n, E[k]);
+                    } else {
+                        doesNotExceedSafeInteger(n + 1);
+                        createProperty(A, n++, E);
+                    }
+                }
+                setArrayLength(A, n);
+                return A;
+            }
+        });
+        return es_array_concat;
+    }
+    requireEs_array_concat();
     var es_array_splice = {};
     var deletePropertyOrThrow;
     var hasRequiredDeletePropertyOrThrow;
@@ -9358,6 +6754,269 @@
     requireEs_array_splice();
     var es_map = {};
     var es_map_constructor = {};
+    var internalMetadata = {
+        exports: {}
+    };
+    var objectGetOwnPropertyNamesExternal = {};
+    var hasRequiredObjectGetOwnPropertyNamesExternal;
+    function requireObjectGetOwnPropertyNamesExternal() {
+        if (hasRequiredObjectGetOwnPropertyNamesExternal) return objectGetOwnPropertyNamesExternal;
+        hasRequiredObjectGetOwnPropertyNamesExternal = 1;
+        var classof = requireClassofRaw();
+        var toIndexedObject = requireToIndexedObject();
+        var $getOwnPropertyNames = requireObjectGetOwnPropertyNames().f;
+        var arraySlice = requireArraySlice();
+        var windowNames = typeof window == "object" && window && Object.getOwnPropertyNames ? Object.getOwnPropertyNames(window) : [];
+        var getWindowNames = function(it) {
+            try {
+                return $getOwnPropertyNames(it);
+            } catch (error) {
+                return arraySlice(windowNames);
+            }
+        };
+        objectGetOwnPropertyNamesExternal.f = function getOwnPropertyNames(it) {
+            return windowNames && classof(it) === "Window" ? getWindowNames(it) : $getOwnPropertyNames(toIndexedObject(it));
+        };
+        return objectGetOwnPropertyNamesExternal;
+    }
+    var arrayBufferNonExtensible;
+    var hasRequiredArrayBufferNonExtensible;
+    function requireArrayBufferNonExtensible() {
+        if (hasRequiredArrayBufferNonExtensible) return arrayBufferNonExtensible;
+        hasRequiredArrayBufferNonExtensible = 1;
+        var fails = requireFails();
+        arrayBufferNonExtensible = fails(function() {
+            if (typeof ArrayBuffer == "function") {
+                var buffer = new ArrayBuffer(8);
+                if (Object.isExtensible(buffer)) Object.defineProperty(buffer, "a", {
+                    value: 8
+                });
+            }
+        });
+        return arrayBufferNonExtensible;
+    }
+    var objectIsExtensible;
+    var hasRequiredObjectIsExtensible;
+    function requireObjectIsExtensible() {
+        if (hasRequiredObjectIsExtensible) return objectIsExtensible;
+        hasRequiredObjectIsExtensible = 1;
+        var fails = requireFails();
+        var isObject = requireIsObject();
+        var classof = requireClassofRaw();
+        var ARRAY_BUFFER_NON_EXTENSIBLE = requireArrayBufferNonExtensible();
+        var $isExtensible = Object.isExtensible;
+        var FAILS_ON_PRIMITIVES = fails(function() {});
+        objectIsExtensible = FAILS_ON_PRIMITIVES || ARRAY_BUFFER_NON_EXTENSIBLE ? function isExtensible(it) {
+            if (!isObject(it)) return false;
+            if (ARRAY_BUFFER_NON_EXTENSIBLE && classof(it) === "ArrayBuffer") return false;
+            return $isExtensible ? $isExtensible(it) : true;
+        } : $isExtensible;
+        return objectIsExtensible;
+    }
+    var freezing;
+    var hasRequiredFreezing;
+    function requireFreezing() {
+        if (hasRequiredFreezing) return freezing;
+        hasRequiredFreezing = 1;
+        var fails = requireFails();
+        freezing = !fails(function() {
+            return Object.isExtensible(Object.preventExtensions({}));
+        });
+        return freezing;
+    }
+    var hasRequiredInternalMetadata;
+    function requireInternalMetadata() {
+        if (hasRequiredInternalMetadata) return internalMetadata.exports;
+        hasRequiredInternalMetadata = 1;
+        var $ = require_export();
+        var uncurryThis = requireFunctionUncurryThis();
+        var hiddenKeys = requireHiddenKeys();
+        var isObject = requireIsObject();
+        var hasOwn = requireHasOwnProperty();
+        var defineProperty = requireObjectDefineProperty().f;
+        var getOwnPropertyNamesModule = requireObjectGetOwnPropertyNames();
+        var getOwnPropertyNamesExternalModule = requireObjectGetOwnPropertyNamesExternal();
+        var isExtensible = requireObjectIsExtensible();
+        var uid = requireUid();
+        var FREEZING = requireFreezing();
+        var REQUIRED = false;
+        var METADATA = uid("meta");
+        var id = 0;
+        var setMetadata = function(it) {
+            defineProperty(it, METADATA, {
+                value: {
+                    objectID: "O" + id++,
+                    weakData: {}
+                }
+            });
+        };
+        var fastKey = function(it, create) {
+            if (!isObject(it)) return typeof it == "symbol" ? it : (typeof it == "string" ? "S" : "P") + it;
+            if (!hasOwn(it, METADATA)) {
+                if (!isExtensible(it)) return "F";
+                if (!create) return "E";
+                setMetadata(it);
+            }
+            return it[METADATA].objectID;
+        };
+        var getWeakData = function(it, create) {
+            if (!hasOwn(it, METADATA)) {
+                if (!isExtensible(it)) return true;
+                if (!create) return false;
+                setMetadata(it);
+            }
+            return it[METADATA].weakData;
+        };
+        var onFreeze = function(it) {
+            if (FREEZING && REQUIRED && isExtensible(it) && !hasOwn(it, METADATA)) setMetadata(it);
+            return it;
+        };
+        var enable = function() {
+            meta.enable = function() {};
+            REQUIRED = true;
+            var getOwnPropertyNames = getOwnPropertyNamesModule.f;
+            var splice = uncurryThis([].splice);
+            var test = {};
+            test[METADATA] = 1;
+            if (getOwnPropertyNames(test).length) {
+                getOwnPropertyNamesModule.f = function(it) {
+                    var result = getOwnPropertyNames(it);
+                    for (var i = 0, length = result.length; i < length; i++) {
+                        if (result[i] === METADATA) {
+                            splice(result, i, 1);
+                            break;
+                        }
+                    }
+                    return result;
+                };
+                $({
+                    target: "Object",
+                    stat: true,
+                    forced: true
+                }, {
+                    getOwnPropertyNames: getOwnPropertyNamesExternalModule.f
+                });
+            }
+        };
+        var meta = internalMetadata.exports = {
+            enable: enable,
+            fastKey: fastKey,
+            getWeakData: getWeakData,
+            onFreeze: onFreeze
+        };
+        hiddenKeys[METADATA] = true;
+        return internalMetadata.exports;
+    }
+    var collection;
+    var hasRequiredCollection;
+    function requireCollection() {
+        if (hasRequiredCollection) return collection;
+        hasRequiredCollection = 1;
+        var $ = require_export();
+        var globalThis = requireGlobalThis();
+        var uncurryThis = requireFunctionUncurryThis();
+        var isForced = requireIsForced();
+        var defineBuiltIn = requireDefineBuiltIn();
+        var InternalMetadataModule = requireInternalMetadata();
+        var iterate = requireIterate();
+        var anInstance = requireAnInstance();
+        var isCallable = requireIsCallable();
+        var isNullOrUndefined = requireIsNullOrUndefined();
+        var isObject = requireIsObject();
+        var fails = requireFails();
+        var checkCorrectnessOfIteration = requireCheckCorrectnessOfIteration();
+        var setToStringTag = requireSetToStringTag();
+        var inheritIfRequired = requireInheritIfRequired();
+        collection = function(CONSTRUCTOR_NAME, wrapper, common) {
+            var IS_MAP = CONSTRUCTOR_NAME.indexOf("Map") !== -1;
+            var IS_WEAK = CONSTRUCTOR_NAME.indexOf("Weak") !== -1;
+            var ADDER = IS_MAP ? "set" : "add";
+            var NativeConstructor = globalThis[CONSTRUCTOR_NAME];
+            var NativePrototype = NativeConstructor && NativeConstructor.prototype;
+            var Constructor = NativeConstructor;
+            var exported = {};
+            var fixMethod = function(KEY) {
+                var uncurriedNativeMethod = uncurryThis(NativePrototype[KEY]);
+                defineBuiltIn(NativePrototype, KEY, KEY === "add" ? function add(value) {
+                    uncurriedNativeMethod(this, value === 0 ? 0 : value);
+                    return this;
+                } : KEY === "delete" ? function(key) {
+                    return IS_WEAK && !isObject(key) ? false : uncurriedNativeMethod(this, key === 0 ? 0 : key);
+                } : KEY === "get" ? function get(key) {
+                    return IS_WEAK && !isObject(key) ? undefined : uncurriedNativeMethod(this, key === 0 ? 0 : key);
+                } : KEY === "has" ? function has(key) {
+                    return IS_WEAK && !isObject(key) ? false : uncurriedNativeMethod(this, key === 0 ? 0 : key);
+                } : function set(key, value) {
+                    uncurriedNativeMethod(this, key === 0 ? 0 : key, value);
+                    return this;
+                });
+            };
+            var REPLACE = isForced(CONSTRUCTOR_NAME, !isCallable(NativeConstructor) || !(IS_WEAK || NativePrototype.forEach && !fails(function() {
+                (new NativeConstructor).entries().next();
+            })));
+            if (REPLACE) {
+                Constructor = common.getConstructor(wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER);
+                InternalMetadataModule.enable();
+            } else if (isForced(CONSTRUCTOR_NAME, true)) {
+                var instance = new Constructor;
+                var HASNT_CHAINING = instance[ADDER](IS_WEAK ? {} : -0, 1) !== instance;
+                var THROWS_ON_PRIMITIVES = fails(function() {
+                    instance.has(1);
+                });
+                var ACCEPT_ITERABLES = checkCorrectnessOfIteration(function(iterable) {
+                    new NativeConstructor(iterable);
+                });
+                var BUGGY_ZERO = !IS_WEAK && fails(function() {
+                    var $instance = new NativeConstructor;
+                    var index = 5;
+                    while (index--) $instance[ADDER](index, index);
+                    return !$instance.has(-0);
+                });
+                if (!ACCEPT_ITERABLES) {
+                    Constructor = wrapper(function(dummy, iterable) {
+                        anInstance(dummy, NativePrototype);
+                        var that = inheritIfRequired(new NativeConstructor, dummy, Constructor);
+                        if (!isNullOrUndefined(iterable)) iterate(iterable, that[ADDER], {
+                            that: that,
+                            AS_ENTRIES: IS_MAP
+                        });
+                        return that;
+                    });
+                    Constructor.prototype = NativePrototype;
+                    NativePrototype.constructor = Constructor;
+                }
+                if (THROWS_ON_PRIMITIVES || BUGGY_ZERO) {
+                    fixMethod("delete");
+                    fixMethod("has");
+                    IS_MAP && fixMethod("get");
+                }
+                if (BUGGY_ZERO || HASNT_CHAINING) fixMethod(ADDER);
+                if (IS_WEAK && NativePrototype.clear) delete NativePrototype.clear;
+            }
+            exported[CONSTRUCTOR_NAME] = Constructor;
+            $({
+                global: true,
+                constructor: true,
+                forced: Constructor !== NativeConstructor
+            }, exported);
+            setToStringTag(Constructor, CONSTRUCTOR_NAME);
+            if (!IS_WEAK) common.setStrong(Constructor, CONSTRUCTOR_NAME, IS_MAP);
+            return Constructor;
+        };
+        return collection;
+    }
+    var defineBuiltIns;
+    var hasRequiredDefineBuiltIns;
+    function requireDefineBuiltIns() {
+        if (hasRequiredDefineBuiltIns) return defineBuiltIns;
+        hasRequiredDefineBuiltIns = 1;
+        var defineBuiltIn = requireDefineBuiltIn();
+        defineBuiltIns = function(target, src, options) {
+            for (var key in src) defineBuiltIn(target, key, src[key], options);
+            return target;
+        };
+        return defineBuiltIns;
+    }
     var collectionStrong;
     var hasRequiredCollectionStrong;
     function requireCollectionStrong() {
@@ -9544,6 +7203,246 @@
         return es_map;
     }
     requireEs_map();
+    var es_weakMap = {};
+    var es_weakMap_constructor = {};
+    var collectionWeak;
+    var hasRequiredCollectionWeak;
+    function requireCollectionWeak() {
+        if (hasRequiredCollectionWeak) return collectionWeak;
+        hasRequiredCollectionWeak = 1;
+        var uncurryThis = requireFunctionUncurryThis();
+        var defineBuiltIns = requireDefineBuiltIns();
+        var getWeakData = requireInternalMetadata().getWeakData;
+        var anInstance = requireAnInstance();
+        var anObject = requireAnObject();
+        var isNullOrUndefined = requireIsNullOrUndefined();
+        var isObject = requireIsObject();
+        var iterate = requireIterate();
+        var ArrayIterationModule = requireArrayIteration();
+        var hasOwn = requireHasOwnProperty();
+        var InternalStateModule = requireInternalState();
+        var setInternalState = InternalStateModule.set;
+        var internalStateGetterFor = InternalStateModule.getterFor;
+        var find = ArrayIterationModule.find;
+        var findIndex = ArrayIterationModule.findIndex;
+        var splice = uncurryThis([].splice);
+        var id = 0;
+        var uncaughtFrozenStore = function(state) {
+            return state.frozen || (state.frozen = new UncaughtFrozenStore);
+        };
+        var UncaughtFrozenStore = function() {
+            this.entries = [];
+        };
+        var findUncaughtFrozen = function(store, key) {
+            return find(store.entries, function(it) {
+                return it[0] === key;
+            });
+        };
+        UncaughtFrozenStore.prototype = {
+            get: function(key) {
+                var entry = findUncaughtFrozen(this, key);
+                if (entry) return entry[1];
+            },
+            has: function(key) {
+                return !!findUncaughtFrozen(this, key);
+            },
+            set: function(key, value) {
+                var entry = findUncaughtFrozen(this, key);
+                if (entry) entry[1] = value; else this.entries.push([ key, value ]);
+            },
+            delete: function(key) {
+                var index = findIndex(this.entries, function(it) {
+                    return it[0] === key;
+                });
+                if (~index) splice(this.entries, index, 1);
+                return !!~index;
+            }
+        };
+        collectionWeak = {
+            getConstructor: function(wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER) {
+                var Constructor = wrapper(function(that, iterable) {
+                    anInstance(that, Prototype);
+                    setInternalState(that, {
+                        type: CONSTRUCTOR_NAME,
+                        id: id++,
+                        frozen: null
+                    });
+                    if (!isNullOrUndefined(iterable)) iterate(iterable, that[ADDER], {
+                        that: that,
+                        AS_ENTRIES: IS_MAP
+                    });
+                });
+                var Prototype = Constructor.prototype;
+                var getInternalState = internalStateGetterFor(CONSTRUCTOR_NAME);
+                var define = function(that, key, value) {
+                    var state = getInternalState(that);
+                    var data = getWeakData(anObject(key), true);
+                    if (data === true) uncaughtFrozenStore(state).set(key, value); else data[state.id] = value;
+                    return that;
+                };
+                defineBuiltIns(Prototype, {
+                    delete: function(key) {
+                        var state = getInternalState(this);
+                        if (!isObject(key)) return false;
+                        var data = getWeakData(key);
+                        if (data === true) return uncaughtFrozenStore(state)["delete"](key);
+                        return data && hasOwn(data, state.id) && delete data[state.id];
+                    },
+                    has: function has(key) {
+                        var state = getInternalState(this);
+                        if (!isObject(key)) return false;
+                        var data = getWeakData(key);
+                        if (data === true) return uncaughtFrozenStore(state).has(key);
+                        return data && hasOwn(data, state.id);
+                    }
+                });
+                defineBuiltIns(Prototype, IS_MAP ? {
+                    get: function get(key) {
+                        var state = getInternalState(this);
+                        if (isObject(key)) {
+                            var data = getWeakData(key);
+                            if (data === true) return uncaughtFrozenStore(state).get(key);
+                            if (data) return data[state.id];
+                        }
+                    },
+                    set: function set(key, value) {
+                        return define(this, key, value);
+                    }
+                } : {
+                    add: function add(value) {
+                        return define(this, value, true);
+                    }
+                });
+                return Constructor;
+            }
+        };
+        return collectionWeak;
+    }
+    var hasRequiredEs_weakMap_constructor;
+    function requireEs_weakMap_constructor() {
+        if (hasRequiredEs_weakMap_constructor) return es_weakMap_constructor;
+        hasRequiredEs_weakMap_constructor = 1;
+        var FREEZING = requireFreezing();
+        var globalThis = requireGlobalThis();
+        var uncurryThis = requireFunctionUncurryThis();
+        var defineBuiltIns = requireDefineBuiltIns();
+        var InternalMetadataModule = requireInternalMetadata();
+        var collection = requireCollection();
+        var collectionWeak = requireCollectionWeak();
+        var isObject = requireIsObject();
+        var enforceInternalState = requireInternalState().enforce;
+        var fails = requireFails();
+        var NATIVE_WEAK_MAP = requireWeakMapBasicDetection();
+        var $Object = Object;
+        var isArray = Array.isArray;
+        var isExtensible = $Object.isExtensible;
+        var isFrozen = $Object.isFrozen;
+        var isSealed = $Object.isSealed;
+        var freeze = $Object.freeze;
+        var seal = $Object.seal;
+        var IS_IE11 = !globalThis.ActiveXObject && "ActiveXObject" in globalThis;
+        var InternalWeakMap;
+        var wrapper = function(init) {
+            return function WeakMap() {
+                return init(this, arguments.length ? arguments[0] : undefined);
+            };
+        };
+        var $WeakMap = collection("WeakMap", wrapper, collectionWeak);
+        var WeakMapPrototype = $WeakMap.prototype;
+        var nativeSet = uncurryThis(WeakMapPrototype.set);
+        var hasMSEdgeFreezingBug = function() {
+            return FREEZING && fails(function() {
+                var frozenArray = freeze([]);
+                nativeSet(new $WeakMap, frozenArray, 1);
+                return !isFrozen(frozenArray);
+            });
+        };
+        if (NATIVE_WEAK_MAP) if (IS_IE11) {
+            InternalWeakMap = collectionWeak.getConstructor(wrapper, "WeakMap", true);
+            InternalMetadataModule.enable();
+            var nativeDelete = uncurryThis(WeakMapPrototype["delete"]);
+            var nativeHas = uncurryThis(WeakMapPrototype.has);
+            var nativeGet = uncurryThis(WeakMapPrototype.get);
+            defineBuiltIns(WeakMapPrototype, {
+                delete: function(key) {
+                    if (isObject(key) && !isExtensible(key)) {
+                        var state = enforceInternalState(this);
+                        if (!state.frozen) state.frozen = new InternalWeakMap;
+                        return nativeDelete(this, key) || state.frozen["delete"](key);
+                    }
+                    return nativeDelete(this, key);
+                },
+                has: function has(key) {
+                    if (isObject(key) && !isExtensible(key)) {
+                        var state = enforceInternalState(this);
+                        if (!state.frozen) state.frozen = new InternalWeakMap;
+                        return nativeHas(this, key) || state.frozen.has(key);
+                    }
+                    return nativeHas(this, key);
+                },
+                get: function get(key) {
+                    if (isObject(key) && !isExtensible(key)) {
+                        var state = enforceInternalState(this);
+                        if (!state.frozen) state.frozen = new InternalWeakMap;
+                        return nativeHas(this, key) ? nativeGet(this, key) : state.frozen.get(key);
+                    }
+                    return nativeGet(this, key);
+                },
+                set: function set(key, value) {
+                    if (isObject(key) && !isExtensible(key)) {
+                        var state = enforceInternalState(this);
+                        if (!state.frozen) state.frozen = new InternalWeakMap;
+                        nativeHas(this, key) ? nativeSet(this, key, value) : state.frozen.set(key, value);
+                    } else nativeSet(this, key, value);
+                    return this;
+                }
+            });
+        } else if (hasMSEdgeFreezingBug()) {
+            defineBuiltIns(WeakMapPrototype, {
+                set: function set(key, value) {
+                    var arrayIntegrityLevel;
+                    if (isArray(key)) {
+                        if (isFrozen(key)) arrayIntegrityLevel = freeze; else if (isSealed(key)) arrayIntegrityLevel = seal;
+                    }
+                    nativeSet(this, key, value);
+                    if (arrayIntegrityLevel) arrayIntegrityLevel(key);
+                    return this;
+                }
+            });
+        }
+        return es_weakMap_constructor;
+    }
+    var hasRequiredEs_weakMap;
+    function requireEs_weakMap() {
+        if (hasRequiredEs_weakMap) return es_weakMap;
+        hasRequiredEs_weakMap = 1;
+        requireEs_weakMap_constructor();
+        return es_weakMap;
+    }
+    requireEs_weakMap();
+    var es_weakSet = {};
+    var es_weakSet_constructor = {};
+    var hasRequiredEs_weakSet_constructor;
+    function requireEs_weakSet_constructor() {
+        if (hasRequiredEs_weakSet_constructor) return es_weakSet_constructor;
+        hasRequiredEs_weakSet_constructor = 1;
+        var collection = requireCollection();
+        var collectionWeak = requireCollectionWeak();
+        collection("WeakSet", function(init) {
+            return function WeakSet() {
+                return init(this, arguments.length ? arguments[0] : undefined);
+            };
+        }, collectionWeak);
+        return es_weakSet_constructor;
+    }
+    var hasRequiredEs_weakSet;
+    function requireEs_weakSet() {
+        if (hasRequiredEs_weakSet) return es_weakSet;
+        hasRequiredEs_weakSet = 1;
+        requireEs_weakSet_constructor();
+        return es_weakSet;
+    }
+    requireEs_weakSet();
     var _container$1 = new WeakMap;
     var _input = new WeakMap;
     var _visualRadio = new WeakMap;
@@ -10828,6 +8727,70 @@
     }
     requireEs_array_find();
     var es_array_from = {};
+    var callWithSafeIterationClosing;
+    var hasRequiredCallWithSafeIterationClosing;
+    function requireCallWithSafeIterationClosing() {
+        if (hasRequiredCallWithSafeIterationClosing) return callWithSafeIterationClosing;
+        hasRequiredCallWithSafeIterationClosing = 1;
+        var anObject = requireAnObject();
+        var iteratorClose = requireIteratorClose();
+        callWithSafeIterationClosing = function(iterator, fn, value, ENTRIES) {
+            try {
+                return ENTRIES ? fn(anObject(value)[0], value[1]) : fn(value);
+            } catch (error) {
+                iteratorClose(iterator, "throw", error);
+            }
+        };
+        return callWithSafeIterationClosing;
+    }
+    var arrayFrom;
+    var hasRequiredArrayFrom;
+    function requireArrayFrom() {
+        if (hasRequiredArrayFrom) return arrayFrom;
+        hasRequiredArrayFrom = 1;
+        var bind = requireFunctionBindContext();
+        var call = requireFunctionCall();
+        var toObject = requireToObject();
+        var callWithSafeIterationClosing = requireCallWithSafeIterationClosing();
+        var isArrayIteratorMethod = requireIsArrayIteratorMethod();
+        var isConstructor = requireIsConstructor();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var createProperty = requireCreateProperty();
+        var setArrayLength = requireArraySetLength();
+        var getIterator = requireGetIterator();
+        var getIteratorMethod = requireGetIteratorMethod();
+        var $Array = Array;
+        arrayFrom = function from(arrayLike) {
+            var O = toObject(arrayLike);
+            var IS_CONSTRUCTOR = isConstructor(this);
+            var argumentsLength = arguments.length;
+            var mapfn = argumentsLength > 1 ? arguments[1] : undefined;
+            var mapping = mapfn !== undefined;
+            if (mapping) mapfn = bind(mapfn, argumentsLength > 2 ? arguments[2] : undefined);
+            var iteratorMethod = getIteratorMethod(O);
+            var index = 0;
+            var length, result, step, iterator, next, value;
+            if (iteratorMethod && !(this === $Array && isArrayIteratorMethod(iteratorMethod))) {
+                result = IS_CONSTRUCTOR ? new this : [];
+                iterator = getIterator(O, iteratorMethod);
+                next = iterator.next;
+                for (;!(step = call(next, iterator)).done; index++) {
+                    value = mapping ? callWithSafeIterationClosing(iterator, mapfn, [ step.value, index ], true) : step.value;
+                    createProperty(result, index, value);
+                }
+            } else {
+                length = lengthOfArrayLike(O);
+                result = IS_CONSTRUCTOR ? new this(length) : $Array(length);
+                for (;length > index; index++) {
+                    value = mapping ? mapfn(O[index], index) : O[index];
+                    createProperty(result, index, value);
+                }
+            }
+            setArrayLength(result, index);
+            return result;
+        };
+        return arrayFrom;
+    }
     var hasRequiredEs_array_from;
     function requireEs_array_from() {
         if (hasRequiredEs_array_from) return es_array_from;
@@ -11760,7 +9723,1663 @@
     function translate(message) {
         return window.Asc.plugin.tr(message);
     }
-    var es_array_sort = {};
+    var es_arrayBuffer_constructor = {};
+    var arrayBufferBasicDetection;
+    var hasRequiredArrayBufferBasicDetection;
+    function requireArrayBufferBasicDetection() {
+        if (hasRequiredArrayBufferBasicDetection) return arrayBufferBasicDetection;
+        hasRequiredArrayBufferBasicDetection = 1;
+        arrayBufferBasicDetection = typeof ArrayBuffer != "undefined" && typeof DataView != "undefined";
+        return arrayBufferBasicDetection;
+    }
+    var toIndex;
+    var hasRequiredToIndex;
+    function requireToIndex() {
+        if (hasRequiredToIndex) return toIndex;
+        hasRequiredToIndex = 1;
+        var toIntegerOrInfinity = requireToIntegerOrInfinity();
+        var toLength = requireToLength();
+        var $RangeError = RangeError;
+        toIndex = function(it) {
+            if (it === undefined) return 0;
+            var number = toIntegerOrInfinity(it);
+            var length = toLength(number);
+            if (number !== length) throw new $RangeError("Wrong length or index");
+            return length;
+        };
+        return toIndex;
+    }
+    var mathSign;
+    var hasRequiredMathSign;
+    function requireMathSign() {
+        if (hasRequiredMathSign) return mathSign;
+        hasRequiredMathSign = 1;
+        mathSign = Math.sign || function sign(x) {
+            var n = +x;
+            return n === 0 || n !== n ? n : n < 0 ? -1 : 1;
+        };
+        return mathSign;
+    }
+    var mathRoundTiesToEven;
+    var hasRequiredMathRoundTiesToEven;
+    function requireMathRoundTiesToEven() {
+        if (hasRequiredMathRoundTiesToEven) return mathRoundTiesToEven;
+        hasRequiredMathRoundTiesToEven = 1;
+        var EPSILON = 2220446049250313e-31;
+        var INVERSE_EPSILON = 1 / EPSILON;
+        mathRoundTiesToEven = function(n) {
+            return n + INVERSE_EPSILON - INVERSE_EPSILON;
+        };
+        return mathRoundTiesToEven;
+    }
+    var mathFloatRound;
+    var hasRequiredMathFloatRound;
+    function requireMathFloatRound() {
+        if (hasRequiredMathFloatRound) return mathFloatRound;
+        hasRequiredMathFloatRound = 1;
+        var sign = requireMathSign();
+        var roundTiesToEven = requireMathRoundTiesToEven();
+        var abs = Math.abs;
+        var EPSILON = 2220446049250313e-31;
+        mathFloatRound = function(x, FLOAT_EPSILON, FLOAT_MAX_VALUE, FLOAT_MIN_VALUE) {
+            var n = +x;
+            var absolute = abs(n);
+            var s = sign(n);
+            if (absolute < FLOAT_MIN_VALUE) return s * roundTiesToEven(absolute / FLOAT_MIN_VALUE / FLOAT_EPSILON) * FLOAT_MIN_VALUE * FLOAT_EPSILON;
+            var a = (1 + FLOAT_EPSILON / EPSILON) * absolute;
+            var result = a - (a - absolute);
+            if (result > FLOAT_MAX_VALUE || result !== result) return s * Infinity;
+            return s * result;
+        };
+        return mathFloatRound;
+    }
+    var mathFround;
+    var hasRequiredMathFround;
+    function requireMathFround() {
+        if (hasRequiredMathFround) return mathFround;
+        hasRequiredMathFround = 1;
+        var floatRound = requireMathFloatRound();
+        var FLOAT32_EPSILON = 1.1920928955078125e-7;
+        var FLOAT32_MAX_VALUE = 34028234663852886e22;
+        var FLOAT32_MIN_VALUE = 11754943508222875e-54;
+        mathFround = Math.fround || function fround(x) {
+            return floatRound(x, FLOAT32_EPSILON, FLOAT32_MAX_VALUE, FLOAT32_MIN_VALUE);
+        };
+        return mathFround;
+    }
+    var ieee754;
+    var hasRequiredIeee754;
+    function requireIeee754() {
+        if (hasRequiredIeee754) return ieee754;
+        hasRequiredIeee754 = 1;
+        var $Array = Array;
+        var abs = Math.abs;
+        var pow = Math.pow;
+        var floor = Math.floor;
+        var log = Math.log;
+        var LN2 = Math.LN2;
+        var pack = function(number, mantissaLength, bytes) {
+            var buffer = $Array(bytes);
+            var exponentLength = bytes * 8 - mantissaLength - 1;
+            var eMax = (1 << exponentLength) - 1;
+            var eBias = eMax >> 1;
+            var rt = mantissaLength === 23 ? pow(2, -24) - pow(2, -77) : 0;
+            var sign = number < 0 || number === 0 && 1 / number < 0 ? 1 : 0;
+            var index = 0;
+            var exponent, mantissa, c;
+            number = abs(number);
+            if (number !== number || number === Infinity) {
+                mantissa = number !== number ? 1 : 0;
+                exponent = eMax;
+            } else {
+                exponent = floor(log(number) / LN2);
+                c = pow(2, -exponent);
+                if (number * c < 1) {
+                    exponent--;
+                    c *= 2;
+                }
+                if (exponent + eBias >= 1) {
+                    number += rt / c;
+                } else {
+                    number += rt * pow(2, 1 - eBias);
+                }
+                if (number * c >= 2) {
+                    exponent++;
+                    c /= 2;
+                }
+                if (exponent + eBias >= eMax) {
+                    mantissa = 0;
+                    exponent = eMax;
+                } else if (exponent + eBias >= 1) {
+                    mantissa = (number * c - 1) * pow(2, mantissaLength);
+                    exponent += eBias;
+                } else {
+                    mantissa = number * pow(2, eBias - 1) * pow(2, mantissaLength);
+                    exponent = 0;
+                }
+            }
+            while (mantissaLength >= 8) {
+                buffer[index++] = mantissa & 255;
+                mantissa /= 256;
+                mantissaLength -= 8;
+            }
+            exponent = exponent << mantissaLength | mantissa;
+            exponentLength += mantissaLength;
+            while (exponentLength > 0) {
+                buffer[index++] = exponent & 255;
+                exponent /= 256;
+                exponentLength -= 8;
+            }
+            buffer[index - 1] |= sign * 128;
+            return buffer;
+        };
+        var unpack = function(buffer, mantissaLength) {
+            var bytes = buffer.length;
+            var exponentLength = bytes * 8 - mantissaLength - 1;
+            var eMax = (1 << exponentLength) - 1;
+            var eBias = eMax >> 1;
+            var nBits = exponentLength - 7;
+            var index = bytes - 1;
+            var sign = buffer[index--];
+            var exponent = sign & 127;
+            var mantissa;
+            sign >>= 7;
+            while (nBits > 0) {
+                exponent = exponent * 256 + buffer[index--];
+                nBits -= 8;
+            }
+            mantissa = exponent & (1 << -nBits) - 1;
+            exponent >>= -nBits;
+            nBits += mantissaLength;
+            while (nBits > 0) {
+                mantissa = mantissa * 256 + buffer[index--];
+                nBits -= 8;
+            }
+            if (exponent === 0) {
+                exponent = 1 - eBias;
+            } else if (exponent === eMax) {
+                return mantissa ? NaN : sign ? -Infinity : Infinity;
+            } else {
+                mantissa += pow(2, mantissaLength);
+                exponent -= eBias;
+            }
+            return (sign ? -1 : 1) * mantissa * pow(2, exponent - mantissaLength);
+        };
+        ieee754 = {
+            pack: pack,
+            unpack: unpack
+        };
+        return ieee754;
+    }
+    var arrayFill;
+    var hasRequiredArrayFill;
+    function requireArrayFill() {
+        if (hasRequiredArrayFill) return arrayFill;
+        hasRequiredArrayFill = 1;
+        var toObject = requireToObject();
+        var toAbsoluteIndex = requireToAbsoluteIndex();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        arrayFill = function fill(value) {
+            var O = toObject(this);
+            var length = lengthOfArrayLike(O);
+            var argumentsLength = arguments.length;
+            var index = toAbsoluteIndex(argumentsLength > 1 ? arguments[1] : undefined, length);
+            var end = argumentsLength > 2 ? arguments[2] : undefined;
+            var endPos = end === undefined ? length : toAbsoluteIndex(end, length);
+            while (endPos > index) O[index++] = value;
+            return O;
+        };
+        return arrayFill;
+    }
+    var arrayBuffer;
+    var hasRequiredArrayBuffer;
+    function requireArrayBuffer() {
+        if (hasRequiredArrayBuffer) return arrayBuffer;
+        hasRequiredArrayBuffer = 1;
+        var globalThis = requireGlobalThis();
+        var uncurryThis = requireFunctionUncurryThis();
+        var DESCRIPTORS = requireDescriptors();
+        var NATIVE_ARRAY_BUFFER = requireArrayBufferBasicDetection();
+        var FunctionName = requireFunctionName();
+        var createNonEnumerableProperty = requireCreateNonEnumerableProperty();
+        var defineBuiltInAccessor = requireDefineBuiltInAccessor();
+        var defineBuiltIns = requireDefineBuiltIns();
+        var fails = requireFails();
+        var anInstance = requireAnInstance();
+        var toIntegerOrInfinity = requireToIntegerOrInfinity();
+        var toLength = requireToLength();
+        var toIndex = requireToIndex();
+        var fround = requireMathFround();
+        var IEEE754 = requireIeee754();
+        var getPrototypeOf = requireObjectGetPrototypeOf();
+        var setPrototypeOf = requireObjectSetPrototypeOf();
+        var arrayFill = requireArrayFill();
+        var arraySlice = requireArraySlice();
+        var inheritIfRequired = requireInheritIfRequired();
+        var copyConstructorProperties = requireCopyConstructorProperties();
+        var setToStringTag = requireSetToStringTag();
+        var InternalStateModule = requireInternalState();
+        var PROPER_FUNCTION_NAME = FunctionName.PROPER;
+        var CONFIGURABLE_FUNCTION_NAME = FunctionName.CONFIGURABLE;
+        var ARRAY_BUFFER = "ArrayBuffer";
+        var DATA_VIEW = "DataView";
+        var PROTOTYPE = "prototype";
+        var WRONG_LENGTH = "Wrong length";
+        var WRONG_INDEX = "Wrong index";
+        var getInternalArrayBufferState = InternalStateModule.getterFor(ARRAY_BUFFER);
+        var getInternalDataViewState = InternalStateModule.getterFor(DATA_VIEW);
+        var setInternalState = InternalStateModule.set;
+        var NativeArrayBuffer = globalThis[ARRAY_BUFFER];
+        var $ArrayBuffer = NativeArrayBuffer;
+        var ArrayBufferPrototype = $ArrayBuffer && $ArrayBuffer[PROTOTYPE];
+        var $DataView = globalThis[DATA_VIEW];
+        var DataViewPrototype = $DataView && $DataView[PROTOTYPE];
+        var ObjectPrototype = Object.prototype;
+        var Array = globalThis.Array;
+        var RangeError = globalThis.RangeError;
+        var fill = uncurryThis(arrayFill);
+        var reverse = uncurryThis([].reverse);
+        var packIEEE754 = IEEE754.pack;
+        var unpackIEEE754 = IEEE754.unpack;
+        var packInt8 = function(number) {
+            return [ number & 255 ];
+        };
+        var packInt16 = function(number) {
+            return [ number & 255, number >> 8 & 255 ];
+        };
+        var packInt32 = function(number) {
+            return [ number & 255, number >> 8 & 255, number >> 16 & 255, number >> 24 & 255 ];
+        };
+        var unpackInt32 = function(buffer) {
+            return buffer[3] << 24 | buffer[2] << 16 | buffer[1] << 8 | buffer[0];
+        };
+        var packFloat32 = function(number) {
+            return packIEEE754(fround(number), 23, 4);
+        };
+        var packFloat64 = function(number) {
+            return packIEEE754(number, 52, 8);
+        };
+        var addGetter = function(Constructor, key, getInternalState) {
+            defineBuiltInAccessor(Constructor[PROTOTYPE], key, {
+                configurable: true,
+                get: function() {
+                    return getInternalState(this)[key];
+                }
+            });
+        };
+        var get = function(view, count, index, isLittleEndian) {
+            var store = getInternalDataViewState(view);
+            var intIndex = toIndex(index);
+            var boolIsLittleEndian = !!isLittleEndian;
+            if (intIndex + count > store.byteLength) throw new RangeError(WRONG_INDEX);
+            var bytes = store.bytes;
+            var start = intIndex + store.byteOffset;
+            var pack = arraySlice(bytes, start, start + count);
+            return boolIsLittleEndian ? pack : reverse(pack);
+        };
+        var set = function(view, count, index, conversion, value, isLittleEndian) {
+            var store = getInternalDataViewState(view);
+            var intIndex = toIndex(index);
+            var pack = conversion(+value);
+            var boolIsLittleEndian = !!isLittleEndian;
+            if (intIndex + count > store.byteLength) throw new RangeError(WRONG_INDEX);
+            var bytes = store.bytes;
+            var start = intIndex + store.byteOffset;
+            for (var i = 0; i < count; i++) bytes[start + i] = pack[boolIsLittleEndian ? i : count - i - 1];
+        };
+        if (!NATIVE_ARRAY_BUFFER) {
+            $ArrayBuffer = function ArrayBuffer(length) {
+                anInstance(this, ArrayBufferPrototype);
+                var byteLength = toIndex(length);
+                setInternalState(this, {
+                    type: ARRAY_BUFFER,
+                    bytes: fill(Array(byteLength), 0),
+                    byteLength: byteLength
+                });
+                if (!DESCRIPTORS) {
+                    this.byteLength = byteLength;
+                    this.detached = false;
+                }
+            };
+            ArrayBufferPrototype = $ArrayBuffer[PROTOTYPE];
+            $DataView = function DataView(buffer, byteOffset, byteLength) {
+                anInstance(this, DataViewPrototype);
+                anInstance(buffer, ArrayBufferPrototype);
+                var bufferState = getInternalArrayBufferState(buffer);
+                var bufferLength = bufferState.byteLength;
+                var offset = toIntegerOrInfinity(byteOffset);
+                if (offset < 0 || offset > bufferLength) throw new RangeError("Wrong offset");
+                byteLength = byteLength === undefined ? bufferLength - offset : toLength(byteLength);
+                if (offset + byteLength > bufferLength) throw new RangeError(WRONG_LENGTH);
+                setInternalState(this, {
+                    type: DATA_VIEW,
+                    buffer: buffer,
+                    byteLength: byteLength,
+                    byteOffset: offset,
+                    bytes: bufferState.bytes
+                });
+                if (!DESCRIPTORS) {
+                    this.buffer = buffer;
+                    this.byteLength = byteLength;
+                    this.byteOffset = offset;
+                }
+            };
+            DataViewPrototype = $DataView[PROTOTYPE];
+            if (DESCRIPTORS) {
+                addGetter($ArrayBuffer, "byteLength", getInternalArrayBufferState);
+                addGetter($DataView, "buffer", getInternalDataViewState);
+                addGetter($DataView, "byteLength", getInternalDataViewState);
+                addGetter($DataView, "byteOffset", getInternalDataViewState);
+            }
+            defineBuiltIns(DataViewPrototype, {
+                getInt8: function getInt8(byteOffset) {
+                    return get(this, 1, byteOffset)[0] << 24 >> 24;
+                },
+                getUint8: function getUint8(byteOffset) {
+                    return get(this, 1, byteOffset)[0];
+                },
+                getInt16: function getInt16(byteOffset) {
+                    var bytes = get(this, 2, byteOffset, arguments.length > 1 ? arguments[1] : false);
+                    return (bytes[1] << 8 | bytes[0]) << 16 >> 16;
+                },
+                getUint16: function getUint16(byteOffset) {
+                    var bytes = get(this, 2, byteOffset, arguments.length > 1 ? arguments[1] : false);
+                    return bytes[1] << 8 | bytes[0];
+                },
+                getInt32: function getInt32(byteOffset) {
+                    return unpackInt32(get(this, 4, byteOffset, arguments.length > 1 ? arguments[1] : false));
+                },
+                getUint32: function getUint32(byteOffset) {
+                    return unpackInt32(get(this, 4, byteOffset, arguments.length > 1 ? arguments[1] : false)) >>> 0;
+                },
+                getFloat32: function getFloat32(byteOffset) {
+                    return unpackIEEE754(get(this, 4, byteOffset, arguments.length > 1 ? arguments[1] : false), 23);
+                },
+                getFloat64: function getFloat64(byteOffset) {
+                    return unpackIEEE754(get(this, 8, byteOffset, arguments.length > 1 ? arguments[1] : false), 52);
+                },
+                setInt8: function setInt8(byteOffset, value) {
+                    set(this, 1, byteOffset, packInt8, value);
+                },
+                setUint8: function setUint8(byteOffset, value) {
+                    set(this, 1, byteOffset, packInt8, value);
+                },
+                setInt16: function setInt16(byteOffset, value) {
+                    set(this, 2, byteOffset, packInt16, value, arguments.length > 2 ? arguments[2] : false);
+                },
+                setUint16: function setUint16(byteOffset, value) {
+                    set(this, 2, byteOffset, packInt16, value, arguments.length > 2 ? arguments[2] : false);
+                },
+                setInt32: function setInt32(byteOffset, value) {
+                    set(this, 4, byteOffset, packInt32, value, arguments.length > 2 ? arguments[2] : false);
+                },
+                setUint32: function setUint32(byteOffset, value) {
+                    set(this, 4, byteOffset, packInt32, value, arguments.length > 2 ? arguments[2] : false);
+                },
+                setFloat32: function setFloat32(byteOffset, value) {
+                    set(this, 4, byteOffset, packFloat32, value, arguments.length > 2 ? arguments[2] : false);
+                },
+                setFloat64: function setFloat64(byteOffset, value) {
+                    set(this, 8, byteOffset, packFloat64, value, arguments.length > 2 ? arguments[2] : false);
+                }
+            });
+        } else {
+            var INCORRECT_ARRAY_BUFFER_NAME = PROPER_FUNCTION_NAME && NativeArrayBuffer.name !== ARRAY_BUFFER;
+            if (!fails(function() {
+                NativeArrayBuffer(1);
+            }) || !fails(function() {
+                new NativeArrayBuffer(-1);
+            }) || fails(function() {
+                new NativeArrayBuffer;
+                new NativeArrayBuffer(1.5);
+                new NativeArrayBuffer(NaN);
+                return NativeArrayBuffer.length !== 1 || INCORRECT_ARRAY_BUFFER_NAME && !CONFIGURABLE_FUNCTION_NAME;
+            })) {
+                $ArrayBuffer = function ArrayBuffer(length) {
+                    anInstance(this, ArrayBufferPrototype);
+                    return inheritIfRequired(new NativeArrayBuffer(toIndex(length)), this, $ArrayBuffer);
+                };
+                $ArrayBuffer[PROTOTYPE] = ArrayBufferPrototype;
+                ArrayBufferPrototype.constructor = $ArrayBuffer;
+                copyConstructorProperties($ArrayBuffer, NativeArrayBuffer);
+            } else if (INCORRECT_ARRAY_BUFFER_NAME && CONFIGURABLE_FUNCTION_NAME) {
+                createNonEnumerableProperty(NativeArrayBuffer, "name", ARRAY_BUFFER);
+            }
+            if (setPrototypeOf && getPrototypeOf(DataViewPrototype) !== ObjectPrototype) {
+                setPrototypeOf(DataViewPrototype, ObjectPrototype);
+            }
+            var testView = new $DataView(new $ArrayBuffer(2));
+            var $setInt8 = uncurryThis(DataViewPrototype.setInt8);
+            testView.setInt8(0, 2147483648);
+            testView.setInt8(1, 2147483649);
+            if (testView.getInt8(0) || !testView.getInt8(1)) defineBuiltIns(DataViewPrototype, {
+                setInt8: function setInt8(byteOffset, value) {
+                    $setInt8(this, byteOffset, value << 24 >> 24);
+                },
+                setUint8: function setUint8(byteOffset, value) {
+                    $setInt8(this, byteOffset, value << 24 >> 24);
+                }
+            }, {
+                unsafe: true
+            });
+        }
+        setToStringTag($ArrayBuffer, ARRAY_BUFFER);
+        setToStringTag($DataView, DATA_VIEW);
+        arrayBuffer = {
+            ArrayBuffer: $ArrayBuffer,
+            DataView: $DataView
+        };
+        return arrayBuffer;
+    }
+    var hasRequiredEs_arrayBuffer_constructor;
+    function requireEs_arrayBuffer_constructor() {
+        if (hasRequiredEs_arrayBuffer_constructor) return es_arrayBuffer_constructor;
+        hasRequiredEs_arrayBuffer_constructor = 1;
+        var $ = require_export();
+        var globalThis = requireGlobalThis();
+        var arrayBufferModule = requireArrayBuffer();
+        var setSpecies = requireSetSpecies();
+        var ARRAY_BUFFER = "ArrayBuffer";
+        var ArrayBuffer = arrayBufferModule[ARRAY_BUFFER];
+        var NativeArrayBuffer = globalThis[ARRAY_BUFFER];
+        $({
+            global: true,
+            constructor: true,
+            forced: NativeArrayBuffer !== ArrayBuffer
+        }, {
+            ArrayBuffer: ArrayBuffer
+        });
+        setSpecies(ARRAY_BUFFER);
+        return es_arrayBuffer_constructor;
+    }
+    requireEs_arrayBuffer_constructor();
+    var es_arrayBuffer_slice = {};
+    var hasRequiredEs_arrayBuffer_slice;
+    function requireEs_arrayBuffer_slice() {
+        if (hasRequiredEs_arrayBuffer_slice) return es_arrayBuffer_slice;
+        hasRequiredEs_arrayBuffer_slice = 1;
+        var $ = require_export();
+        var uncurryThis = requireFunctionUncurryThisClause();
+        var fails = requireFails();
+        var ArrayBufferModule = requireArrayBuffer();
+        var anObject = requireAnObject();
+        var toAbsoluteIndex = requireToAbsoluteIndex();
+        var toLength = requireToLength();
+        var ArrayBuffer = ArrayBufferModule.ArrayBuffer;
+        var DataView = ArrayBufferModule.DataView;
+        var DataViewPrototype = DataView.prototype;
+        var nativeArrayBufferSlice = uncurryThis(ArrayBuffer.prototype.slice);
+        var getUint8 = uncurryThis(DataViewPrototype.getUint8);
+        var setUint8 = uncurryThis(DataViewPrototype.setUint8);
+        var INCORRECT_SLICE = fails(function() {
+            return !new ArrayBuffer(2).slice(1, undefined).byteLength;
+        });
+        $({
+            target: "ArrayBuffer",
+            proto: true,
+            unsafe: true,
+            forced: INCORRECT_SLICE
+        }, {
+            slice: function slice(start, end) {
+                if (nativeArrayBufferSlice && end === undefined) {
+                    return nativeArrayBufferSlice(anObject(this), start);
+                }
+                var length = anObject(this).byteLength;
+                var first = toAbsoluteIndex(start, length);
+                var fin = toAbsoluteIndex(end === undefined ? length : end, length);
+                var result = new ArrayBuffer(toLength(fin - first));
+                var viewSource = new DataView(this);
+                var viewTarget = new DataView(result);
+                var index = 0;
+                while (first < fin) {
+                    setUint8(viewTarget, index++, getUint8(viewSource, first++));
+                }
+                return result;
+            }
+        });
+        return es_arrayBuffer_slice;
+    }
+    requireEs_arrayBuffer_slice();
+    var es_object_keys = {};
+    var hasRequiredEs_object_keys;
+    function requireEs_object_keys() {
+        if (hasRequiredEs_object_keys) return es_object_keys;
+        hasRequiredEs_object_keys = 1;
+        var $ = require_export();
+        var toObject = requireToObject();
+        var nativeKeys = requireObjectKeys();
+        var fails = requireFails();
+        var FAILS_ON_PRIMITIVES = fails(function() {
+            nativeKeys(1);
+        });
+        $({
+            target: "Object",
+            stat: true,
+            forced: FAILS_ON_PRIMITIVES
+        }, {
+            keys: function keys(it) {
+                return nativeKeys(toObject(it));
+            }
+        });
+        return es_object_keys;
+    }
+    requireEs_object_keys();
+    var es_typedArray_uint8Array = {};
+    var typedArrayConstructor = {
+        exports: {}
+    };
+    var arrayBufferViewCore;
+    var hasRequiredArrayBufferViewCore;
+    function requireArrayBufferViewCore() {
+        if (hasRequiredArrayBufferViewCore) return arrayBufferViewCore;
+        hasRequiredArrayBufferViewCore = 1;
+        var NATIVE_ARRAY_BUFFER = requireArrayBufferBasicDetection();
+        var DESCRIPTORS = requireDescriptors();
+        var globalThis = requireGlobalThis();
+        var isCallable = requireIsCallable();
+        var isObject = requireIsObject();
+        var hasOwn = requireHasOwnProperty();
+        var classof = requireClassof();
+        var tryToString = requireTryToString();
+        var createNonEnumerableProperty = requireCreateNonEnumerableProperty();
+        var defineBuiltIn = requireDefineBuiltIn();
+        var defineBuiltInAccessor = requireDefineBuiltInAccessor();
+        var isPrototypeOf = requireObjectIsPrototypeOf();
+        var getPrototypeOf = requireObjectGetPrototypeOf();
+        var setPrototypeOf = requireObjectSetPrototypeOf();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var uid = requireUid();
+        var InternalStateModule = requireInternalState();
+        var enforceInternalState = InternalStateModule.enforce;
+        var getInternalState = InternalStateModule.get;
+        var Int8Array = globalThis.Int8Array;
+        var Int8ArrayPrototype = Int8Array && Int8Array.prototype;
+        var Uint8ClampedArray = globalThis.Uint8ClampedArray;
+        var Uint8ClampedArrayPrototype = Uint8ClampedArray && Uint8ClampedArray.prototype;
+        var TypedArray = Int8Array && getPrototypeOf(Int8Array);
+        var TypedArrayPrototype = Int8ArrayPrototype && getPrototypeOf(Int8ArrayPrototype);
+        var ObjectPrototype = Object.prototype;
+        var TypeError = globalThis.TypeError;
+        var TO_STRING_TAG = wellKnownSymbol("toStringTag");
+        var TYPED_ARRAY_TAG = uid("TYPED_ARRAY_TAG");
+        var TYPED_ARRAY_CONSTRUCTOR = "TypedArrayConstructor";
+        var NATIVE_ARRAY_BUFFER_VIEWS = NATIVE_ARRAY_BUFFER && !!setPrototypeOf && classof(globalThis.opera) !== "Opera";
+        var TYPED_ARRAY_TAG_REQUIRED = false;
+        var NAME, Constructor, Prototype;
+        var TypedArrayConstructorsList = {
+            Int8Array: 1,
+            Uint8Array: 1,
+            Uint8ClampedArray: 1,
+            Int16Array: 2,
+            Uint16Array: 2,
+            Int32Array: 4,
+            Uint32Array: 4,
+            Float32Array: 4,
+            Float64Array: 8
+        };
+        var BigIntArrayConstructorsList = {
+            BigInt64Array: 8,
+            BigUint64Array: 8
+        };
+        var isView = function isView(it) {
+            if (!isObject(it)) return false;
+            var klass = classof(it);
+            return klass === "DataView" || hasOwn(TypedArrayConstructorsList, klass) || hasOwn(BigIntArrayConstructorsList, klass);
+        };
+        var getTypedArrayConstructor = function(it) {
+            var proto = getPrototypeOf(it);
+            if (!isObject(proto)) return;
+            var state = getInternalState(proto);
+            return state && hasOwn(state, TYPED_ARRAY_CONSTRUCTOR) ? state[TYPED_ARRAY_CONSTRUCTOR] : getTypedArrayConstructor(proto);
+        };
+        var isTypedArray = function(it) {
+            if (!isObject(it)) return false;
+            var klass = classof(it);
+            return hasOwn(TypedArrayConstructorsList, klass) || hasOwn(BigIntArrayConstructorsList, klass);
+        };
+        var aTypedArray = function(it) {
+            if (isTypedArray(it)) return it;
+            throw new TypeError("Target is not a typed array");
+        };
+        var aTypedArrayConstructor = function(C) {
+            if (isCallable(C) && (!setPrototypeOf || isPrototypeOf(TypedArray, C))) return C;
+            throw new TypeError(tryToString(C) + " is not a typed array constructor");
+        };
+        var exportTypedArrayMethod = function(KEY, property, forced, options) {
+            if (!DESCRIPTORS) return;
+            if (forced) for (var ARRAY in TypedArrayConstructorsList) {
+                var TypedArrayConstructor = globalThis[ARRAY];
+                if (TypedArrayConstructor && hasOwn(TypedArrayConstructor.prototype, KEY)) try {
+                    delete TypedArrayConstructor.prototype[KEY];
+                } catch (error) {
+                    try {
+                        TypedArrayConstructor.prototype[KEY] = property;
+                    } catch (error2) {}
+                }
+            }
+            if (!TypedArrayPrototype[KEY] || forced) {
+                defineBuiltIn(TypedArrayPrototype, KEY, forced ? property : NATIVE_ARRAY_BUFFER_VIEWS && Int8ArrayPrototype[KEY] || property, options);
+            }
+        };
+        var exportTypedArrayStaticMethod = function(KEY, property, forced) {
+            var ARRAY, TypedArrayConstructor;
+            if (!DESCRIPTORS) return;
+            if (setPrototypeOf) {
+                if (forced) for (ARRAY in TypedArrayConstructorsList) {
+                    TypedArrayConstructor = globalThis[ARRAY];
+                    if (TypedArrayConstructor && hasOwn(TypedArrayConstructor, KEY)) try {
+                        delete TypedArrayConstructor[KEY];
+                    } catch (error) {}
+                }
+                if (!TypedArray[KEY] || forced) {
+                    try {
+                        return defineBuiltIn(TypedArray, KEY, forced ? property : NATIVE_ARRAY_BUFFER_VIEWS && TypedArray[KEY] || property);
+                    } catch (error) {}
+                } else return;
+            }
+            for (ARRAY in TypedArrayConstructorsList) {
+                TypedArrayConstructor = globalThis[ARRAY];
+                if (TypedArrayConstructor && (!TypedArrayConstructor[KEY] || forced)) {
+                    defineBuiltIn(TypedArrayConstructor, KEY, property);
+                }
+            }
+        };
+        for (NAME in TypedArrayConstructorsList) {
+            Constructor = globalThis[NAME];
+            Prototype = Constructor && Constructor.prototype;
+            if (Prototype) enforceInternalState(Prototype)[TYPED_ARRAY_CONSTRUCTOR] = Constructor; else NATIVE_ARRAY_BUFFER_VIEWS = false;
+        }
+        for (NAME in BigIntArrayConstructorsList) {
+            Constructor = globalThis[NAME];
+            Prototype = Constructor && Constructor.prototype;
+            if (Prototype) enforceInternalState(Prototype)[TYPED_ARRAY_CONSTRUCTOR] = Constructor;
+        }
+        if (!NATIVE_ARRAY_BUFFER_VIEWS || !isCallable(TypedArray) || TypedArray === Function.prototype) {
+            TypedArray = function TypedArray() {
+                throw new TypeError("Incorrect invocation");
+            };
+            if (NATIVE_ARRAY_BUFFER_VIEWS) for (NAME in TypedArrayConstructorsList) {
+                if (globalThis[NAME]) setPrototypeOf(globalThis[NAME], TypedArray);
+            }
+        }
+        if (!NATIVE_ARRAY_BUFFER_VIEWS || !TypedArrayPrototype || TypedArrayPrototype === ObjectPrototype) {
+            TypedArrayPrototype = TypedArray.prototype;
+            if (NATIVE_ARRAY_BUFFER_VIEWS) for (NAME in TypedArrayConstructorsList) {
+                if (globalThis[NAME]) setPrototypeOf(globalThis[NAME].prototype, TypedArrayPrototype);
+            }
+        }
+        if (NATIVE_ARRAY_BUFFER_VIEWS && getPrototypeOf(Uint8ClampedArrayPrototype) !== TypedArrayPrototype) {
+            setPrototypeOf(Uint8ClampedArrayPrototype, TypedArrayPrototype);
+        }
+        if (DESCRIPTORS && !hasOwn(TypedArrayPrototype, TO_STRING_TAG)) {
+            TYPED_ARRAY_TAG_REQUIRED = true;
+            defineBuiltInAccessor(TypedArrayPrototype, TO_STRING_TAG, {
+                configurable: true,
+                get: function() {
+                    return isObject(this) ? this[TYPED_ARRAY_TAG] : undefined;
+                }
+            });
+            for (NAME in TypedArrayConstructorsList) if (globalThis[NAME]) {
+                createNonEnumerableProperty(globalThis[NAME], TYPED_ARRAY_TAG, NAME);
+            }
+        }
+        arrayBufferViewCore = {
+            NATIVE_ARRAY_BUFFER_VIEWS: NATIVE_ARRAY_BUFFER_VIEWS,
+            TYPED_ARRAY_TAG: TYPED_ARRAY_TAG_REQUIRED && TYPED_ARRAY_TAG,
+            aTypedArray: aTypedArray,
+            aTypedArrayConstructor: aTypedArrayConstructor,
+            exportTypedArrayMethod: exportTypedArrayMethod,
+            exportTypedArrayStaticMethod: exportTypedArrayStaticMethod,
+            getTypedArrayConstructor: getTypedArrayConstructor,
+            isView: isView,
+            isTypedArray: isTypedArray,
+            TypedArray: TypedArray,
+            TypedArrayPrototype: TypedArrayPrototype
+        };
+        return arrayBufferViewCore;
+    }
+    var typedArrayConstructorsRequireWrappers;
+    var hasRequiredTypedArrayConstructorsRequireWrappers;
+    function requireTypedArrayConstructorsRequireWrappers() {
+        if (hasRequiredTypedArrayConstructorsRequireWrappers) return typedArrayConstructorsRequireWrappers;
+        hasRequiredTypedArrayConstructorsRequireWrappers = 1;
+        var globalThis = requireGlobalThis();
+        var fails = requireFails();
+        var checkCorrectnessOfIteration = requireCheckCorrectnessOfIteration();
+        var NATIVE_ARRAY_BUFFER_VIEWS = requireArrayBufferViewCore().NATIVE_ARRAY_BUFFER_VIEWS;
+        var ArrayBuffer = globalThis.ArrayBuffer;
+        var Int8Array = globalThis.Int8Array;
+        typedArrayConstructorsRequireWrappers = !NATIVE_ARRAY_BUFFER_VIEWS || !fails(function() {
+            Int8Array(1);
+        }) || !fails(function() {
+            new Int8Array(-1);
+        }) || !checkCorrectnessOfIteration(function(iterable) {
+            new Int8Array;
+            new Int8Array(null);
+            new Int8Array(1.5);
+            new Int8Array(iterable);
+        }, true) || fails(function() {
+            return new Int8Array(new ArrayBuffer(2), 1, undefined).length !== 1;
+        });
+        return typedArrayConstructorsRequireWrappers;
+    }
+    var isIntegralNumber;
+    var hasRequiredIsIntegralNumber;
+    function requireIsIntegralNumber() {
+        if (hasRequiredIsIntegralNumber) return isIntegralNumber;
+        hasRequiredIsIntegralNumber = 1;
+        var isObject = requireIsObject();
+        var floor = Math.floor;
+        isIntegralNumber = Number.isInteger || function isInteger(it) {
+            return !isObject(it) && isFinite(it) && floor(it) === it;
+        };
+        return isIntegralNumber;
+    }
+    var toPositiveInteger;
+    var hasRequiredToPositiveInteger;
+    function requireToPositiveInteger() {
+        if (hasRequiredToPositiveInteger) return toPositiveInteger;
+        hasRequiredToPositiveInteger = 1;
+        var toIntegerOrInfinity = requireToIntegerOrInfinity();
+        var $RangeError = RangeError;
+        toPositiveInteger = function(it) {
+            var result = toIntegerOrInfinity(it);
+            if (result < 0) throw new $RangeError("The argument can't be less than 0");
+            return result;
+        };
+        return toPositiveInteger;
+    }
+    var toOffset;
+    var hasRequiredToOffset;
+    function requireToOffset() {
+        if (hasRequiredToOffset) return toOffset;
+        hasRequiredToOffset = 1;
+        var toPositiveInteger = requireToPositiveInteger();
+        var $RangeError = RangeError;
+        toOffset = function(it, BYTES) {
+            var offset = toPositiveInteger(it);
+            if (offset % BYTES) throw new $RangeError("Wrong offset");
+            return offset;
+        };
+        return toOffset;
+    }
+    var toUint8Clamped;
+    var hasRequiredToUint8Clamped;
+    function requireToUint8Clamped() {
+        if (hasRequiredToUint8Clamped) return toUint8Clamped;
+        hasRequiredToUint8Clamped = 1;
+        var round = Math.round;
+        toUint8Clamped = function(it) {
+            var value = round(it);
+            return value < 0 ? 0 : value > 255 ? 255 : value & 255;
+        };
+        return toUint8Clamped;
+    }
+    var isBigIntArray;
+    var hasRequiredIsBigIntArray;
+    function requireIsBigIntArray() {
+        if (hasRequiredIsBigIntArray) return isBigIntArray;
+        hasRequiredIsBigIntArray = 1;
+        var classof = requireClassof();
+        isBigIntArray = function(it) {
+            var klass = classof(it);
+            return klass === "BigInt64Array" || klass === "BigUint64Array";
+        };
+        return isBigIntArray;
+    }
+    var toBigInt;
+    var hasRequiredToBigInt;
+    function requireToBigInt() {
+        if (hasRequiredToBigInt) return toBigInt;
+        hasRequiredToBigInt = 1;
+        var toPrimitive = requireToPrimitive();
+        var $TypeError = TypeError;
+        toBigInt = function(argument) {
+            var prim = toPrimitive(argument, "number");
+            if (typeof prim == "number") throw new $TypeError("Can't convert number to bigint");
+            return BigInt(prim);
+        };
+        return toBigInt;
+    }
+    var typedArrayFrom;
+    var hasRequiredTypedArrayFrom;
+    function requireTypedArrayFrom() {
+        if (hasRequiredTypedArrayFrom) return typedArrayFrom;
+        hasRequiredTypedArrayFrom = 1;
+        var bind = requireFunctionBindContext();
+        var call = requireFunctionCall();
+        var aConstructor = requireAConstructor();
+        var toObject = requireToObject();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var getIterator = requireGetIterator();
+        var getIteratorMethod = requireGetIteratorMethod();
+        var isArrayIteratorMethod = requireIsArrayIteratorMethod();
+        var isBigIntArray = requireIsBigIntArray();
+        var aTypedArrayConstructor = requireArrayBufferViewCore().aTypedArrayConstructor;
+        var toBigInt = requireToBigInt();
+        typedArrayFrom = function from(source) {
+            var C = aConstructor(this);
+            var O = toObject(source);
+            var argumentsLength = arguments.length;
+            var mapfn = argumentsLength > 1 ? arguments[1] : undefined;
+            var mapping = mapfn !== undefined;
+            var iteratorMethod = getIteratorMethod(O);
+            var i, length, result, thisIsBigIntArray, value, step, iterator, next;
+            if (iteratorMethod && !isArrayIteratorMethod(iteratorMethod)) {
+                iterator = getIterator(O, iteratorMethod);
+                next = iterator.next;
+                O = [];
+                while (!(step = call(next, iterator)).done) {
+                    O.push(step.value);
+                }
+            }
+            if (mapping && argumentsLength > 2) {
+                mapfn = bind(mapfn, arguments[2]);
+            }
+            length = lengthOfArrayLike(O);
+            result = new (aTypedArrayConstructor(C))(length);
+            thisIsBigIntArray = isBigIntArray(result);
+            for (i = 0; length > i; i++) {
+                value = mapping ? mapfn(O[i], i) : O[i];
+                result[i] = thisIsBigIntArray ? toBigInt(value) : +value;
+            }
+            return result;
+        };
+        return typedArrayFrom;
+    }
+    var arrayFromConstructorAndList;
+    var hasRequiredArrayFromConstructorAndList;
+    function requireArrayFromConstructorAndList() {
+        if (hasRequiredArrayFromConstructorAndList) return arrayFromConstructorAndList;
+        hasRequiredArrayFromConstructorAndList = 1;
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        arrayFromConstructorAndList = function(Constructor, list, $length) {
+            var index = 0;
+            var length = arguments.length > 2 ? $length : lengthOfArrayLike(list);
+            var result = new Constructor(length);
+            while (length > index) result[index] = list[index++];
+            return result;
+        };
+        return arrayFromConstructorAndList;
+    }
+    var hasRequiredTypedArrayConstructor;
+    function requireTypedArrayConstructor() {
+        if (hasRequiredTypedArrayConstructor) return typedArrayConstructor.exports;
+        hasRequiredTypedArrayConstructor = 1;
+        var $ = require_export();
+        var globalThis = requireGlobalThis();
+        var call = requireFunctionCall();
+        var DESCRIPTORS = requireDescriptors();
+        var TYPED_ARRAYS_CONSTRUCTORS_REQUIRES_WRAPPERS = requireTypedArrayConstructorsRequireWrappers();
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var ArrayBufferModule = requireArrayBuffer();
+        var anInstance = requireAnInstance();
+        var createPropertyDescriptor = requireCreatePropertyDescriptor();
+        var createNonEnumerableProperty = requireCreateNonEnumerableProperty();
+        var isIntegralNumber = requireIsIntegralNumber();
+        var toLength = requireToLength();
+        var toIndex = requireToIndex();
+        var toOffset = requireToOffset();
+        var toUint8Clamped = requireToUint8Clamped();
+        var toPropertyKey = requireToPropertyKey();
+        var hasOwn = requireHasOwnProperty();
+        var classof = requireClassof();
+        var isObject = requireIsObject();
+        var isSymbol = requireIsSymbol();
+        var create = requireObjectCreate();
+        var isPrototypeOf = requireObjectIsPrototypeOf();
+        var setPrototypeOf = requireObjectSetPrototypeOf();
+        var getOwnPropertyNames = requireObjectGetOwnPropertyNames().f;
+        var typedArrayFrom = requireTypedArrayFrom();
+        var forEach = requireArrayIteration().forEach;
+        var setSpecies = requireSetSpecies();
+        var defineBuiltInAccessor = requireDefineBuiltInAccessor();
+        var definePropertyModule = requireObjectDefineProperty();
+        var getOwnPropertyDescriptorModule = requireObjectGetOwnPropertyDescriptor();
+        var arrayFromConstructorAndList = requireArrayFromConstructorAndList();
+        var InternalStateModule = requireInternalState();
+        var inheritIfRequired = requireInheritIfRequired();
+        var getInternalState = InternalStateModule.get;
+        var setInternalState = InternalStateModule.set;
+        var enforceInternalState = InternalStateModule.enforce;
+        var nativeDefineProperty = definePropertyModule.f;
+        var nativeGetOwnPropertyDescriptor = getOwnPropertyDescriptorModule.f;
+        var RangeError = globalThis.RangeError;
+        var ArrayBuffer = ArrayBufferModule.ArrayBuffer;
+        var ArrayBufferPrototype = ArrayBuffer.prototype;
+        var DataView = ArrayBufferModule.DataView;
+        var NATIVE_ARRAY_BUFFER_VIEWS = ArrayBufferViewCore.NATIVE_ARRAY_BUFFER_VIEWS;
+        var TYPED_ARRAY_TAG = ArrayBufferViewCore.TYPED_ARRAY_TAG;
+        var TypedArray = ArrayBufferViewCore.TypedArray;
+        var TypedArrayPrototype = ArrayBufferViewCore.TypedArrayPrototype;
+        var isTypedArray = ArrayBufferViewCore.isTypedArray;
+        var BYTES_PER_ELEMENT = "BYTES_PER_ELEMENT";
+        var WRONG_LENGTH = "Wrong length";
+        var addGetter = function(it, key) {
+            defineBuiltInAccessor(it, key, {
+                configurable: true,
+                get: function() {
+                    return getInternalState(this)[key];
+                }
+            });
+        };
+        var isArrayBuffer = function(it) {
+            var klass;
+            return isPrototypeOf(ArrayBufferPrototype, it) || (klass = classof(it)) === "ArrayBuffer" || klass === "SharedArrayBuffer";
+        };
+        var isTypedArrayIndex = function(target, key) {
+            return isTypedArray(target) && !isSymbol(key) && key in target && isIntegralNumber(+key) && key >= 0;
+        };
+        var wrappedGetOwnPropertyDescriptor = function getOwnPropertyDescriptor(target, key) {
+            key = toPropertyKey(key);
+            return isTypedArrayIndex(target, key) ? createPropertyDescriptor(2, target[key]) : nativeGetOwnPropertyDescriptor(target, key);
+        };
+        var wrappedDefineProperty = function defineProperty(target, key, descriptor) {
+            key = toPropertyKey(key);
+            if (isTypedArrayIndex(target, key) && isObject(descriptor) && hasOwn(descriptor, "value") && !hasOwn(descriptor, "get") && !hasOwn(descriptor, "set") && !descriptor.configurable && (!hasOwn(descriptor, "writable") || descriptor.writable) && (!hasOwn(descriptor, "enumerable") || descriptor.enumerable)) {
+                target[key] = descriptor.value;
+                return target;
+            }
+            return nativeDefineProperty(target, key, descriptor);
+        };
+        if (DESCRIPTORS) {
+            if (!NATIVE_ARRAY_BUFFER_VIEWS) {
+                getOwnPropertyDescriptorModule.f = wrappedGetOwnPropertyDescriptor;
+                definePropertyModule.f = wrappedDefineProperty;
+                addGetter(TypedArrayPrototype, "buffer");
+                addGetter(TypedArrayPrototype, "byteOffset");
+                addGetter(TypedArrayPrototype, "byteLength");
+                addGetter(TypedArrayPrototype, "length");
+            }
+            $({
+                target: "Object",
+                stat: true,
+                forced: !NATIVE_ARRAY_BUFFER_VIEWS
+            }, {
+                getOwnPropertyDescriptor: wrappedGetOwnPropertyDescriptor,
+                defineProperty: wrappedDefineProperty
+            });
+            typedArrayConstructor.exports = function(TYPE, wrapper, CLAMPED) {
+                var BYTES = TYPE.match(/\d+/)[0] / 8;
+                var CONSTRUCTOR_NAME = TYPE + (CLAMPED ? "Clamped" : "") + "Array";
+                var GETTER = "get" + TYPE;
+                var SETTER = "set" + TYPE;
+                var NativeTypedArrayConstructor = globalThis[CONSTRUCTOR_NAME];
+                var TypedArrayConstructor = NativeTypedArrayConstructor;
+                var TypedArrayConstructorPrototype = TypedArrayConstructor && TypedArrayConstructor.prototype;
+                var exported = {};
+                var getter = function(that, index) {
+                    var data = getInternalState(that);
+                    return data.view[GETTER](index * BYTES + data.byteOffset, true);
+                };
+                var setter = function(that, index, value) {
+                    var data = getInternalState(that);
+                    data.view[SETTER](index * BYTES + data.byteOffset, CLAMPED ? toUint8Clamped(value) : value, true);
+                };
+                var addElement = function(that, index) {
+                    nativeDefineProperty(that, index, {
+                        get: function() {
+                            return getter(this, index);
+                        },
+                        set: function(value) {
+                            return setter(this, index, value);
+                        },
+                        enumerable: true
+                    });
+                };
+                if (!NATIVE_ARRAY_BUFFER_VIEWS) {
+                    TypedArrayConstructor = wrapper(function(that, data, offset, $length) {
+                        anInstance(that, TypedArrayConstructorPrototype);
+                        var index = 0;
+                        var byteOffset = 0;
+                        var buffer, byteLength, length;
+                        if (!isObject(data)) {
+                            length = toIndex(data);
+                            byteLength = length * BYTES;
+                            buffer = new ArrayBuffer(byteLength);
+                        } else if (isArrayBuffer(data)) {
+                            buffer = data;
+                            byteOffset = toOffset(offset, BYTES);
+                            var $len = data.byteLength;
+                            if ($length === undefined) {
+                                if ($len % BYTES) throw new RangeError(WRONG_LENGTH);
+                                byteLength = $len - byteOffset;
+                                if (byteLength < 0) throw new RangeError(WRONG_LENGTH);
+                            } else {
+                                byteLength = toLength($length) * BYTES;
+                                if (byteLength + byteOffset > $len) throw new RangeError(WRONG_LENGTH);
+                            }
+                            length = byteLength / BYTES;
+                        } else if (isTypedArray(data)) {
+                            return arrayFromConstructorAndList(TypedArrayConstructor, data);
+                        } else {
+                            return call(typedArrayFrom, TypedArrayConstructor, data);
+                        }
+                        setInternalState(that, {
+                            buffer: buffer,
+                            byteOffset: byteOffset,
+                            byteLength: byteLength,
+                            length: length,
+                            view: new DataView(buffer)
+                        });
+                        while (index < length) addElement(that, index++);
+                    });
+                    if (setPrototypeOf) setPrototypeOf(TypedArrayConstructor, TypedArray);
+                    TypedArrayConstructorPrototype = TypedArrayConstructor.prototype = create(TypedArrayPrototype);
+                } else if (TYPED_ARRAYS_CONSTRUCTORS_REQUIRES_WRAPPERS) {
+                    TypedArrayConstructor = wrapper(function(dummy, data, typedArrayOffset, $length) {
+                        anInstance(dummy, TypedArrayConstructorPrototype);
+                        return inheritIfRequired(function() {
+                            if (!isObject(data)) return new NativeTypedArrayConstructor(toIndex(data));
+                            if (isArrayBuffer(data)) return $length !== undefined ? new NativeTypedArrayConstructor(data, toOffset(typedArrayOffset, BYTES), $length) : typedArrayOffset !== undefined ? new NativeTypedArrayConstructor(data, toOffset(typedArrayOffset, BYTES)) : new NativeTypedArrayConstructor(data);
+                            if (isTypedArray(data)) return arrayFromConstructorAndList(TypedArrayConstructor, data);
+                            return call(typedArrayFrom, TypedArrayConstructor, data);
+                        }(), dummy, TypedArrayConstructor);
+                    });
+                    if (setPrototypeOf) setPrototypeOf(TypedArrayConstructor, TypedArray);
+                    forEach(getOwnPropertyNames(NativeTypedArrayConstructor), function(key) {
+                        if (!(key in TypedArrayConstructor)) {
+                            createNonEnumerableProperty(TypedArrayConstructor, key, NativeTypedArrayConstructor[key]);
+                        }
+                    });
+                    TypedArrayConstructor.prototype = TypedArrayConstructorPrototype;
+                }
+                if (TypedArrayConstructorPrototype.constructor !== TypedArrayConstructor) {
+                    createNonEnumerableProperty(TypedArrayConstructorPrototype, "constructor", TypedArrayConstructor);
+                }
+                enforceInternalState(TypedArrayConstructorPrototype).TypedArrayConstructor = TypedArrayConstructor;
+                if (TYPED_ARRAY_TAG) {
+                    createNonEnumerableProperty(TypedArrayConstructorPrototype, TYPED_ARRAY_TAG, CONSTRUCTOR_NAME);
+                }
+                var FORCED = TypedArrayConstructor !== NativeTypedArrayConstructor;
+                exported[CONSTRUCTOR_NAME] = TypedArrayConstructor;
+                $({
+                    global: true,
+                    constructor: true,
+                    forced: FORCED,
+                    sham: !NATIVE_ARRAY_BUFFER_VIEWS
+                }, exported);
+                if (!(BYTES_PER_ELEMENT in TypedArrayConstructor)) {
+                    createNonEnumerableProperty(TypedArrayConstructor, BYTES_PER_ELEMENT, BYTES);
+                }
+                if (!(BYTES_PER_ELEMENT in TypedArrayConstructorPrototype)) {
+                    createNonEnumerableProperty(TypedArrayConstructorPrototype, BYTES_PER_ELEMENT, BYTES);
+                }
+                setSpecies(CONSTRUCTOR_NAME);
+            };
+        } else typedArrayConstructor.exports = function() {};
+        return typedArrayConstructor.exports;
+    }
+    var hasRequiredEs_typedArray_uint8Array;
+    function requireEs_typedArray_uint8Array() {
+        if (hasRequiredEs_typedArray_uint8Array) return es_typedArray_uint8Array;
+        hasRequiredEs_typedArray_uint8Array = 1;
+        var createTypedArrayConstructor = requireTypedArrayConstructor();
+        createTypedArrayConstructor("Uint8", function(init) {
+            return function Uint8Array(data, byteOffset, length) {
+                return init(this, data, byteOffset, length);
+            };
+        });
+        return es_typedArray_uint8Array;
+    }
+    requireEs_typedArray_uint8Array();
+    var es_typedArray_copyWithin = {};
+    var arrayCopyWithin;
+    var hasRequiredArrayCopyWithin;
+    function requireArrayCopyWithin() {
+        if (hasRequiredArrayCopyWithin) return arrayCopyWithin;
+        hasRequiredArrayCopyWithin = 1;
+        var toObject = requireToObject();
+        var toAbsoluteIndex = requireToAbsoluteIndex();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var deletePropertyOrThrow = requireDeletePropertyOrThrow();
+        var min = Math.min;
+        arrayCopyWithin = [].copyWithin || function copyWithin(target, start) {
+            var O = toObject(this);
+            var len = lengthOfArrayLike(O);
+            var to = toAbsoluteIndex(target, len);
+            var from = toAbsoluteIndex(start, len);
+            var end = arguments.length > 2 ? arguments[2] : undefined;
+            var count = min((end === undefined ? len : toAbsoluteIndex(end, len)) - from, len - to);
+            var inc = 1;
+            if (from < to && to < from + count) {
+                inc = -1;
+                from += count - 1;
+                to += count - 1;
+            }
+            while (count-- > 0) {
+                if (from in O) O[to] = O[from]; else deletePropertyOrThrow(O, to);
+                to += inc;
+                from += inc;
+            }
+            return O;
+        };
+        return arrayCopyWithin;
+    }
+    var hasRequiredEs_typedArray_copyWithin;
+    function requireEs_typedArray_copyWithin() {
+        if (hasRequiredEs_typedArray_copyWithin) return es_typedArray_copyWithin;
+        hasRequiredEs_typedArray_copyWithin = 1;
+        var uncurryThis = requireFunctionUncurryThis();
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $ArrayCopyWithin = requireArrayCopyWithin();
+        var u$ArrayCopyWithin = uncurryThis($ArrayCopyWithin);
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("copyWithin", function copyWithin(target, start) {
+            return u$ArrayCopyWithin(aTypedArray(this), target, start, arguments.length > 2 ? arguments[2] : undefined);
+        });
+        return es_typedArray_copyWithin;
+    }
+    requireEs_typedArray_copyWithin();
+    var es_typedArray_every = {};
+    var hasRequiredEs_typedArray_every;
+    function requireEs_typedArray_every() {
+        if (hasRequiredEs_typedArray_every) return es_typedArray_every;
+        hasRequiredEs_typedArray_every = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $every = requireArrayIteration().every;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("every", function every(callbackfn) {
+            return $every(aTypedArray(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_every;
+    }
+    requireEs_typedArray_every();
+    var es_typedArray_fill = {};
+    var hasRequiredEs_typedArray_fill;
+    function requireEs_typedArray_fill() {
+        if (hasRequiredEs_typedArray_fill) return es_typedArray_fill;
+        hasRequiredEs_typedArray_fill = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $fill = requireArrayFill();
+        var toBigInt = requireToBigInt();
+        var classof = requireClassof();
+        var call = requireFunctionCall();
+        var uncurryThis = requireFunctionUncurryThis();
+        var fails = requireFails();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var slice = uncurryThis("".slice);
+        var CONVERSION_BUG = fails(function() {
+            var count = 0;
+            new Int8Array(2).fill({
+                valueOf: function() {
+                    return count++;
+                }
+            });
+            return count !== 1;
+        });
+        exportTypedArrayMethod("fill", function fill(value) {
+            var length = arguments.length;
+            aTypedArray(this);
+            var actualValue = slice(classof(this), 0, 3) === "Big" ? toBigInt(value) : +value;
+            return call($fill, this, actualValue, length > 1 ? arguments[1] : undefined, length > 2 ? arguments[2] : undefined);
+        }, CONVERSION_BUG);
+        return es_typedArray_fill;
+    }
+    requireEs_typedArray_fill();
+    var es_typedArray_filter = {};
+    var typedArrayFromSameTypeAndList;
+    var hasRequiredTypedArrayFromSameTypeAndList;
+    function requireTypedArrayFromSameTypeAndList() {
+        if (hasRequiredTypedArrayFromSameTypeAndList) return typedArrayFromSameTypeAndList;
+        hasRequiredTypedArrayFromSameTypeAndList = 1;
+        var arrayFromConstructorAndList = requireArrayFromConstructorAndList();
+        var getTypedArrayConstructor = requireArrayBufferViewCore().getTypedArrayConstructor;
+        typedArrayFromSameTypeAndList = function(instance, list) {
+            return arrayFromConstructorAndList(getTypedArrayConstructor(instance), list);
+        };
+        return typedArrayFromSameTypeAndList;
+    }
+    var hasRequiredEs_typedArray_filter;
+    function requireEs_typedArray_filter() {
+        if (hasRequiredEs_typedArray_filter) return es_typedArray_filter;
+        hasRequiredEs_typedArray_filter = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $filter = requireArrayIteration().filter;
+        var fromSameTypeAndList = requireTypedArrayFromSameTypeAndList();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("filter", function filter(callbackfn) {
+            var list = $filter(aTypedArray(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+            return fromSameTypeAndList(this, list);
+        });
+        return es_typedArray_filter;
+    }
+    requireEs_typedArray_filter();
+    var es_typedArray_find = {};
+    var hasRequiredEs_typedArray_find;
+    function requireEs_typedArray_find() {
+        if (hasRequiredEs_typedArray_find) return es_typedArray_find;
+        hasRequiredEs_typedArray_find = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $find = requireArrayIteration().find;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("find", function find(predicate) {
+            return $find(aTypedArray(this), predicate, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_find;
+    }
+    requireEs_typedArray_find();
+    var es_typedArray_findIndex = {};
+    var hasRequiredEs_typedArray_findIndex;
+    function requireEs_typedArray_findIndex() {
+        if (hasRequiredEs_typedArray_findIndex) return es_typedArray_findIndex;
+        hasRequiredEs_typedArray_findIndex = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $findIndex = requireArrayIteration().findIndex;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("findIndex", function findIndex(predicate) {
+            return $findIndex(aTypedArray(this), predicate, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_findIndex;
+    }
+    requireEs_typedArray_findIndex();
+    var es_typedArray_forEach = {};
+    var hasRequiredEs_typedArray_forEach;
+    function requireEs_typedArray_forEach() {
+        if (hasRequiredEs_typedArray_forEach) return es_typedArray_forEach;
+        hasRequiredEs_typedArray_forEach = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $forEach = requireArrayIteration().forEach;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("forEach", function forEach(callbackfn) {
+            $forEach(aTypedArray(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_forEach;
+    }
+    requireEs_typedArray_forEach();
+    var es_typedArray_from = {};
+    var hasRequiredEs_typedArray_from;
+    function requireEs_typedArray_from() {
+        if (hasRequiredEs_typedArray_from) return es_typedArray_from;
+        hasRequiredEs_typedArray_from = 1;
+        var TYPED_ARRAYS_CONSTRUCTORS_REQUIRES_WRAPPERS = requireTypedArrayConstructorsRequireWrappers();
+        var exportTypedArrayStaticMethod = requireArrayBufferViewCore().exportTypedArrayStaticMethod;
+        var typedArrayFrom = requireTypedArrayFrom();
+        exportTypedArrayStaticMethod("from", typedArrayFrom, TYPED_ARRAYS_CONSTRUCTORS_REQUIRES_WRAPPERS);
+        return es_typedArray_from;
+    }
+    requireEs_typedArray_from();
+    var es_typedArray_includes = {};
+    var hasRequiredEs_typedArray_includes;
+    function requireEs_typedArray_includes() {
+        if (hasRequiredEs_typedArray_includes) return es_typedArray_includes;
+        hasRequiredEs_typedArray_includes = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $includes = requireArrayIncludes().includes;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("includes", function includes(searchElement) {
+            return $includes(aTypedArray(this), searchElement, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_includes;
+    }
+    requireEs_typedArray_includes();
+    var es_typedArray_indexOf = {};
+    var hasRequiredEs_typedArray_indexOf;
+    function requireEs_typedArray_indexOf() {
+        if (hasRequiredEs_typedArray_indexOf) return es_typedArray_indexOf;
+        hasRequiredEs_typedArray_indexOf = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $indexOf = requireArrayIncludes().indexOf;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("indexOf", function indexOf(searchElement) {
+            return $indexOf(aTypedArray(this), searchElement, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_indexOf;
+    }
+    requireEs_typedArray_indexOf();
+    var es_typedArray_iterator = {};
+    var hasRequiredEs_typedArray_iterator;
+    function requireEs_typedArray_iterator() {
+        if (hasRequiredEs_typedArray_iterator) return es_typedArray_iterator;
+        hasRequiredEs_typedArray_iterator = 1;
+        var globalThis = requireGlobalThis();
+        var fails = requireFails();
+        var uncurryThis = requireFunctionUncurryThis();
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var ArrayIterators = requireEs_array_iterator();
+        var wellKnownSymbol = requireWellKnownSymbol();
+        var ITERATOR = wellKnownSymbol("iterator");
+        var Uint8Array = globalThis.Uint8Array;
+        var arrayValues = uncurryThis(ArrayIterators.values);
+        var arrayKeys = uncurryThis(ArrayIterators.keys);
+        var arrayEntries = uncurryThis(ArrayIterators.entries);
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var TypedArrayPrototype = Uint8Array && Uint8Array.prototype;
+        var GENERIC = !fails(function() {
+            TypedArrayPrototype[ITERATOR].call([ 1 ]);
+        });
+        var ITERATOR_IS_VALUES = !!TypedArrayPrototype && TypedArrayPrototype.values && TypedArrayPrototype[ITERATOR] === TypedArrayPrototype.values && TypedArrayPrototype.values.name === "values";
+        var typedArrayValues = function values() {
+            return arrayValues(aTypedArray(this));
+        };
+        exportTypedArrayMethod("entries", function entries() {
+            return arrayEntries(aTypedArray(this));
+        }, GENERIC);
+        exportTypedArrayMethod("keys", function keys() {
+            return arrayKeys(aTypedArray(this));
+        }, GENERIC);
+        exportTypedArrayMethod("values", typedArrayValues, GENERIC || !ITERATOR_IS_VALUES, {
+            name: "values"
+        });
+        exportTypedArrayMethod(ITERATOR, typedArrayValues, GENERIC || !ITERATOR_IS_VALUES, {
+            name: "values"
+        });
+        return es_typedArray_iterator;
+    }
+    requireEs_typedArray_iterator();
+    var es_typedArray_join = {};
+    var hasRequiredEs_typedArray_join;
+    function requireEs_typedArray_join() {
+        if (hasRequiredEs_typedArray_join) return es_typedArray_join;
+        hasRequiredEs_typedArray_join = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var uncurryThis = requireFunctionUncurryThis();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var $join = uncurryThis([].join);
+        exportTypedArrayMethod("join", function join(separator) {
+            return $join(aTypedArray(this), separator);
+        });
+        return es_typedArray_join;
+    }
+    requireEs_typedArray_join();
+    var es_typedArray_lastIndexOf = {};
+    var arrayLastIndexOf;
+    var hasRequiredArrayLastIndexOf;
+    function requireArrayLastIndexOf() {
+        if (hasRequiredArrayLastIndexOf) return arrayLastIndexOf;
+        hasRequiredArrayLastIndexOf = 1;
+        var apply = requireFunctionApply();
+        var toIndexedObject = requireToIndexedObject();
+        var toIntegerOrInfinity = requireToIntegerOrInfinity();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var arrayMethodIsStrict = requireArrayMethodIsStrict();
+        var min = Math.min;
+        var $lastIndexOf = [].lastIndexOf;
+        var NEGATIVE_ZERO = !!$lastIndexOf && 1 / [ 1 ].lastIndexOf(1, -0) < 0;
+        var STRICT_METHOD = arrayMethodIsStrict("lastIndexOf");
+        var FORCED = NEGATIVE_ZERO || !STRICT_METHOD;
+        arrayLastIndexOf = FORCED ? function lastIndexOf(searchElement) {
+            if (NEGATIVE_ZERO) return apply($lastIndexOf, this, arguments) || 0;
+            var O = toIndexedObject(this);
+            var length = lengthOfArrayLike(O);
+            if (length === 0) return -1;
+            var index = length - 1;
+            if (arguments.length > 1) index = min(index, toIntegerOrInfinity(arguments[1]));
+            if (index < 0) index = length + index;
+            for (;index >= 0; index--) if (index in O && O[index] === searchElement) return index || 0;
+            return -1;
+        } : $lastIndexOf;
+        return arrayLastIndexOf;
+    }
+    var hasRequiredEs_typedArray_lastIndexOf;
+    function requireEs_typedArray_lastIndexOf() {
+        if (hasRequiredEs_typedArray_lastIndexOf) return es_typedArray_lastIndexOf;
+        hasRequiredEs_typedArray_lastIndexOf = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var apply = requireFunctionApply();
+        var $lastIndexOf = requireArrayLastIndexOf();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("lastIndexOf", function lastIndexOf(searchElement) {
+            var length = arguments.length;
+            return apply($lastIndexOf, aTypedArray(this), length > 1 ? [ searchElement, arguments[1] ] : [ searchElement ]);
+        });
+        return es_typedArray_lastIndexOf;
+    }
+    requireEs_typedArray_lastIndexOf();
+    var es_typedArray_map = {};
+    var hasRequiredEs_typedArray_map;
+    function requireEs_typedArray_map() {
+        if (hasRequiredEs_typedArray_map) return es_typedArray_map;
+        hasRequiredEs_typedArray_map = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $map = requireArrayIteration().map;
+        var fromSameTypeAndList = requireTypedArrayFromSameTypeAndList();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("map", function map(mapfn) {
+            var list = $map(aTypedArray(this), mapfn, arguments.length > 1 ? arguments[1] : undefined);
+            return fromSameTypeAndList(this, list);
+        });
+        return es_typedArray_map;
+    }
+    requireEs_typedArray_map();
+    var es_typedArray_reduce = {};
+    var arrayReduce;
+    var hasRequiredArrayReduce;
+    function requireArrayReduce() {
+        if (hasRequiredArrayReduce) return arrayReduce;
+        hasRequiredArrayReduce = 1;
+        var aCallable = requireACallable();
+        var toObject = requireToObject();
+        var IndexedObject = requireIndexedObject();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var $TypeError = TypeError;
+        var REDUCE_EMPTY = "Reduce of empty array with no initial value";
+        var createMethod = function(IS_RIGHT) {
+            return function(that, callbackfn, argumentsLength, memo) {
+                var O = toObject(that);
+                var self = IndexedObject(O);
+                var length = lengthOfArrayLike(O);
+                aCallable(callbackfn);
+                if (length === 0 && argumentsLength < 2) throw new $TypeError(REDUCE_EMPTY);
+                var index = IS_RIGHT ? length - 1 : 0;
+                var i = IS_RIGHT ? -1 : 1;
+                if (argumentsLength < 2) while (true) {
+                    if (index in self) {
+                        memo = self[index];
+                        index += i;
+                        break;
+                    }
+                    index += i;
+                    if (IS_RIGHT ? index < 0 : length <= index) {
+                        throw new $TypeError(REDUCE_EMPTY);
+                    }
+                }
+                for (;IS_RIGHT ? index >= 0 : length > index; index += i) if (index in self) {
+                    memo = callbackfn(memo, self[index], index, O);
+                }
+                return memo;
+            };
+        };
+        arrayReduce = {
+            left: createMethod(false),
+            right: createMethod(true)
+        };
+        return arrayReduce;
+    }
+    var hasRequiredEs_typedArray_reduce;
+    function requireEs_typedArray_reduce() {
+        if (hasRequiredEs_typedArray_reduce) return es_typedArray_reduce;
+        hasRequiredEs_typedArray_reduce = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $reduce = requireArrayReduce().left;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("reduce", function reduce(callbackfn) {
+            var length = arguments.length;
+            return $reduce(aTypedArray(this), callbackfn, length, length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_reduce;
+    }
+    requireEs_typedArray_reduce();
+    var es_typedArray_reduceRight = {};
+    var hasRequiredEs_typedArray_reduceRight;
+    function requireEs_typedArray_reduceRight() {
+        if (hasRequiredEs_typedArray_reduceRight) return es_typedArray_reduceRight;
+        hasRequiredEs_typedArray_reduceRight = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $reduceRight = requireArrayReduce().right;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("reduceRight", function reduceRight(callbackfn) {
+            var length = arguments.length;
+            return $reduceRight(aTypedArray(this), callbackfn, length, length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_reduceRight;
+    }
+    requireEs_typedArray_reduceRight();
+    var es_typedArray_reverse = {};
+    var hasRequiredEs_typedArray_reverse;
+    function requireEs_typedArray_reverse() {
+        if (hasRequiredEs_typedArray_reverse) return es_typedArray_reverse;
+        hasRequiredEs_typedArray_reverse = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var floor = Math.floor;
+        exportTypedArrayMethod("reverse", function reverse() {
+            var that = this;
+            var length = aTypedArray(that).length;
+            var middle = floor(length / 2);
+            var index = 0;
+            var value;
+            while (index < middle) {
+                value = that[index];
+                that[index++] = that[--length];
+                that[length] = value;
+            }
+            return that;
+        });
+        return es_typedArray_reverse;
+    }
+    requireEs_typedArray_reverse();
+    var es_typedArray_set = {};
+    var hasRequiredEs_typedArray_set;
+    function requireEs_typedArray_set() {
+        if (hasRequiredEs_typedArray_set) return es_typedArray_set;
+        hasRequiredEs_typedArray_set = 1;
+        var globalThis = requireGlobalThis();
+        var call = requireFunctionCall();
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var lengthOfArrayLike = requireLengthOfArrayLike();
+        var toOffset = requireToOffset();
+        var toIndexedObject = requireToObject();
+        var fails = requireFails();
+        var RangeError = globalThis.RangeError;
+        var Int8Array = globalThis.Int8Array;
+        var Int8ArrayPrototype = Int8Array && Int8Array.prototype;
+        var $set = Int8ArrayPrototype && Int8ArrayPrototype.set;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var WORKS_WITH_OBJECTS_AND_GENERIC_ON_TYPED_ARRAYS = !fails(function() {
+            var array = new Uint8ClampedArray(2);
+            call($set, array, {
+                length: 1,
+                0: 3
+            }, 1);
+            return array[1] !== 3;
+        });
+        var TO_OBJECT_BUG = WORKS_WITH_OBJECTS_AND_GENERIC_ON_TYPED_ARRAYS && ArrayBufferViewCore.NATIVE_ARRAY_BUFFER_VIEWS && fails(function() {
+            var array = new Int8Array(2);
+            array.set(1);
+            array.set("2", 1);
+            return array[0] !== 0 || array[1] !== 2;
+        });
+        exportTypedArrayMethod("set", function set(arrayLike) {
+            aTypedArray(this);
+            var offset = toOffset(arguments.length > 1 ? arguments[1] : undefined, 1);
+            var src = toIndexedObject(arrayLike);
+            if (WORKS_WITH_OBJECTS_AND_GENERIC_ON_TYPED_ARRAYS) return call($set, this, src, offset);
+            var length = this.length;
+            var len = lengthOfArrayLike(src);
+            var index = 0;
+            if (len + offset > length) throw new RangeError("Wrong length");
+            while (index < len) this[offset + index] = src[index++];
+        }, !WORKS_WITH_OBJECTS_AND_GENERIC_ON_TYPED_ARRAYS || TO_OBJECT_BUG);
+        return es_typedArray_set;
+    }
+    requireEs_typedArray_set();
+    var es_typedArray_slice = {};
+    var hasRequiredEs_typedArray_slice;
+    function requireEs_typedArray_slice() {
+        if (hasRequiredEs_typedArray_slice) return es_typedArray_slice;
+        hasRequiredEs_typedArray_slice = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var fails = requireFails();
+        var arraySlice = requireArraySlice();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var getTypedArrayConstructor = ArrayBufferViewCore.getTypedArrayConstructor;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var FORCED = fails(function() {
+            new Int8Array(1).slice();
+        });
+        exportTypedArrayMethod("slice", function slice(start, end) {
+            var list = arraySlice(aTypedArray(this), start, end);
+            var C = getTypedArrayConstructor(this);
+            var index = 0;
+            var length = list.length;
+            var result = new C(length);
+            while (length > index) result[index] = list[index++];
+            return result;
+        }, FORCED);
+        return es_typedArray_slice;
+    }
+    requireEs_typedArray_slice();
+    var es_typedArray_some = {};
+    var hasRequiredEs_typedArray_some;
+    function requireEs_typedArray_some() {
+        if (hasRequiredEs_typedArray_some) return es_typedArray_some;
+        hasRequiredEs_typedArray_some = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var $some = requireArrayIteration().some;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("some", function some(callbackfn) {
+            return $some(aTypedArray(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+        });
+        return es_typedArray_some;
+    }
+    requireEs_typedArray_some();
+    var es_typedArray_sort = {};
+    var arraySort;
+    var hasRequiredArraySort;
+    function requireArraySort() {
+        if (hasRequiredArraySort) return arraySort;
+        hasRequiredArraySort = 1;
+        var arraySlice = requireArraySlice();
+        var floor = Math.floor;
+        var sort = function(array, comparefn) {
+            var length = array.length;
+            if (length < 8) {
+                var i = 1;
+                var element, j;
+                while (i < length) {
+                    j = i;
+                    element = array[i];
+                    while (j && comparefn(array[j - 1], element) > 0) {
+                        array[j] = array[--j];
+                    }
+                    if (j !== i++) array[j] = element;
+                }
+            } else {
+                var middle = floor(length / 2);
+                var left = sort(arraySlice(array, 0, middle), comparefn);
+                var right = sort(arraySlice(array, middle), comparefn);
+                var llength = left.length;
+                var rlength = right.length;
+                var lindex = 0;
+                var rindex = 0;
+                while (lindex < llength || rindex < rlength) {
+                    array[lindex + rindex] = lindex < llength && rindex < rlength ? comparefn(left[lindex], right[rindex]) <= 0 ? left[lindex++] : right[rindex++] : lindex < llength ? left[lindex++] : right[rindex++];
+                }
+            }
+            return array;
+        };
+        arraySort = sort;
+        return arraySort;
+    }
     var environmentFfVersion;
     var hasRequiredEnvironmentFfVersion;
     function requireEnvironmentFfVersion() {
@@ -11790,6 +11409,141 @@
         environmentWebkitVersion = !!webkit && +webkit[1];
         return environmentWebkitVersion;
     }
+    var hasRequiredEs_typedArray_sort;
+    function requireEs_typedArray_sort() {
+        if (hasRequiredEs_typedArray_sort) return es_typedArray_sort;
+        hasRequiredEs_typedArray_sort = 1;
+        var globalThis = requireGlobalThis();
+        var uncurryThis = requireFunctionUncurryThisClause();
+        var fails = requireFails();
+        var aCallable = requireACallable();
+        var internalSort = requireArraySort();
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var FF = requireEnvironmentFfVersion();
+        var IE_OR_EDGE = requireEnvironmentIsIeOrEdge();
+        var V8 = requireEnvironmentV8Version();
+        var WEBKIT = requireEnvironmentWebkitVersion();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var Uint16Array = globalThis.Uint16Array;
+        var nativeSort = Uint16Array && uncurryThis(Uint16Array.prototype.sort);
+        var ACCEPT_INCORRECT_ARGUMENTS = !!nativeSort && !(fails(function() {
+            nativeSort(new Uint16Array(2), null);
+        }) && fails(function() {
+            nativeSort(new Uint16Array(2), {});
+        }));
+        var STABLE_SORT = !!nativeSort && !fails(function() {
+            if (V8) return V8 < 74;
+            if (FF) return FF < 67;
+            if (IE_OR_EDGE) return true;
+            if (WEBKIT) return WEBKIT < 602;
+            var array = new Uint16Array(516);
+            var expected = Array(516);
+            var index, mod;
+            for (index = 0; index < 516; index++) {
+                mod = index % 4;
+                array[index] = 515 - index;
+                expected[index] = index - 2 * mod + 3;
+            }
+            nativeSort(array, function(a, b) {
+                return (a / 4 | 0) - (b / 4 | 0);
+            });
+            for (index = 0; index < 516; index++) {
+                if (array[index] !== expected[index]) return true;
+            }
+        });
+        var getSortCompare = function(comparefn) {
+            return function(x, y) {
+                if (comparefn !== undefined) return +comparefn(x, y) || 0;
+                if (y !== y) return -1;
+                if (x !== x) return 1;
+                if (x === 0 && y === 0) return 1 / x > 0 && 1 / y < 0 ? 1 : -1;
+                return x > y;
+            };
+        };
+        exportTypedArrayMethod("sort", function sort(comparefn) {
+            if (comparefn !== undefined) aCallable(comparefn);
+            if (STABLE_SORT) return nativeSort(this, comparefn);
+            return internalSort(aTypedArray(this), getSortCompare(comparefn));
+        }, !STABLE_SORT || ACCEPT_INCORRECT_ARGUMENTS);
+        return es_typedArray_sort;
+    }
+    requireEs_typedArray_sort();
+    var es_typedArray_subarray = {};
+    var hasRequiredEs_typedArray_subarray;
+    function requireEs_typedArray_subarray() {
+        if (hasRequiredEs_typedArray_subarray) return es_typedArray_subarray;
+        hasRequiredEs_typedArray_subarray = 1;
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var toLength = requireToLength();
+        var toAbsoluteIndex = requireToAbsoluteIndex();
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var getTypedArrayConstructor = ArrayBufferViewCore.getTypedArrayConstructor;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        exportTypedArrayMethod("subarray", function subarray(begin, end) {
+            var O = aTypedArray(this);
+            var length = O.length;
+            var beginIndex = toAbsoluteIndex(begin, length);
+            var C = getTypedArrayConstructor(O);
+            return new C(O.buffer, O.byteOffset + beginIndex * O.BYTES_PER_ELEMENT, toLength((end === undefined ? length : toAbsoluteIndex(end, length)) - beginIndex));
+        });
+        return es_typedArray_subarray;
+    }
+    requireEs_typedArray_subarray();
+    var es_typedArray_toLocaleString = {};
+    var hasRequiredEs_typedArray_toLocaleString;
+    function requireEs_typedArray_toLocaleString() {
+        if (hasRequiredEs_typedArray_toLocaleString) return es_typedArray_toLocaleString;
+        hasRequiredEs_typedArray_toLocaleString = 1;
+        var globalThis = requireGlobalThis();
+        var apply = requireFunctionApply();
+        var ArrayBufferViewCore = requireArrayBufferViewCore();
+        var fails = requireFails();
+        var arraySlice = requireArraySlice();
+        var Int8Array = globalThis.Int8Array;
+        var aTypedArray = ArrayBufferViewCore.aTypedArray;
+        var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+        var $toLocaleString = [].toLocaleString;
+        var TO_LOCALE_STRING_BUG = !!Int8Array && fails(function() {
+            $toLocaleString.call(new Int8Array(1));
+        });
+        var FORCED = fails(function() {
+            return [ 1, 2 ].toLocaleString() !== new Int8Array([ 1, 2 ]).toLocaleString();
+        }) || !fails(function() {
+            Int8Array.prototype.toLocaleString.call([ 1, 2 ]);
+        });
+        exportTypedArrayMethod("toLocaleString", function toLocaleString() {
+            return apply($toLocaleString, TO_LOCALE_STRING_BUG ? arraySlice(aTypedArray(this)) : aTypedArray(this), arraySlice(arguments));
+        }, FORCED);
+        return es_typedArray_toLocaleString;
+    }
+    requireEs_typedArray_toLocaleString();
+    var es_typedArray_toString = {};
+    var hasRequiredEs_typedArray_toString;
+    function requireEs_typedArray_toString() {
+        if (hasRequiredEs_typedArray_toString) return es_typedArray_toString;
+        hasRequiredEs_typedArray_toString = 1;
+        var exportTypedArrayMethod = requireArrayBufferViewCore().exportTypedArrayMethod;
+        var fails = requireFails();
+        var globalThis = requireGlobalThis();
+        var uncurryThis = requireFunctionUncurryThis();
+        var Uint8Array = globalThis.Uint8Array;
+        var Uint8ArrayPrototype = Uint8Array && Uint8Array.prototype || {};
+        var arrayToString = [].toString;
+        var join = uncurryThis([].join);
+        if (fails(function() {
+            arrayToString.call({});
+        })) {
+            arrayToString = function toString() {
+                return join(this);
+            };
+        }
+        var IS_NOT_ARRAY_METHOD = Uint8ArrayPrototype.toString !== arrayToString;
+        exportTypedArrayMethod("toString", arrayToString, IS_NOT_ARRAY_METHOD);
+        return es_typedArray_toString;
+    }
+    requireEs_typedArray_toString();
+    var es_array_sort = {};
     var hasRequiredEs_array_sort;
     function requireEs_array_sort() {
         if (hasRequiredEs_array_sort) return es_array_sort;
@@ -12052,39 +11806,27 @@
             }
         } ]);
     }();
-    var _citPrefixOld = new WeakMap;
     var _citPrefix = new WeakMap;
-    var _bibPrefixOld = new WeakMap;
-    var _citSuffix = new WeakMap;
     var _bibPrefix = new WeakMap;
-    var _bibSuffix = new WeakMap;
     var _CitationDocService_brand = new WeakSet;
     var CitationDocService = function() {
-        function CitationDocService(citPrefix, citSuffix, bibPrefix, bibSuffix) {
+        function CitationDocService(citPrefix, bibPrefix) {
             _classCallCheck(this, CitationDocService);
             _classPrivateMethodInitSpec(this, _CitationDocService_brand);
-            _classPrivateFieldInitSpec(this, _citPrefixOld, void 0);
             _classPrivateFieldInitSpec(this, _citPrefix, void 0);
-            _classPrivateFieldInitSpec(this, _bibPrefixOld, void 0);
-            _classPrivateFieldInitSpec(this, _citSuffix, void 0);
             _classPrivateFieldInitSpec(this, _bibPrefix, void 0);
-            _classPrivateFieldInitSpec(this, _bibSuffix, void 0);
-            _classPrivateFieldSet2(_citPrefixOld, this, "ZOTERO_CITATION");
-            _classPrivateFieldSet2(_bibPrefixOld, this, "ZOTERO_BIBLIOGRAPHY");
             _classPrivateFieldSet2(_citPrefix, this, citPrefix);
-            _classPrivateFieldSet2(_citSuffix, this, citSuffix);
             _classPrivateFieldSet2(_bibPrefix, this, bibPrefix);
-            _classPrivateFieldSet2(_bibSuffix, this, bibSuffix);
         }
         return _createClass(CitationDocService, [ {
             key: "addBibliography",
             value: function addBibliography(text, value) {
                 var formattingPositions = CslHtmlParser.parseHtmlFormatting(text);
                 var field = {
-                    Value: _classPrivateFieldGet2(_bibPrefix, this) + value + _classPrivateFieldGet2(_bibSuffix, this),
+                    Value: _classPrivateFieldGet2(_bibPrefix, this) + value,
                     Content: formattingPositions.text
                 };
-                return _assertClassBrand(_CitationDocService_brand, this, _addAddinField).call(this, field).then(function() {
+                return _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, field).then(function() {
                     if (!formattingPositions.formatting.length) return;
                     return CslDocFormatter.formatAfterInsert(formattingPositions.formatting);
                 });
@@ -12093,14 +11835,15 @@
             key: "addCitation",
             value: function() {
                 var _addCitation = _asyncToGenerator(_regenerator().m(function _callee(text, value, notesStyle) {
-                    var formattingPositions, field;
+                    var formattingPositions, control;
                     return _regenerator().w(function(_context) {
                         while (1) switch (_context.n) {
                           case 0:
                             formattingPositions = CslHtmlParser.parseHtmlFormatting(text);
-                            field = {
-                                Value: _classPrivateFieldGet2(_citPrefix, this) + " " + _classPrivateFieldGet2(_citSuffix, this) + value,
-                                Content: formattingPositions.text
+                            control = {
+                                Tag: _classPrivateFieldGet2(_citPrefix, this) + "_" + _assertClassBrand(_CitationDocService_brand, this, _base64Encode).call(this, value),
+                                Lock: 3,
+                                PlaceHolderText: formattingPositions.text
                             };
                             if (!(notesStyle && [ "footnotes", "endnotes" ].indexOf(notesStyle) !== -1)) {
                                 _context.n = 1;
@@ -12110,7 +11853,7 @@
                             return _assertClassBrand(_CitationDocService_brand, this, _addNote).call(this, notesStyle);
 
                           case 1:
-                            return _context.a(2, _assertClassBrand(_CitationDocService_brand, this, _addAddinField).call(this, field).then(function() {
+                            return _context.a(2, _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, control).then(function() {
                                 if (!formattingPositions.formatting.length) return;
                                 return CslDocFormatter.formatAfterInsert(formattingPositions.formatting);
                             }));
@@ -12123,15 +11866,15 @@
                 return addCitation;
             }()
         }, {
-            key: "getAddinZoteroFields",
-            value: function getAddinZoteroFields() {
+            key: "getAddinMendeleyControls",
+            value: function getAddinMendeleyControls() {
                 var self = this;
                 return new Promise(function(resolve, reject) {
-                    _assertClassBrand(_CitationDocService_brand, self, _getAllAddinFields).call(self).then(function(arrFields) {
+                    _assertClassBrand(_CitationDocService_brand, self, _getAllContentControls).call(self).then(function(arrFields) {
                         try {
                             if (arrFields.length) {
                                 arrFields = arrFields.filter(function(field) {
-                                    return field.Value.indexOf(_classPrivateFieldGet2(_citPrefix, self)) !== -1 || field.Value.indexOf(_classPrivateFieldGet2(_bibPrefix, self)) !== -1 || field.Value.indexOf(_classPrivateFieldGet2(_citPrefixOld, self)) !== -1 || field.Value.indexOf(_classPrivateFieldGet2(_bibPrefixOld, self)) !== -1;
+                                    return field.Tag.indexOf(_classPrivateFieldGet2(_citPrefix, self)) !== -1 || field.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, self)) !== -1;
                                 });
                             }
                         } catch (e) {
@@ -12144,7 +11887,7 @@
         }, {
             key: "saveAsText",
             value: function saveAsText() {
-                return this.getAddinZoteroFields().then(function(arrFields) {
+                return this.getAddinMendeleyControls().then(function(arrFields) {
                     var count = arrFields.length;
                     if (!count) {
                         window.Asc.plugin.executeCommand("close", "");
@@ -12296,7 +12039,7 @@
 
                           case 8:
                             _context3.n = 9;
-                            return _assertClassBrand(_CitationDocService_brand, this, _addAddinField).call(this, field);
+                            return _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, field);
 
                           case 9:
                             formatting = formats.get(field.FieldId);
@@ -12370,7 +12113,7 @@
 
                           case 6:
                             _context4.n = 7;
-                            return _assertClassBrand(_CitationDocService_brand, this, _addAddinField).call(this, field);
+                            return _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, field);
 
                           case 7:
                             formatting = formats.get(field.FieldId);
@@ -12465,7 +12208,7 @@
 
                           case 9:
                             _context5.n = 10;
-                            return _assertClassBrand(_CitationDocService_brand, this, _addAddinField).call(this, field);
+                            return _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, field);
 
                           case 10:
                             formatting = formats.get(field.FieldId);
@@ -12506,9 +12249,10 @@
             }()
         } ]);
     }();
-    function _addAddinField(field) {
+    function _addContentControl(field) {
         return new Promise(function(resolve) {
-            window.Asc.plugin.executeMethod("AddAddinField", [ field ], resolve);
+            var type = 2;
+            window.Asc.plugin.executeMethod("AddContentControl", [ type, field ], resolve);
         });
     }
     function _addNote(notesStyle) {
@@ -12524,9 +12268,9 @@
             }, false, false, resolve);
         });
     }
-    function _getAllAddinFields() {
+    function _getAllContentControls() {
         return new Promise(function(resolve, reject) {
-            window.Asc.plugin.executeMethod("GetAllAddinFields", null, resolve);
+            window.Asc.plugin.executeMethod("GetAllContentControls", null, resolve);
         });
     }
     function _makeFormattingPositions(fields) {
@@ -12591,6 +12335,19 @@
                 selRange.SetVertAlign("baseline");
             }, isClose, isCalc, resolve);
         });
+    }
+    function _base64Encode(str) {
+        if (typeof TextEncoder !== "undefined") {
+            var bytes = (new TextEncoder).encode(str);
+            var binary = "";
+            for (var i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+            return String.fromCharCode(parseInt(p1, 16));
+        }));
     }
     function CitationItemData(id) {
         if (typeof id !== "string" && typeof id !== "number") {
@@ -14048,73 +13805,9 @@
                 });
             }
         }, {
-            key: "showEditWindow",
-            value: function showEditWindow(content) {
-                var _this2 = this;
-                _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
-                var variation = {
-                    name: "Zotero",
-                    url: "edit-window.html",
-                    description: window.Asc.plugin.tr("Edit citation"),
-                    isVisual: true,
-                    buttons: [ {
-                        text: window.Asc.plugin.tr("Save"),
-                        primary: true,
-                        isViewer: false
-                    }, {
-                        text: window.Asc.plugin.tr("Cancel"),
-                        primary: false
-                    } ],
-                    isModal: false,
-                    EditorsSupport: [ "word" ],
-                    size: [ 380, 150 ],
-                    isViewer: true,
-                    isDisplayedInViewer: false,
-                    isInsideMode: false
-                };
-                _assertClassBrand(_AdditionalWindow_brand, this, _onShow).call(this, variation, content, "default");
-                _classPrivateFieldGet2(_window, this).show(variation);
-                return new Promise(function(resolve, reject) {
-                    window.Asc.plugin.button = function() {
-                        var _ref = _asyncToGenerator(_regenerator().m(function _callee(buttonId, windowId) {
-                            var element;
-                            return _regenerator().w(function(_context) {
-                                while (1) switch (_context.n) {
-                                  case 0:
-                                    _context.n = 1;
-                                    return new Promise(function(resolve) {
-                                        if (!_classPrivateFieldGet2(_window, _this2)) {
-                                            resolve(null);
-                                            return;
-                                        }
-                                        _classPrivateFieldGet2(_window, _this2).attachEvent("onSaveFields", resolve);
-                                        _classPrivateFieldGet2(_window, _this2).command("onClickSave");
-                                    });
-
-                                  case 1:
-                                    element = _context.v;
-                                    if (buttonId === 0) {
-                                        resolve(element);
-                                    } else {
-                                        resolve(null);
-                                    }
-                                    _assertClassBrand(_AdditionalWindow_brand, _this2, _hide).call(_this2);
-
-                                  case 2:
-                                    return _context.a(2);
-                                }
-                            }, _callee);
-                        }));
-                        return function(_x, _x2) {
-                            return _ref.apply(this, arguments);
-                        };
-                    }();
-                });
-            }
-        }, {
             key: "showWarningWindow",
             value: function showWarningWindow(description, text) {
-                var _this3 = this;
+                var _this2 = this;
                 _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
                 var variation = {
                     name: "Zotero",
@@ -14142,7 +13835,7 @@
                         } else {
                             resolve(false);
                         }
-                        _assertClassBrand(_AdditionalWindow_brand, _this3, _hide).call(_this3);
+                        _assertClassBrand(_AdditionalWindow_brand, _this2, _hide).call(_this2);
                     };
                 });
             }
@@ -14155,33 +13848,33 @@
         } ]);
     }();
     function _onShow(variation, content, type) {
-        var _this4 = this;
+        var _this3 = this;
         if (!_classPrivateFieldGet2(_window, this)) return;
         _classPrivateFieldSet2(_defaultButtonFn, this, window.Asc.plugin.button);
         _classPrivateFieldSet2(_defaultThemeChangedFn, this, Asc.plugin.onThemeChanged);
         _classPrivateFieldSet2(_defaultTranslateFn, this, Asc.plugin.onTranslate);
         window.Asc.plugin.onThemeChanged = function(theme) {
             var _classPrivateFieldGet2$1;
-            (_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_window, _this4)) === null || _classPrivateFieldGet2$1 === void 0 || _classPrivateFieldGet2$1.command("onThemeChanged", theme);
-            _classPrivateFieldGet2(_defaultThemeChangedFn, _this4).call(_this4, theme);
+            (_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_window, _this3)) === null || _classPrivateFieldGet2$1 === void 0 || _classPrivateFieldGet2$1.command("onThemeChanged", theme);
+            _classPrivateFieldGet2(_defaultThemeChangedFn, _this3).call(_this3, theme);
         };
         window.Asc.plugin.onTranslate = function() {
             var _classPrivateFieldGet3;
-            (_classPrivateFieldGet3 = _classPrivateFieldGet2(_window, _this4)) === null || _classPrivateFieldGet3 === void 0 || _classPrivateFieldGet3.command("onTranslate");
-            _classPrivateFieldGet2(_defaultTranslateFn, _this4).call(_this4);
+            (_classPrivateFieldGet3 = _classPrivateFieldGet2(_window, _this3)) === null || _classPrivateFieldGet3 === void 0 || _classPrivateFieldGet3.command("onTranslate");
+            _classPrivateFieldGet2(_defaultTranslateFn, _this3).call(_this3);
         };
         _classPrivateFieldGet2(_window, this).attachEvent("onWindowReady", function() {
             if (type === "warning") {
                 var _classPrivateFieldGet4;
-                (_classPrivateFieldGet4 = _classPrivateFieldGet2(_window, _this4)) === null || _classPrivateFieldGet4 === void 0 || _classPrivateFieldGet4.command("onWarning", content);
+                (_classPrivateFieldGet4 = _classPrivateFieldGet2(_window, _this3)) === null || _classPrivateFieldGet4 === void 0 || _classPrivateFieldGet4.command("onWarning", content);
             } else {
                 var _classPrivateFieldGet5;
-                (_classPrivateFieldGet5 = _classPrivateFieldGet2(_window, _this4)) === null || _classPrivateFieldGet5 === void 0 || _classPrivateFieldGet5.command("onAttachedContent", content);
+                (_classPrivateFieldGet5 = _classPrivateFieldGet2(_window, _this3)) === null || _classPrivateFieldGet5 === void 0 || _classPrivateFieldGet5.command("onAttachedContent", content);
             }
         });
         _classPrivateFieldGet2(_window, this).attachEvent("onUpdateHeight", function(height) {
             var _classPrivateFieldGet6;
-            Asc.plugin.executeMethod("ResizeWindow", [ (_classPrivateFieldGet6 = _classPrivateFieldGet2(_window, _this4)) === null || _classPrivateFieldGet6 === void 0 ? void 0 : _classPrivateFieldGet6.id, [ variation.size[0] - 2, height ] ], function() {});
+            Asc.plugin.executeMethod("ResizeWindow", [ (_classPrivateFieldGet6 = _classPrivateFieldGet2(_window, _this3)) === null || _classPrivateFieldGet6 === void 0 ? void 0 : _classPrivateFieldGet6.id, [ variation.size[0] - 2, height ] ], function() {});
         });
     }
     function _hide() {
@@ -14194,23 +13887,18 @@
     var _additionalWindow = new WeakMap;
     var _CitationService_brand = new WeakSet;
     var CitationService = function() {
-        function CitationService(localesManager, cslStylesManager, sdk) {
+        function CitationService(localesManager, cslStylesManager) {
             _classCallCheck(this, CitationService);
             _classPrivateMethodInitSpec(this, _CitationService_brand);
             _classPrivateFieldInitSpec(this, _additionalWindow, void 0);
             this._bibPlaceholderIfEmpty = "Please insert some citation into the document.";
-            this._citPrefixNew = "ZOTERO_ITEM";
-            this._citSuffixNew = "CSL_CITATION";
-            this._citPrefix = "ZOTERO_CITATION";
-            this._bibPrefixNew = "ZOTERO_BIBL";
-            this._bibSuffixNew = "CSL_BIBLIOGRAPHY";
-            this._bibPrefix = "ZOTERO_BIBLIOGRAPHY";
-            this._sdk = sdk;
+            this._citPrefixNew = "MENDELEY_CITATION";
+            this._bibPrefixNew = "MENDELEY_BIBLIOGRAPHY";
             this._localesManager = localesManager;
             this._cslStylesManager = cslStylesManager;
             this._storage = new CSLCitationStorage;
             this._formatter;
-            this.citationDocService = new CitationDocService(this._citPrefixNew, this._citSuffixNew, this._bibPrefixNew, this._bibSuffixNew);
+            this.citationDocService = new CitationDocService(this._citPrefixNew, this._bibPrefixNew);
             _classPrivateFieldSet2(_additionalWindow, this, new AdditionalWindow);
         }
         return _createClass(CitationService, [ {
@@ -14248,12 +13936,7 @@
                                 item = items[citationID];
                                 cslCitation.fillFromObject(item);
                             }
-                            return _context.a(2, _assertClassBrand(_CitationService_brand, this, _getSelectedInJsonFormat).call(this, items).then(function(items) {
-                                items.forEach(function(item) {
-                                    cslCitation.fillFromObject(item);
-                                });
-                                return _assertClassBrand(_CitationService_brand, self, _formatInsertLink).call(self, cslCitation);
-                            }));
+                            return _context.a(2, _assertClassBrand(_CitationService_brand, self, _formatInsertLink).call(self, cslCitation));
                         }
                     }, _callee, this, [ [ 1, 3 ] ]);
                 }));
@@ -14788,45 +14471,6 @@
             return keys;
         });
     }
-    function _getSelectedInJsonFormat(items) {
-        var arrUsrItems = [];
-        var arrGroupsItems = {};
-        for (var citationID in items) {
-            var item = items[citationID];
-            var userID = item["userID"];
-            var _groupID = item["groupID"];
-            if (userID) {
-                arrUsrItems.push(item.id);
-            } else if (_groupID) {
-                if (!arrGroupsItems[_groupID]) {
-                    arrGroupsItems[_groupID] = [];
-                }
-                arrGroupsItems[_groupID].push(item.id);
-            }
-        }
-        var promises = [];
-        if (arrUsrItems.length) {
-            promises.push(this._sdk.getItems(null, arrUsrItems, "json").then(function(res) {
-                var items = res.items || [];
-                return items;
-            }));
-        }
-        for (var groupID in arrGroupsItems) {
-            if (Object.hasOwnProperty.call(arrGroupsItems, groupID)) {
-                promises.push(this._sdk.getGroupItems(null, groupID, arrGroupsItems[groupID], "json").then(function(res) {
-                    var items = res.items || [];
-                    return items;
-                }));
-            }
-        }
-        return Promise.all(promises).then(function(res) {
-            var items = [];
-            res.forEach(function(resItems) {
-                items = items.concat(resItems);
-            });
-            return items;
-        });
-    }
     function _makeBibliography() {
         try {
             var bibItems = new Array(this._storage.size);
@@ -14852,21 +14496,37 @@
     }
     function _extractField(field) {
         var citationObject;
-        var citationStartIndex = field.Value.indexOf("{");
-        var citationEndIndex = field.Value.lastIndexOf("}");
+        if (field.Tag.indexOf(this._bibPrefixNew) !== -1) {
+            return {};
+        }
+        var citationStartIndex = field.Tag.indexOf("_", this._citPrefixNew.length + 1);
         if (citationStartIndex !== -1) {
-            var citationString = field.Value.slice(citationStartIndex, citationEndIndex + 1);
+            var base64String = field.Tag.slice(citationStartIndex);
+            var binary = atob(base64String);
+            var citationString;
+            if (typeof TextDecoder !== "undefined") {
+                var bytes = Uint8Array.from(binary, function(c) {
+                    return c.charCodeAt(0);
+                });
+                citationString = new TextDecoder("utf-8").decode(bytes);
+            } else {
+                var escaped = "";
+                for (var i = 0; i < binary.length; i++) {
+                    escaped += "%" + ("00" + binary.charCodeAt(i).toString(16)).slice(-2);
+                }
+                citationString = decodeURIComponent(escaped);
+            }
             citationObject = JSON.parse(citationString);
         }
         return citationObject;
     }
     function _synchronizeStorageWithDocItems(updatedField) {
         var self = this;
-        return this.citationDocService.getAddinZoteroFields().then(function(arrFields) {
+        return this.citationDocService.getAddinMendeleyControls().then(function(arrFields) {
             var numOfItems = 0;
             var bibFieldValue = " ";
             var bibField = arrFields.find(function(field) {
-                return field.Value.indexOf(self._bibPrefixNew) !== -1 || field.Value.indexOf(self._bibPrefix) !== -1;
+                return field.Tag.indexOf(self._bibPrefixNew) !== -1;
             });
             if (bibField) {
                 var citationObject = _assertClassBrand(_CitationService_brand, self, _extractField).call(self, bibField);
@@ -14875,15 +14535,11 @@
                 }
             }
             var fields = arrFields.filter(function(field) {
-                return field.Value.indexOf(self._citPrefixNew) !== -1 || field.Value.indexOf(self._citPrefix) !== -1;
+                return field.Tag.indexOf(self._citPrefixNew) !== -1;
             });
             var fieldsWithCitations = fields.map(function(field) {
                 var citationObject = _assertClassBrand(_CitationService_brand, self, _extractField).call(self, field);
-                var citationID = "";
-                if (field.Value.indexOf(self._citPrefix) === -1) {
-                    citationID = citationObject.citationID;
-                }
-                var cslCitation = new CSLCitation(numOfItems, citationID);
+                var cslCitation = new CSLCitation(numOfItems);
                 if (updatedField) {
                     numOfItems += cslCitation.fillFromObject(updatedField);
                 } else {
@@ -15008,7 +14664,7 @@
 
                   case 6:
                     if (cslCitation) {
-                        field["Value"] = this._citPrefixNew + " " + this._citSuffixNew + JSON.stringify(cslCitation.toJSON());
+                        field["Value"] = this._citPrefixNew + "_" + JSON.stringify(cslCitation.toJSON());
                     }
                     updatedFields.push(field);
 
@@ -15786,30 +15442,25 @@
         this._languageSelect.enable();
     };
     var LoginPage = function() {
-        function LoginPage(router, sdk) {
+        function LoginPage(router) {
             _classCallCheck(this, LoginPage);
             this._router = router;
-            this._sdk = sdk;
             this._redirectConfigField = new InputField("redirectConfig", {
-                readonly: true
+                readonly: true,
+                showClear: false
             });
-            this._redirectUrlCopyBtn = new Button("redirectUrlCopy", {});
+            this._redirectUrlCopyBtn = new Button("redirectUrlCopy", {
+                variant: "secondary"
+            });
             this._appIdField = new InputField("appIdField", {
                 autofocus: true,
                 autocomplete: "on"
             });
-            this._saveConfigBtn = new Button("saveConfigBtn", {
-                disabled: true
+            this._loginBtn = new Button("loginBtn", {
+                variant: "primary"
             });
-            this._saveConfigMessage = new Message("saveConfigMessage", {
-                type: "error"
-            });
-            this._loginBtn = new Button("loginBtn", {});
             this._loginMessage = new Message("loginMessage", {
                 type: "error"
-            });
-            this._reconfigBtn = new Button("reconfigBtn", {
-                variant: "secondary"
             });
             this._logoutLink = document.getElementById("logoutLink");
             if (!this._logoutLink) {
@@ -15827,36 +15478,7 @@
                 var redirectUrl = document.location.protocol + "//" + document.location.host + document.location.pathname.replace("index.html", "oauth.html");
                 this._redirectConfigField.setValue(redirectUrl);
                 this._addEventListeners();
-                var hasFirstAnswer = false;
-                var onlineZoteroElements = document.querySelectorAll(".for-zotero-online");
-                apisChecker.subscribe(function(apis) {
-                    if (!hasFirstAnswer) {
-                        hasFirstAnswer = true;
-                        self._onOpen();
-                        self._show();
-                    }
-                    if (apis.online) {
-                        onlineZoteroElements.forEach(function(element) {
-                            element.classList.remove("hidden");
-                        });
-                    } else {
-                        onlineZoteroElements.forEach(function(element) {
-                            element.classList.add("hidden");
-                        });
-                    }
-                    if (apis.online && apis.hasKey) {
-                        self._sdk.setIsOnlineAvailable(true);
-                        self._hide(true);
-                        self._onAuthorized();
-                        return;
-                    } else if (apis.desktop && apis.hasPermission) {
-                        self._sdk.setIsOnlineAvailable(false);
-                        self._hide();
-                        self._hideAllMessages();
-                        self._onAuthorized();
-                        return;
-                    }
-                });
+                this._mendAppId = localStorage.getItem("mendAppId") || "";
                 var triggers = {
                     onOpen: function onOpen(callbackFn) {
                         self._onOpen = callbackFn;
@@ -15867,6 +15489,21 @@
                         return triggers;
                     }
                 };
+                if (this._mendAppId) {
+                    this._appIdField.setValue(this._mendAppId);
+                    var token = localStorage.getItem("mendToken");
+                    if (token) {
+                        self._hide();
+                        Promise.resolve().then(function() {
+                            self._onAuthorized();
+                        });
+                        return triggers;
+                    }
+                }
+                self._show();
+                Promise.resolve().then(function() {
+                    self._onOpen();
+                });
                 return triggers;
             }
         }, {
@@ -15883,7 +15520,26 @@
                 }
                 localStorage.setItem("mendToken", answer);
                 this._onAuthorized();
+                this._hideLoader();
+                this._hide();
                 return true;
+            }
+        }, {
+            key: "getAuthFlow",
+            value: function getAuthFlow() {
+                var _this = this;
+                return {
+                    authenticate: function authenticate() {
+                        _this._show();
+                        _this._authenticate();
+                    },
+                    getToken: function getToken() {
+                        return localStorage.getItem("mendToken");
+                    },
+                    refreshToken: function refreshToken() {
+                        return false;
+                    }
+                };
             }
         }, {
             key: "_addEventListeners",
@@ -15893,9 +15549,9 @@
                     if (event.type !== "inputfield:submit") ;
                     if (event.type === "inputfield:input") {
                         if (self._appIdField.getValue()) {
-                            self._saveConfigBtn.enable();
+                            self._loginBtn.enable();
                         } else {
-                            self._saveConfigBtn.disable();
+                            self._loginBtn.disable();
                         }
                     }
                 });
@@ -15906,27 +15562,15 @@
                     navigator.clipboard.writeText(self._redirectConfigField.getValue());
                     window.open("https://dev.mendeley.com/myapps.html", "_blank");
                 });
-                this._saveConfigBtn.subscribe(function(event) {
-                    if (event.type !== "button:click") {
-                        return;
-                    }
-                    self._saveConfig();
-                });
                 this._loginBtn.subscribe(function(event) {
                     if (event.type !== "button:click") {
                         return;
                     }
                     self._authenticate();
                 });
-                this._reconfigBtn.subscribe(function(event) {
-                    if (event.type !== "button:click") {
-                        return;
-                    }
-                    self._showLoader();
-                    self._hideLoader();
-                });
                 this._logoutLink.onclick = function(e) {
-                    self._sdk.clearSettings();
+                    document.cookie = "mendToken=; max-age=0";
+                    localStorage.removeItem("mendToken");
                     self._show();
                     return true;
                 };
@@ -15934,7 +15578,14 @@
         }, {
             key: "_authenticate",
             value: function _authenticate() {
-                var self = this;
+                var _this2 = this;
+                var appid = this._appIdField.getValue();
+                if (!appid) {
+                    this._loginMessage.show(translate("AppId is empty"));
+                    return;
+                }
+                this._mendAppId = appid;
+                localStorage.setItem("mendAppId", appid);
                 if (!this._mendAppId) {
                     this._loginMessage.show(translate("Please enter your Mendeley App ID"));
                     return;
@@ -15947,32 +15598,21 @@
                     this._hideLoader();
                     return;
                 }
-                wnd.addEventListener("beforeunload", function() {
-                    self._hideLoader();
-                });
-            }
-        }, {
-            key: "_saveConfig",
-            value: function _saveConfig() {
-                var appid = this._appIdField.getValue();
-                if (appid) {
-                    this._mendAppId = appid;
-                    localStorage.setItem("mendAppId", appid);
-                    switchAuthState("login");
-                } else {
-                    this._saveConfigMessage.show(translate("AppId is empty"));
-                }
+                var timer = setInterval(function() {
+                    if (!wnd || wnd.closed) {
+                        clearInterval(timer);
+                        _this2._hideLoader();
+                    }
+                }, 500);
             }
         }, {
             key: "_hideAllMessages",
             value: function _hideAllMessages() {}
         }, {
             key: "_hide",
-            value: function _hide(bShowLogoutLink) {
+            value: function _hide() {
                 this._router.openMain();
-                if (bShowLogoutLink) {
-                    this._logoutLink.classList.remove("hidden");
-                }
+                this._logoutLink.classList.remove("hidden");
             }
         }, {
             key: "_show",
@@ -15983,17 +15623,13 @@
         }, {
             key: "_showLoader",
             value: function _showLoader() {
-                this._saveConfigBtn.disable();
                 this._loginBtn.disable();
-                this._reconfigBtn.disable();
                 this._appIdField.disable();
             }
         }, {
             key: "_hideLoader",
             value: function _hideLoader() {
-                this._saveConfigBtn.enable();
                 this._loginBtn.enable();
-                this._reconfigBtn.enable();
                 this._appIdField.enable();
             }
         } ]);
@@ -16006,7 +15642,8 @@
         });
         this._filterButton = new Button("filterButton", {
             variant: "secondary-icon",
-            size: "small"
+            size: "small",
+            disabled: true
         });
         this._librarySelectList = new SelectBox("librarySelectList", {
             placeholder: translate("No items selected"),
@@ -16042,17 +15679,14 @@
         var savedGroups = localStorage.getItem("selectedGroups");
         var selectedItems = savedGroups ? JSON.parse(savedGroups).map(function(id) {
             return id.toString();
-        }) : [ "my_library", "group_libraries" ];
+        }) : [ "all_collections" ];
         var hasSelected = false;
         groups.forEach(function(group) {
             group.id = String(group.id);
         });
         var customGroups = [ {
-            id: "my_library",
-            name: translate("My Library")
-        }, {
-            id: "group_libraries",
-            name: translate("Group Libraries")
+            id: "all_collections",
+            name: translate("All collections")
         } ];
         !hasSelected && customGroups.forEach(function(group) {
             if (selectedItems.indexOf(group.id) !== -1) {
@@ -16065,7 +15699,7 @@
             }
         });
         if (!hasSelected) {
-            selectedItems = [ "my_library", "group_libraries" ];
+            selectedItems = [ "all_collections" ];
         }
         var addGroupToSelectBox = function addGroupToSelectBox(id, name, selected) {
             if (typeof id === "number") {
@@ -16082,7 +15716,7 @@
             return;
         }
         this._librarySelectList.addSeparator();
-        var selected = selectedItems.indexOf("group_libraries") !== -1;
+        var selected = selectedItems.indexOf("all_collections") !== -1;
         for (var i = 0; i < groups.length; i++) {
             var _id = groups[i].id;
             var _name = groups[i].name;
@@ -16135,19 +15769,16 @@
             });
             var bWasCustom = customIds.indexOf(String(current)) !== -1;
             if (bWasCustom) {
-                if (current === "group_libraries") {
+                if (current === "all_collections") {
                     if (bEnabled) {
-                        aGroupsToSave.push("group_libraries");
+                        aGroupsToSave.push("all_collections");
                         self._librarySelectList.selectItems(ids, true);
                     } else {
                         self._librarySelectList.unselectItems(ids, true);
                     }
-                    if (values.indexOf("my_library") !== -1) {
-                        aGroupsToSave.push("my_library");
-                    }
                 } else {
-                    if (values.indexOf("group_libraries") !== -1) {
-                        aGroupsToSave.push("group_libraries");
+                    if (values.indexOf("all_collections") !== -1) {
+                        aGroupsToSave.push("all_collections");
                         if (bEnabled) {
                             aGroupsToSave.push(current);
                         }
@@ -16160,15 +15791,12 @@
                     return values.indexOf(id) !== -1;
                 });
                 if (bAllGroupsSelected) {
-                    self._librarySelectList.selectItems("group_libraries", true);
-                    aGroupsToSave.push("group_libraries");
-                    if (values.indexOf("my_library") !== -1) {
-                        aGroupsToSave.push("my_library");
-                    }
+                    self._librarySelectList.selectItems("all_collections", true);
+                    aGroupsToSave.push("all_collections");
                 } else {
-                    self._librarySelectList.unselectItems("group_libraries", true);
+                    self._librarySelectList.unselectItems("all_collections", true);
                     aGroupsToSave = values.filter(function(value) {
-                        return value !== "group_libraries";
+                        return value !== "all_collections";
                     });
                 }
             }
@@ -16637,7 +16265,6 @@
             };
         }
         window.Asc.plugin.init = function() {
-            console.warn(window.Asc);
             if (isLocal) {
                 var message = "This plugin doesn't work into Desktop Editors.";
                 var content = document.getElementById("content");
@@ -16651,15 +16278,17 @@
             Loader.show();
             initElements();
             router = new Router;
-            sdk = new ZoteroSdk;
-            loginPage = new LoginPage(router, sdk);
+            loginPage = new LoginPage(router);
+            sdk = new Sdk({
+                authFlow: loginPage.getAuthFlow()
+            });
             settings = new SettingsPage(router, displayNoneClass);
-            citationService = new CitationService(settings.getLocalesManager(), settings.getStyleManager(), sdk);
+            citationService = new CitationService(settings.getLocalesManager(), settings.getStyleManager());
             var isInit = false;
             addEventListeners();
             loginPage.init().onOpen(function() {
                 Loader.hide();
-            }).onAuthorized(function(apis) {
+            }).onAuthorized(function() {
                 if (isInit) return;
                 isInit = true;
                 Loader.show();
@@ -16669,12 +16298,6 @@
                 });
             });
             window.Asc.plugin.onTranslate = applyTranslations;
-            getEditorVersion().then(function(editorVersion) {
-                window.Asc.scope.editorVersion = editorVersion;
-                if (editorVersion >= 9003e3) {
-                    addContextMenuButtons();
-                }
-            });
         };
         window.OAuthError = function(error) {
             loginPage.onAuthCallback(error);
@@ -16709,27 +16332,19 @@
             function searchFor(text, selectedGroups, groupsHash) {
                 selectCitation.clearLibrary();
                 var promises = [];
-                return sdk.getUserGroups().then(function(userGroups) {
-                    var groups = selectedGroups.filter(function(group) {
-                        return group !== "my_library" && group !== "group_libraries";
-                    });
-                    if (selectedGroups.indexOf("my_library") !== -1) {
-                        promises.push(loadLibrary(sdk.getItems(text), false));
-                    }
-                    for (var i = 0; i < groups.length; i++) {
-                        promises.push(loadLibrary(sdk.getGroupItems(text, groups[i]), true));
-                    }
+                return new Promise(function(resolve) {
+                    promises.push(loadLibrary(sdk.getItems(text), false));
                     lastSearch.text = text;
                     lastSearch.obj = null;
                     lastSearch.groups = [];
                     lastSearch.groupsHash = groupsHash;
-                    return promises;
+                    resolve(promises);
                 });
             }
             searchFilter.subscribe(function(text, selectedGroups) {
                 text = text.trim();
                 var groupsHash = selectedGroups.join(",");
-                if (elements.mainState.classList.contains(displayNoneClass) || !text || text == lastSearch.text && groupsHash === lastSearch.groupsHash || selectedGroups.length === 0) return;
+                if (elements.mainState.classList.contains(displayNoneClass) || !text || text == lastSearch.text && groupsHash === lastSearch.groupsHash) return;
                 searchFor(text, selectedGroups, groupsHash).catch(function() {
                     return [];
                 }).then(function(promises) {
@@ -17111,6 +16726,7 @@
                 if (isGroup && res && res.next) lastSearch.groups.push(res); else lastSearch.obj = res && res.items.length ? res : null;
             }
             var fillUrisFromId = function fillUrisFromId(item) {
+                if (!item.id) return item;
                 var slashFirstIndex = item.id.indexOf("/") + 1;
                 var slashLastIndex = item.id.lastIndexOf("/") + 1;
                 var httpIndex = item.id.indexOf("http");
@@ -17147,103 +16763,6 @@
                     insertLinkBtn.setText(translate("Insert Citation"));
                 }
             }
-        }
-        function getEditorVersion() {
-            return _getEditorVersion.apply(this, arguments);
-        }
-        function _getEditorVersion() {
-            _getEditorVersion = _asyncToGenerator(_regenerator().m(function _callee4() {
-                var version, arrVer, _t;
-                return _regenerator().w(function(_context4) {
-                    while (1) switch (_context4.p = _context4.n) {
-                      case 0:
-                        _context4.p = 0;
-                        _context4.n = 1;
-                        return new Promise(function(resolve) {
-                            Asc.plugin.executeMethod("GetVersion", [], resolve);
-                        });
-
-                      case 1:
-                        version = _context4.v;
-                        if ("develop" == version) version = "99.99.99";
-                        arrVer = version.split(".");
-                        while (3 > arrVer.length) arrVer.push("0");
-                        return _context4.a(2, 1e6 * parseInt(arrVer[0]) + 1e3 * parseInt(arrVer[1]) + parseInt(arrVer[2]));
-
-                      case 2:
-                        _context4.p = 2;
-                        _t = _context4.v;
-                        console.error(_t);
-                        return _context4.a(2, 99999999);
-                    }
-                }, _callee4, null, [ [ 0, 2 ] ]);
-            }));
-            return _getEditorVersion.apply(this, arguments);
-        }
-        function addContextMenuButtons() {
-            var buttonMain = new Asc.ButtonContextMenu;
-            buttonMain.text = "Edit citation";
-            buttonMain.addCheckers("Target", "Selection");
-            buttonMain.attachOnClick(_asyncToGenerator(_regenerator().m(function _callee3() {
-                var field, updatedField, cursorPos, updateFn, styleManager;
-                return _regenerator().w(function(_context3) {
-                    while (1) switch (_context3.n) {
-                      case 0:
-                        _context3.n = 1;
-                        return new Promise(function(resolve) {
-                            window.Asc.plugin.executeMethod("GetCurrentAddinField", null, resolve);
-                        });
-
-                      case 1:
-                        field = _context3.v;
-                        if (!(!field || !field.Value || field.Value.toLowerCase().indexOf("zotero_item") === -1)) {
-                            _context3.n = 2;
-                            break;
-                        }
-                        return _context3.a(2);
-
-                      case 2:
-                        _context3.n = 3;
-                        return citationService.showEditCitationWindow(field);
-
-                      case 3:
-                        updatedField = _context3.v;
-                        if (updatedField) {
-                            _context3.n = 4;
-                            break;
-                        }
-                        return _context3.a(2);
-
-                      case 4:
-                        showLoader();
-                        _context3.n = 5;
-                        return CursorService.getCursorPosition();
-
-                      case 5:
-                        cursorPos = _context3.v;
-                        updateFn = citationService.updateItem.bind(citationService, updatedField);
-                        styleManager = settings.getStyleManager();
-                        if (styleManager.getLastUsedFormat() === "note") {
-                            updateFn = citationService.updateItemInNotes.bind(citationService, updatedField, styleManager.getLastUsedNotesStyle());
-                        }
-                        updateFn().catch(function(error) {
-                            console.error(error);
-                            var message = translate("Failed to insert citation");
-                            if (typeof error === "string") {
-                                message += ". " + translate(error);
-                            }
-                            showError(message);
-                        }).finally(function() {
-                            hideLoader();
-                            CursorService.setCursorPosition(cursorPos);
-                        });
-
-                      case 6:
-                        return _context3.a(2);
-                    }
-                }, _callee3);
-            })));
-            Asc.Buttons.registerContextMenu();
         }
     })();
 });
