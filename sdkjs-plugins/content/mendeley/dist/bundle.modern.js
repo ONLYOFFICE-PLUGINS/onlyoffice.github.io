@@ -3070,23 +3070,21 @@ class CitationDocService {
         });
     }
     saveAsText() {
-        return this.getAddinMendeleyControls().then(function(arrFields) {
-            var count = arrFields.length;
-            if (!count) {
-                window.Asc.plugin.executeCommand("close", "");
-                return false;
-            }
-            return new Promise(function(resolve) {
-                arrFields.forEach(function(field) {
-                    window.Asc.plugin.executeMethod("RemoveFieldWrapper", [ field.InternalId ], function() {
-                        count--;
-                        if (!count) {
-                            resolve(true);
-                            window.Asc.plugin.executeCommand("close", "");
-                        }
-                    });
+        return new Promise(resolve => {
+            Asc.scope.citPrefix = _classPrivateFieldGet2(_citPrefix, this);
+            Asc.scope.bibPrefix = _classPrivateFieldGet2(_bibPrefix, this);
+            window.Asc.plugin.callCommand(function() {
+                var doc = Api.GetDocument();
+                var controls = doc.GetAllContentControls();
+                if (!controls || controls.length === 0) return;
+                controls.forEach(control => {
+                    var tag = control.GetTag();
+                    console.log("tag", tag);
+                    if (tag.indexOf(Asc.scope.citPrefix) === 0 || tag.indexOf(Asc.scope.bibPrefix) === 0) {
+                        control.Delete(true);
+                    }
                 });
-            });
+            }, false, false, resolve);
         });
     }
     updateAddinFields(fields) {
@@ -6968,8 +6966,7 @@ SelectCitationsComponent.prototype.count = function() {
         searchFilter = new SearchFilterComponents;
         selectCitation = new SelectCitationsComponent(displayNoneClass, loadMore, shouldLoadMore);
         saveAsTextBtn = new Button("saveAsTextBtn", {
-            variant: "secondary",
-            disabled: true
+            variant: "secondary"
         });
         insertLinkBtn = new Button("insertLinkBtn", {
             disabled: true
@@ -7169,7 +7166,10 @@ SelectCitationsComponent.prototype.count = function() {
             CursorService.getCursorPosition().then(function(pos) {
                 cursorPos = pos;
                 return citationService.insertSelectedCitations(items);
-            }).then(function(keys) {}).catch(function(error) {
+            }).then(function(keys) {
+                selectCitation.removeItems(keys);
+                return citationService.updateCslItems();
+            }).catch(function(error) {
                 console.error(error);
                 var message = translate("Failed to insert citation");
                 if (typeof error === "string") {
