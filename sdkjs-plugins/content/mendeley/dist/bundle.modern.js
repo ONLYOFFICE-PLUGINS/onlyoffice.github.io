@@ -294,429 +294,195 @@ Router.prototype.openSettings = function() {
     this._setCurrentRoute("settings");
 };
 
-var zoteroEnvironment = {
-    restApiUrl: "https://api.zotero.org/",
-    desktopApiUrl: "http://127.0.0.1:23119/api/"
-};
-
-({
-    _desktopVersion: function() {
-        if (window.navigator && window.navigator.userAgent.toLowerCase().indexOf("ascdesktopeditor") < 0) return false;
-        if (window.location && window.location.protocol == "file:") return true;
-        var src = window.document.currentScript ? window.document.currentScript.getAttribute("src") : "";
-        if (src && 0 == src.indexOf("file:///")) return true;
-        return false;
-    }()
-});
-
-var _maxRetries = new WeakMap;
-
-var _initialDelay = new WeakMap;
-
-var _maxDelay = new WeakMap;
-
-var _backoffFactor = new WeakMap;
-
-var _retryOn = new WeakMap;
-
-var _requestLimit = new WeakMap;
-
-var _requestWindow = new WeakMap;
-
-var _requestTimestamps = new WeakMap;
-
-var _requestCount = new WeakMap;
-
-var _lastRequestTime = new WeakMap;
-
-var _RateLimitedFetcher_brand = new WeakSet;
-
-class RateLimitedFetcher {
-    constructor() {
-        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-        _classPrivateMethodInitSpec(this, _RateLimitedFetcher_brand);
-        _classPrivateFieldInitSpec(this, _maxRetries, void 0);
-        _classPrivateFieldInitSpec(this, _initialDelay, void 0);
-        _classPrivateFieldInitSpec(this, _maxDelay, void 0);
-        _classPrivateFieldInitSpec(this, _backoffFactor, void 0);
-        _classPrivateFieldInitSpec(this, _retryOn, void 0);
-        _classPrivateFieldInitSpec(this, _requestLimit, void 0);
-        _classPrivateFieldInitSpec(this, _requestWindow, void 0);
-        _classPrivateFieldInitSpec(this, _requestTimestamps, void 0);
-        _classPrivateFieldInitSpec(this, _requestCount, void 0);
-        _classPrivateFieldInitSpec(this, _lastRequestTime, void 0);
-        _classPrivateFieldSet2(_maxRetries, this, options.maxRetries || 5);
-        _classPrivateFieldSet2(_initialDelay, this, options.initialDelay || 1e3);
-        _classPrivateFieldSet2(_maxDelay, this, options.maxDelay || 5e3);
-        _classPrivateFieldSet2(_backoffFactor, this, options.backoffFactor || 2);
-        _classPrivateFieldSet2(_retryOn, this, options.retryOn || [ 429, 502, 503, 504 ]);
-        _classPrivateFieldSet2(_requestLimit, this, 10);
-        _classPrivateFieldSet2(_requestWindow, this, 5e3);
-        _classPrivateFieldSet2(_requestTimestamps, this, []);
-        _classPrivateFieldSet2(_requestCount, this, 0);
-        _classPrivateFieldSet2(_lastRequestTime, this, 0);
+class MendeleyToCls {
+    static transform(item) {
+        if (item.citation_key) {
+            item.id = item.citation_key;
+            delete item.citation_key;
+        }
+        item.type = this._convertMendeleyTypeToCSLType(item.type);
+        this._convertMendeleyWriter(item, "author", "authors");
+        this._convertMendeleyWriter(item, "editor", "editors");
+        this._convertMendeleyWriter(item, "collection-editor", "editors");
+        this._convertMendeleyWriter(item, "container-author", "editors");
+        this._convertMendeleyWriter(item, "collection-editor", "series_editor");
+        this._convertMendeleyWriter(item, "container-author", "series_editor");
+        this._convertMendeleyWriter(item, "translators", "translators");
+        this._convertMendeleyDate(item, "issued");
+        this._convertMendeleyDate(item, "event-date");
+        if (item.revision || item.series_number) {
+            item.number = item.revision || item.series_number;
+            delete item.revision;
+            delete item.series_number;
+        }
+        if (item.series || item.source) {
+            item["container-title"] = item.series || item.source;
+            item["collection-title"] = item.series || item.source;
+            delete item.series;
+        }
+        if (item.type == "patent" && item.source) {
+            item.publisher = item.source;
+        }
+        delete item.source;
+        if (item.identifiers) {
+            if (item.identifiers.doi) item.DOI = item.identifiers.doi;
+            if (item.identifiers.isbn) item.ISBN = item.identifiers.isbn;
+            if (item.identifiers.issn) item.ISSN = item.identifiers.issn;
+            if (item.identifiers.pmid) item.PMID = item.identifiers.pmid;
+            delete item.identifiers;
+        }
+        if (item.keywords) {
+            item.keyword = item.keywords.toString();
+            delete item.keywords;
+        }
+        if (item.websites && item.websites.length > 0) {
+            item.URL = item.websites[0];
+            delete item.websites;
+        }
+        if (item.chapter) {
+            item["chapter-number"] = item.chapter;
+            delete item.chapter;
+        }
+        if (item.city) {
+            item["event-place"] = item.city;
+            item["publisher-place"] = item.city;
+            delete item.city;
+        }
+        if (item.short_title) {
+            item["short-title"] = item.short_title;
+            delete item.short_title;
+        }
+        return item;
     }
-    fetchWithRetry(url, headers, attempt) {
-        var _this = this;
-        return _asyncToGenerator(function*() {
-            try {
-                yield _assertClassBrand(_RateLimitedFetcher_brand, _this, _checkAndApplyRateLimit).call(_this);
-                var response = yield fetch(url, {
-                    headers: headers
-                });
-                if (response.ok) {
-                    return response;
-                }
-                if (_classPrivateFieldGet2(_retryOn, _this).includes(response.status) && attempt < _classPrivateFieldGet2(_maxRetries, _this)) {
-                    var delay = _assertClassBrand(_RateLimitedFetcher_brand, _this, _calculateDelay).call(_this, attempt, response);
-                    console.log("Attempt ".concat(attempt + 1, "/").concat(_classPrivateFieldGet2(_maxRetries, _this), " failed with ").concat(response.status, ". Retrying in ").concat(delay, "ms"));
-                    yield _assertClassBrand(_RateLimitedFetcher_brand, _this, _delay).call(_this, delay);
-                    return _this.fetchWithRetry(url, headers, attempt + 1);
-                }
-                throw new Error("".concat(response.status, " ").concat(response.statusText));
-            } catch (error) {
-                if (attempt >= _classPrivateFieldGet2(_maxRetries, _this)) {
-                    var message = "";
-                    if (error instanceof Error) {
-                        message = error.message;
-                    }
-                    throw new Error("Request failed after ".concat(_classPrivateFieldGet2(_maxRetries, _this), " attempts: ").concat(message));
-                }
-                if (attempt < _classPrivateFieldGet2(_maxRetries, _this)) {
-                    var _delay2 = _assertClassBrand(_RateLimitedFetcher_brand, _this, _calculateDelay).call(_this, attempt);
-                    console.log("Network error on attempt ".concat(attempt + 1, ". Retrying in ").concat(_delay2, "ms"));
-                    yield _assertClassBrand(_RateLimitedFetcher_brand, _this, _delay).call(_this, _delay2);
-                    return _this.fetchWithRetry(url, headers, attempt + 1);
-                }
-                throw error;
+    static _convertMendeleyTypeToCSLType(str) {
+        str = str.toLowerCase();
+        switch (str) {
+          case "bill":
+          case "book":
+          case "patent":
+          case "report":
+          case "statute":
+          case "thesis":
+            return str;
+
+          case "book_section":
+            return "chapter";
+
+          case "conference_proceedings":
+            return "paper-conference";
+
+          case "encyclopedia_article":
+            return "entry-encyclopedia";
+
+          case "film":
+            return "motion_picture";
+
+          case "hearing":
+            return "speech";
+
+          case "journal":
+            return "article-journal";
+
+          case "magazine_article":
+            return "article-magazine";
+
+          case "newspaper_article":
+            return "article-newspaper";
+
+          case "television_broadcast":
+            return "broadcast";
+
+          case "web_page":
+            return "webpage";
+
+          case "case":
+          case "computer_program":
+          case "generic":
+          case "working_paper":
+          default:
+            return "article";
+        }
+    }
+    static _convertMendeleyWriter(item, fieldTo, fieldFrom) {
+        if (!item[fieldFrom] || item[fieldFrom].length <= 0) return;
+        if (!item[fieldTo]) item[fieldTo] = [];
+        for (var i = 0; i < item[fieldFrom].length; i++) {
+            item[fieldTo].push({
+                given: item[fieldFrom][i].first_name,
+                family: item[fieldFrom][i].last_name
+            });
+        }
+        delete item[fieldFrom];
+    }
+    static _convertMendeleyDate(item, field) {
+        if (!item.year) return;
+        var date = [ item.year ];
+        delete item.year;
+        if (item.month) {
+            date.push(item.month);
+            delete item.month;
+            if (item.day) {
+                date.push(item.day);
+                delete item.day;
             }
-        })();
-    }
-    resetCounter() {
-        _classPrivateFieldSet2(_requestTimestamps, this, []);
-        _classPrivateFieldSet2(_requestCount, this, 0);
-        _classPrivateFieldSet2(_lastRequestTime, this, 0);
-    }
-}
-
-function _cleanupOldRequests() {
-    var now = Date.now();
-    _classPrivateFieldSet2(_requestTimestamps, this, _classPrivateFieldGet2(_requestTimestamps, this).filter(timestamp => now - timestamp < _classPrivateFieldGet2(_requestWindow, this)));
-}
-
-function _checkAndApplyRateLimit() {
-    return _checkAndApplyRateLimit2.apply(this, arguments);
-}
-
-function _checkAndApplyRateLimit2() {
-    _checkAndApplyRateLimit2 = _asyncToGenerator(function*() {
-        var _this$requestCount;
-        _assertClassBrand(_RateLimitedFetcher_brand, this, _cleanupOldRequests).call(this);
-        if (_classPrivateFieldGet2(_requestTimestamps, this).length >= _classPrivateFieldGet2(_requestLimit, this)) {
-            var oldestRequest = _classPrivateFieldGet2(_requestTimestamps, this)[0];
-            var timeSinceOldest = Date.now() - oldestRequest;
-            if (timeSinceOldest < _classPrivateFieldGet2(_requestWindow, this)) {
-                var waitTime = 500 * _classPrivateFieldGet2(_requestTimestamps, this).length - _classPrivateFieldGet2(_requestLimit, this);
-                if (waitTime < 0) {
-                    waitTime = 0;
-                    console.warn("Wait time is less than 0");
-                }
-                console.log("Rate limit prevention: ".concat(_classPrivateFieldGet2(_requestTimestamps, this).length, " requests in last ").concat(_classPrivateFieldGet2(_requestWindow, this), "ms. Waiting ").concat(waitTime, "ms..."));
-                yield _assertClassBrand(_RateLimitedFetcher_brand, this, _delay).call(this, waitTime);
-                _assertClassBrand(_RateLimitedFetcher_brand, this, _cleanupOldRequests).call(this);
-            }
         }
-        _classPrivateFieldGet2(_requestTimestamps, this).push(Date.now());
-        _classPrivateFieldSet2(_requestCount, this, (_this$requestCount = _classPrivateFieldGet2(_requestCount, this), 
-        _this$requestCount++, _this$requestCount));
-        var now = Date.now();
-        var timeSinceLastRequest = now - _classPrivateFieldGet2(_lastRequestTime, this);
-        var minDelay = 100;
-        if (timeSinceLastRequest < minDelay && _classPrivateFieldGet2(_lastRequestTime, this) > 0) {
-            yield _assertClassBrand(_RateLimitedFetcher_brand, this, _delay).call(this, minDelay - timeSinceLastRequest);
-        }
-        _classPrivateFieldSet2(_lastRequestTime, this, Date.now());
-    });
-    return _checkAndApplyRateLimit2.apply(this, arguments);
-}
-
-function _calculateDelay(attempt) {
-    var response = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-    var retryAfterHeader = response === null || response === void 0 ? void 0 : response.headers.get("Retry-After");
-    if (retryAfterHeader) {
-        var seconds = parseInt(retryAfterHeader);
-        if (seconds > 86400) {
-            var timestamp = parseInt(retryAfterHeader) * 1e3;
-            return Math.max(0, timestamp - Date.now());
-        }
-        return seconds * 1e3;
+        item[field] = {
+            "date-parts": [ date ]
+        };
     }
-    var exponentialDelay = _classPrivateFieldGet2(_initialDelay, this) * Math.pow(_classPrivateFieldGet2(_backoffFactor, this), attempt);
-    var jitter = Math.random() * 1e3;
-    return Math.min(exponentialDelay + jitter, _classPrivateFieldGet2(_maxDelay, this));
-}
-
-function _delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 class Sdk {
     constructor(authFlow) {
         this._mendeleySdk = MendeleySDK(authFlow);
-        this._apiKey = null;
         this._userId = 0;
         this._userGroups = [];
-        this._isOnlineAvailable = true;
-        this._fetcher = new RateLimitedFetcher({
-            maxRetries: 5,
-            initialDelay: 5e3
-        });
-        this.ZOTERO_API_VERSION = "3";
-        this.USER_AGENT = "AscDesktopEditor";
-        this.DEFAULT_FORMAT = "csljson";
-        this.STORAGE_KEYS = {
-            USER_ID: "zoteroUserId",
-            API_KEY: "zoteroApiKey"
-        };
-        this.API_PATHS = {
-            USERS: "users",
-            GROUPS: "groups",
-            ITEMS: "items",
-            KEYS: "keys"
-        };
-    }
-    _getBaseUrl() {
-        return this._isOnlineAvailable ? zoteroEnvironment.restApiUrl : zoteroEnvironment.desktopApiUrl;
-    }
-    _getDesktopRequest(url) {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            window.AscSimpleRequest.createRequest({
-                url: url,
-                method: "GET",
-                headers: {
-                    "Zotero-API-Version": self.ZOTERO_API_VERSION,
-                    "User-Agent": self.USER_AGENT
-                },
-                complete: resolve,
-                error: function error(_error) {
-                    if (_error.statusCode === -102) {
-                        _error.statusCode = 404;
-                        _error.message = "Connection to Zotero failed. Make sure Zotero is running";
-                    }
-                    reject(_error);
-                }
-            });
-        });
-    }
-    _getOnlineRequest(url) {
-        var headers = {
-            "Zotero-API-Version": this.ZOTERO_API_VERSION,
-            "Zotero-API-Key": this._apiKey || ""
-        };
-        return fetch(url, {
-            headers: headers
-        }).then(function(response) {
-            if (!response.ok) {
-                var message = response.status + " " + response.statusText;
-                console.error(message);
-                throw new Error(message);
-            }
-            return response;
-        }).catch(function(error) {
-            if (typeof error === "object") {
-                error.message = "Connection to Zotero failed";
-            }
-            throw error;
-        });
-    }
-    _getRequestWithOfflineSupport(url) {
-        return this._isOnlineAvailable ? this._getOnlineRequest(url) : this._getDesktopRequest(url.href);
-    }
-    _buildGetRequest(path, queryParams) {
-        queryParams = queryParams || {};
-        var url = new URL(path, this._getBaseUrl());
-        Object.keys(queryParams).forEach(function(key) {
-            if (queryParams[key] !== undefined && queryParams[key] !== null) {
-                url.searchParams.append(key, queryParams[key]);
-            }
-        });
-        return this._getRequestWithOfflineSupport(url);
-    }
-    _parseLinkHeader(headerValue) {
-        var links = {};
-        var linkHeaderRegex = /<(.*?)>; rel="(.*?)"/g;
-        if (!headerValue) return links;
-        var match;
-        while ((match = linkHeaderRegex.exec(headerValue.trim())) !== null) {
-            links[match[2]] = match[1];
-        }
-        return links;
-    }
-    _parseDesktopItemsResponse(promise, resolve, reject, id) {
-        return promise.then(function(response) {
-            return {
-                items: JSON.parse(response.responseText),
-                id: id
-            };
-        }).then(resolve).catch(reject);
-    }
-    _parseItemsResponse(promise, resolve, reject, id) {
-        var self = this;
-        return promise.then(function(response) {
-            return Promise.all([ response.json(), response ]);
-        }).then(function(results) {
-            var json = results[0];
-            var response = results[1];
-            var links = self._parseLinkHeader(response.headers.get("Link") || "");
-            var result = {
-                items: json,
-                id: id
-            };
-            if (typeof json === "object" && json.items) {
-                result.items = json.items;
-            }
-            if (links.next) {
-                result.next = function() {
-                    return new Promise(function(rs, rj) {
-                        self._parseItemsResponse(self._getOnlineRequest(new URL(links.next)), rs, rj, id);
-                    });
-                };
-            }
-            resolve(result);
-        }).catch(reject);
-    }
-    _parseResponse(promise, resolve, reject, id) {
-        if (this._isOnlineAvailable) {
-            var fetchPromise = promise;
-            this._parseItemsResponse(fetchPromise, resolve, reject, id);
-        } else {
-            var ascSimplePromise = promise;
-            this._parseDesktopItemsResponse(ascSimplePromise, resolve, reject, id);
-        }
     }
     getItems(search, itemsID, format) {
-        var self = this;
-        format = format || self.DEFAULT_FORMAT;
+        var promise = Promise.resolve({
+            items: []
+        });
         if (search) {
-            return this._mendeleySdk.documents.search({
+            promise = this._mendeleySdk.documents.search({
                 query: search,
                 limit: 20,
                 view: "bib"
             });
-        } else if (itemsID) ; else {
-            return this._mendeleySdk.documents.list({
-                limit: 20,
-                view: "bib"
+        } else if (itemsID || format) ; else {
+            promise = this._mendeleySdk.documents.list({
+                limit: 16,
+                view: "bib",
+                sort: "last_modified",
+                order: "desc"
             });
         }
-        return new Promise(function(resolve, reject) {
-            var queryParams = {
-                format: format,
-                itemType: "-attachment"
-            };
-            if (search) {
-                queryParams.q = search;
-            } else if (itemsID) {
-                queryParams.itemKey = itemsID.join(",");
-            } else {
-                queryParams.limit = 20;
-            }
-            var path = self.API_PATHS.USERS + "/" + self._userId + "/" + self.API_PATHS.ITEMS;
-            var request = self._buildGetRequest(path, queryParams);
-            return self._parseResponse(request, resolve, reject, self._userId);
+        return promise.then(response => {
+            console.warn(response.items);
+            response.items.forEach(MendeleyToCls.transform.bind(MendeleyToCls));
+            return response;
         });
     }
-    getGroupItems(search, groupId, itemsID, format) {
-        var self = this;
-        format = format || self.DEFAULT_FORMAT;
+    getGroupItems(search, groupId, itemsID) {
         return new Promise(function(resolve, reject) {
-            var queryParams = {
-                format: format
-            };
-            if (search) {
-                queryParams.q = search;
-            } else if (itemsID) {
-                queryParams.itemKey = itemsID.join(",");
-            }
-            var path = self.API_PATHS.GROUPS + "/" + groupId + "/" + self.API_PATHS.ITEMS;
-            var request = self._buildGetRequest(path, queryParams);
-            return self._parseResponse(request, resolve, reject, groupId);
+            resolve({
+                items: []
+            });
         });
     }
     getUserGroups() {
         var self = this;
+        this._mendeleySdk.folders.list({
+            limit: 6
+        }).then(response => {
+            console.error(response);
+        });
         return new Promise(function(resolve, reject) {
             if (self._userGroups.length > 0) {
                 resolve(self._userGroups);
                 return;
             }
-            var path = self.API_PATHS.USERS + "/" + self._userId + "/groups";
-            self._buildGetRequest(path).then(function(response) {
-                if (self._isOnlineAvailable) {
-                    var fetchResponse = response;
-                    if (!fetchResponse.ok) {
-                        throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
-                    }
-                    return fetchResponse.json();
-                }
-                var ascSimpleResponse = response;
-                return JSON.parse(ascSimpleResponse.responseText);
-            }).then(function(groups) {
-                self._userGroups = groups.map(function(group) {
-                    return {
-                        id: group.id,
-                        name: group.data.name
-                    };
-                });
-                resolve(self._userGroups);
-            }).catch(reject);
+            resolve(self._userGroups);
         });
-    }
-    setApiKey(key) {
-        var self = this;
-        var path = this.API_PATHS.KEYS + "/" + key;
-        return this._buildGetRequest(path).then(function(response) {
-            var fetchResponse = response;
-            if (!fetchResponse.ok) {
-                throw new Error(fetchResponse.status + " " + fetchResponse.statusText);
-            }
-            return fetchResponse.json();
-        }).then(function(keyData) {
-            self._saveSettings(keyData.userID, key);
-            return true;
-        });
-    }
-    _applySettings(userId, apiKey) {
-        this._userId = userId;
-        this._apiKey = apiKey;
-    }
-    _saveSettings(userId, apiKey) {
-        this._applySettings(userId, apiKey);
-        localStorage.setItem(this.STORAGE_KEYS.USER_ID, String(userId));
-        localStorage.setItem(this.STORAGE_KEYS.API_KEY, apiKey);
-    }
-    hasSettings() {
-        var userId = localStorage.getItem(this.STORAGE_KEYS.USER_ID);
-        var apiKey = localStorage.getItem(this.STORAGE_KEYS.API_KEY);
-        if (userId && apiKey) {
-            this._applySettings(Number(userId), apiKey);
-            return true;
-        }
-        return false;
-    }
-    clearSettings() {
-        localStorage.removeItem(this.STORAGE_KEYS.USER_ID);
-        localStorage.removeItem(this.STORAGE_KEYS.API_KEY);
-        this._userGroups = [];
-        this._userId = 0;
-        this._apiKey = null;
-    }
-    getUserId() {
-        return this._userId;
-    }
-    setIsOnlineAvailable(isOnline) {
-        this._isOnlineAvailable = isOnline;
     }
 }
 
@@ -3278,7 +3044,7 @@ class CitationDocService {
             Value: _classPrivateFieldGet2(_bibPrefix, this) + value + _classPrivateFieldGet2(_bibSuffix, this),
             Content: formattingPositions.text
         };
-        return _assertClassBrand(_CitationDocService_brand, this, _addAddinField).call(this, field).then(function() {
+        return _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, field).then(function() {
             if (!formattingPositions.formatting.length) return;
             return CslDocFormatter.formatAfterInsert(formattingPositions.formatting);
         });
@@ -3294,7 +3060,7 @@ class CitationDocService {
             if (notesStyle && [ "footnotes", "endnotes" ].indexOf(notesStyle) !== -1) {
                 yield _assertClassBrand(_CitationDocService_brand, _this, _addNote).call(_this, notesStyle);
             }
-            return _assertClassBrand(_CitationDocService_brand, _this, _addAddinField).call(_this, field).then(function() {
+            return _assertClassBrand(_CitationDocService_brand, _this, _addContentControl).call(_this, field).then(function() {
                 if (!formattingPositions.formatting.length) return;
                 return CslDocFormatter.formatAfterInsert(formattingPositions.formatting);
             });
@@ -3368,7 +3134,7 @@ class CitationDocService {
                 if (!isReferenceSelected) continue;
                 yield _assertClassBrand(_CitationDocService_brand, _this3, _removeSuperscript).call(_this3);
                 yield _assertClassBrand(_CitationDocService_brand, _this3, _removeSelectedContent).call(_this3);
-                yield _assertClassBrand(_CitationDocService_brand, _this3, _addAddinField).call(_this3, field);
+                yield _assertClassBrand(_CitationDocService_brand, _this3, _addContentControl).call(_this3, field);
                 var formatting = formats.get(field.FieldId);
                 if (!formatting) continue;
                 yield CslDocFormatter.formatAfterInsert(formatting.formatting);
@@ -3386,7 +3152,7 @@ class CitationDocService {
                 if (!selectFieldResult) continue;
                 yield _assertClassBrand(_CitationDocService_brand, _this4, _removeSelectedContent).call(_this4);
                 yield _assertClassBrand(_CitationDocService_brand, _this4, _addNote).call(_this4, notesStyle);
-                yield _assertClassBrand(_CitationDocService_brand, _this4, _addAddinField).call(_this4, field);
+                yield _assertClassBrand(_CitationDocService_brand, _this4, _addContentControl).call(_this4, field);
                 var formatting = formats.get(field.FieldId);
                 if (!formatting) continue;
                 yield CslDocFormatter.formatAfterInsert(formatting.formatting);
@@ -3411,7 +3177,7 @@ class CitationDocService {
                 if (!isReferenceSelected) continue;
                 yield _assertClassBrand(_CitationDocService_brand, _this5, _removeSelectedContent).call(_this5);
                 yield _assertClassBrand(_CitationDocService_brand, _this5, _addNote).call(_this5, notesStyle);
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _addAddinField).call(_this5, field);
+                yield _assertClassBrand(_CitationDocService_brand, _this5, _addContentControl).call(_this5, field);
                 var formatting = formats.get(field.FieldId);
                 if (!formatting) continue;
                 yield CslDocFormatter.formatAfterInsert(formatting.formatting);
@@ -3425,9 +3191,16 @@ class CitationDocService {
     }
 }
 
-function _addAddinField(field) {
+function _addContentControl(field) {
+    var contentControlProperties = {
+        Id: 7,
+        Tag: "test tag",
+        Lock: 3,
+        PlaceHolderText: "Content Control"
+    };
     return new Promise(function(resolve) {
         window.Asc.plugin.executeMethod("AddAddinField", [ field ], resolve);
+        window.Asc.plugin.executeMethod("AddContentControl", [ 2, contentControlProperties ]);
     });
 }
 
@@ -5097,55 +4870,6 @@ class AdditionalWindow {
             };
         });
     }
-    showEditWindow(content) {
-        var _this = this;
-        _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
-        var variation = {
-            name: "Zotero",
-            url: "edit-window.html",
-            description: window.Asc.plugin.tr("Edit citation"),
-            isVisual: true,
-            buttons: [ {
-                text: window.Asc.plugin.tr("Save"),
-                primary: true,
-                isViewer: false
-            }, {
-                text: window.Asc.plugin.tr("Cancel"),
-                primary: false
-            } ],
-            isModal: false,
-            EditorsSupport: [ "word" ],
-            size: [ 380, 150 ],
-            isViewer: true,
-            isDisplayedInViewer: false,
-            isInsideMode: false
-        };
-        _assertClassBrand(_AdditionalWindow_brand, this, _onShow).call(this, variation, content, "default");
-        _classPrivateFieldGet2(_window, this).show(variation);
-        return new Promise((resolve, reject) => {
-            window.Asc.plugin.button = function() {
-                var _ref = _asyncToGenerator(function*(buttonId, windowId) {
-                    var element = yield new Promise(resolve => {
-                        if (!_classPrivateFieldGet2(_window, _this)) {
-                            resolve(null);
-                            return;
-                        }
-                        _classPrivateFieldGet2(_window, _this).attachEvent("onSaveFields", resolve);
-                        _classPrivateFieldGet2(_window, _this).command("onClickSave");
-                    });
-                    if (buttonId === 0) {
-                        resolve(element);
-                    } else {
-                        resolve(null);
-                    }
-                    _assertClassBrand(_AdditionalWindow_brand, _this, _hide).call(_this);
-                });
-                return function(_x, _x2) {
-                    return _ref.apply(this, arguments);
-                };
-            }();
-        });
-    }
     showWarningWindow(description, text) {
         _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
         var variation = {
@@ -6669,7 +6393,8 @@ function SearchFilterComponents() {
     });
     this._filterButton = new Button("filterButton", {
         variant: "secondary-icon",
-        size: "small"
+        size: "small",
+        disabled: true
     });
     this._librarySelectList = new SelectBox("librarySelectList", {
         placeholder: translate("No items selected"),
@@ -6707,17 +6432,14 @@ SearchFilterComponents.prototype.addGroups = function(groups) {
     var savedGroups = localStorage.getItem("selectedGroups");
     var selectedItems = savedGroups ? JSON.parse(savedGroups).map(function(id) {
         return id.toString();
-    }) : [ "my_library", "group_libraries" ];
+    }) : [ "all_collections" ];
     var hasSelected = false;
     groups.forEach(function(group) {
         group.id = String(group.id);
     });
     var customGroups = [ {
-        id: "my_library",
-        name: translate("My Library")
-    }, {
-        id: "group_libraries",
-        name: translate("Group Libraries")
+        id: "all_collections",
+        name: translate("All collections")
     } ];
     !hasSelected && customGroups.forEach(function(group) {
         if (selectedItems.indexOf(group.id) !== -1) {
@@ -6730,7 +6452,7 @@ SearchFilterComponents.prototype.addGroups = function(groups) {
         }
     });
     if (!hasSelected) {
-        selectedItems = [ "my_library", "group_libraries" ];
+        selectedItems = [ "all_collections" ];
     }
     var addGroupToSelectBox = function addGroupToSelectBox(id, name, selected) {
         if (typeof id === "number") {
@@ -6747,7 +6469,7 @@ SearchFilterComponents.prototype.addGroups = function(groups) {
         return;
     }
     this._librarySelectList.addSeparator();
-    var selected = selectedItems.indexOf("group_libraries") !== -1;
+    var selected = selectedItems.indexOf("all_collections") !== -1;
     for (var i = 0; i < groups.length; i++) {
         var _id = groups[i].id;
         var _name = groups[i].name;
@@ -6803,19 +6525,16 @@ SearchFilterComponents.prototype._selectedGroupsWatcher = function(customGroups,
         });
         var bWasCustom = customIds.indexOf(String(current)) !== -1;
         if (bWasCustom) {
-            if (current === "group_libraries") {
+            if (current === "all_collections") {
                 if (bEnabled) {
-                    aGroupsToSave.push("group_libraries");
+                    aGroupsToSave.push("all_collections");
                     self._librarySelectList.selectItems(ids, true);
                 } else {
                     self._librarySelectList.unselectItems(ids, true);
                 }
-                if (values.indexOf("my_library") !== -1) {
-                    aGroupsToSave.push("my_library");
-                }
             } else {
-                if (values.indexOf("group_libraries") !== -1) {
-                    aGroupsToSave.push("group_libraries");
+                if (values.indexOf("all_collections") !== -1) {
+                    aGroupsToSave.push("all_collections");
                     if (bEnabled) {
                         aGroupsToSave.push(current);
                     }
@@ -6828,15 +6547,12 @@ SearchFilterComponents.prototype._selectedGroupsWatcher = function(customGroups,
                 return values.indexOf(id) !== -1;
             });
             if (bAllGroupsSelected) {
-                self._librarySelectList.selectItems("group_libraries", true);
-                aGroupsToSave.push("group_libraries");
-                if (values.indexOf("my_library") !== -1) {
-                    aGroupsToSave.push("my_library");
-                }
+                self._librarySelectList.selectItems("all_collections", true);
+                aGroupsToSave.push("all_collections");
             } else {
-                self._librarySelectList.unselectItems("group_libraries", true);
+                self._librarySelectList.unselectItems("all_collections", true);
                 aGroupsToSave = values.filter(function(value) {
-                    return value !== "group_libraries";
+                    return value !== "all_collections";
                 });
             }
         }
@@ -7351,18 +7067,12 @@ SelectCitationsComponent.prototype.count = function() {
             if (isInit) return;
             isInit = true;
             Loader.show();
-            Promise.all([ settings.init() ]).then(function() {
+            Promise.all([ loadGroups(), settings.init() ]).then(function() {
                 Loader.hide();
                 showCitationsAtTheStartFromMyLibrary();
             });
         });
         window.Asc.plugin.onTranslate = applyTranslations;
-        getEditorVersion().then(editorVersion => {
-            window.Asc.scope.editorVersion = editorVersion;
-            if (editorVersion >= 9003e3) {
-                addContextMenuButtons();
-            }
-        });
     };
     window.OAuthError = function(error) {
         loginPage.onAuthCallback(error);
@@ -7384,6 +7094,12 @@ SelectCitationsComponent.prototype.count = function() {
             }
         }).finally(() => {
             libLoader.hide();
+        });
+    }
+    function loadGroups() {
+        return sdk.getUserGroups().then(function(groups) {
+            searchFilter.addGroups(groups);
+            return groups;
         });
     }
     function addEventListeners() {
@@ -7713,6 +7429,7 @@ SelectCitationsComponent.prototype.count = function() {
             if (isGroup && res && res.next) lastSearch.groups.push(res); else lastSearch.obj = res && res.items.length ? res : null;
         }
         var fillUrisFromId = function fillUrisFromId(item) {
+            if (!item.id) return item;
             var slashFirstIndex = item.id.indexOf("/") + 1;
             var slashLastIndex = item.id.lastIndexOf("/") + 1;
             var httpIndex = item.id.indexOf("http");
@@ -7749,62 +7466,6 @@ SelectCitationsComponent.prototype.count = function() {
                 insertLinkBtn.setText(translate("Insert Citation"));
             }
         }
-    }
-    function getEditorVersion() {
-        return _getEditorVersion.apply(this, arguments);
-    }
-    function _getEditorVersion() {
-        _getEditorVersion = _asyncToGenerator(function*() {
-            try {
-                var version = yield new Promise(resolve => {
-                    Asc.plugin.executeMethod("GetVersion", [], resolve);
-                });
-                if ("develop" == version) version = "99.99.99";
-                var arrVer = version.split(".");
-                while (3 > arrVer.length) arrVer.push("0");
-                return 1e6 * parseInt(arrVer[0]) + 1e3 * parseInt(arrVer[1]) + parseInt(arrVer[2]);
-            } catch (error) {
-                console.error(error);
-                return 99999999;
-            }
-        });
-        return _getEditorVersion.apply(this, arguments);
-    }
-    function addContextMenuButtons() {
-        var buttonMain = new Asc.ButtonContextMenu;
-        buttonMain.text = "Edit citation";
-        buttonMain.addCheckers("Target", "Selection");
-        buttonMain.attachOnClick(_asyncToGenerator(function*() {
-            var field = yield new Promise(resolve => {
-                window.Asc.plugin.executeMethod("GetCurrentAddinField", null, resolve);
-            });
-            if (!field || !field.Value || field.Value.toLowerCase().indexOf("zotero_item") === -1) {
-                return;
-            }
-            var updatedField = yield citationService.showEditCitationWindow(field);
-            if (!updatedField) {
-                return;
-            }
-            showLoader();
-            var cursorPos = yield CursorService.getCursorPosition();
-            var updateFn = citationService.updateItem.bind(citationService, updatedField);
-            var styleManager = settings.getStyleManager();
-            if (styleManager.getLastUsedFormat() === "note") {
-                updateFn = citationService.updateItemInNotes.bind(citationService, updatedField, styleManager.getLastUsedNotesStyle());
-            }
-            updateFn().catch(function(error) {
-                console.error(error);
-                var message = translate("Failed to insert citation");
-                if (typeof error === "string") {
-                    message += ". " + translate(error);
-                }
-                showError(message);
-            }).finally(function() {
-                hideLoader();
-                CursorService.setCursorPosition(cursorPos);
-            });
-        }));
-        Asc.Buttons.registerContextMenu();
     }
 })();
 //# sourceMappingURL=bundle.modern.js.map
