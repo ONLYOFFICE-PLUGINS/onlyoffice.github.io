@@ -34,11 +34,13 @@
 	{ "name": "onlydraw", "discussion": "" },
 	{ "name": "pomodoro", "discussion": "" },
 	{ "name": "videoembedder", "discussion": "" },
+	{ "name": "mathtype", "discussion": "" },
 	{ "name": "mathpix", "discussion": "" },
 	{ "name": "icons", "discussion": "" },
 	{ "name": "datepicker", "discussion": "" },
 	{ "name": "news", "discussion": "" },
 	{ "name": "texthighlighter", "discussion": "" },
 	{ "name": "bergamot", "discussion": "" },
-	{ "name": "textcleaner", "discussion": "" }
+	{ "name": "textcleaner", "discussion": "" },
+	{ "name": "odata", "discussion": "" }
 ]
