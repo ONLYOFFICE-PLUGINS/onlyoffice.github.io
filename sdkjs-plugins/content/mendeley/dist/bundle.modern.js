@@ -451,14 +451,13 @@ class Sdk {
         } else if (itemsID || format) ; else {
             promise = this._mendeleySdk.documents.list({
                 limit: 16,
-                view: "all",
+                view: "bib",
                 sort: "last_modified",
                 order: "desc"
             });
         }
         return promise.then(response => {
             response.items.forEach(MendeleyToCls.transform.bind(MendeleyToCls));
-            console.warn(response);
             return response;
         });
     }
@@ -3049,21 +3048,54 @@ class CitationDocService {
         })();
     }
     getAddinMendeleyControls() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            _assertClassBrand(_CitationDocService_brand, self, _getAllContentControls).call(self).then(function(arrFields) {
-                try {
-                    if (arrFields.length) {
-                        arrFields = arrFields.filter(function(field) {
-                            return field.Tag.indexOf(_classPrivateFieldGet2(_citPrefix, self)) !== -1 || field.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, self)) !== -1;
-                        });
+        var _this3 = this;
+        return _asyncToGenerator(function*() {
+            var self = _this3;
+            try {
+                var arrFields = yield _assertClassBrand(_CitationDocService_brand, self, _getAllContentControls).call(self);
+                var filteredFields = [];
+                var internalIds = [];
+                for (var i = 0; i < arrFields.length; i++) {
+                    var field = arrFields[i];
+                    var bHasCitPrefix = field.Tag.indexOf(_classPrivateFieldGet2(_citPrefix, self)) !== -1;
+                    var bHasBibPrefix = field.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, self)) !== -1;
+                    if (bHasCitPrefix || bHasBibPrefix) {
+                        filteredFields.push(field);
+                        internalIds.push(field.InternalId);
                     }
-                } catch (e) {
-                    reject(e);
                 }
-                resolve(arrFields);
-            });
-        });
+                Asc.scope.internalIds = internalIds;
+                var placeholderTexts = yield new Promise(resolve => Asc.plugin.callCommand(() => {
+                    var placeholderTexts = [];
+                    var doc = Api.GetDocument();
+                    doc.GetAllContentControls().forEach(control => {
+                        var id = control.GetInternalId();
+                        var index = Asc.scope.internalIds.indexOf(id);
+                        if (index !== -1) {
+                            var text = control.GetRange(0, Number.MAX_SAFE_INTEGER).GetText();
+                            while (text.lastIndexOf("\n") === text.length - 1) {
+                                text = text.slice(0, -1);
+                            }
+                            while (text.lastIndexOf("\r") === text.length - 1) {
+                                text = text.slice(0, -1);
+                            }
+                            text = text.trim();
+                            placeholderTexts[index] = text;
+                        }
+                    });
+                    return placeholderTexts;
+                }, false, false, resolve));
+                filteredFields.forEach((field, index) => {
+                    if (placeholderTexts[index]) {
+                        field.PlaceHolderText = placeholderTexts[index];
+                    }
+                });
+                return filteredFields;
+            } catch (e) {
+                console.error(e);
+                return [];
+            }
+        })();
     }
     saveAsText() {
         return new Promise(resolve => {
@@ -3083,71 +3115,63 @@ class CitationDocService {
         });
     }
     updateAddinFields(controls) {
-        var _this3 = this;
+        var _this4 = this;
         return _asyncToGenerator(function*() {
             var _loop = function* _loop(i) {
                 var id = controls[i].InternalId;
                 if (!id) {
-                    return 1;
+                    return 0;
                 }
                 yield window.Asc.plugin.executeMethod("SelectContentControl", [ id ]);
-                var tag = _classPrivateFieldGet2(_citPrefix, _this3) + "_v3_" + _assertClassBrand(_CitationDocService_brand, _this3, _base64Encode).call(_this3, controls[i].Tag);
+                var tag = controls[i].Tag;
+                if (tag.indexOf(_classPrivateFieldGet2(_bibPrefix, _this4)) !== 0) {
+                    tag = _classPrivateFieldGet2(_citPrefix, _this4) + "_v3_" + _assertClassBrand(_CitationDocService_brand, _this4, _base64Encode).call(_this4, controls[i].Tag);
+                }
                 yield new Promise(resolve => {
                     Asc.scope.tag = tag;
                     Asc.scope.id = controls[i].InternalId;
+                    Asc.scope.placeholderText = controls[i].PlaceHolderText;
                     Asc.plugin.callCommand(() => {
                         var doc = Api.GetDocument();
                         var controls = doc.GetAllContentControls();
                         var control = controls.find(c => c.GetInternalId() === Asc.scope.id);
                         if (control) {
                             control.SetTag(Asc.scope.tag);
-                            control.SetPlaceholderText("");
+                            if (Asc.scope.placeholderText) {
+                                control.SetPlaceholderText("");
+                            }
                         }
                     }, false, false, resolve);
                 });
+                if (!controls[i].PlaceHolderText) {
+                    return 0;
+                }
                 yield new Promise(function(resolve) {
                     window.Asc.plugin.executeMethod("PasteHtml", [ controls[i].PlaceHolderText ], resolve);
                 });
-            };
+            }, _ret;
             for (var i = 0; i < controls.length; i++) {
-                if (yield* _loop(i)) continue;
+                _ret = yield* _loop(i);
+                if (_ret === 0) continue;
             }
         })();
     }
     convertNotesToText(fields) {
-        var _this4 = this;
+        var _this5 = this;
         return _asyncToGenerator(function*() {
-            var formats = _assertClassBrand(_CitationDocService_brand, _this4, _makeFormattingPositions).call(_this4, fields);
+            var formats = _assertClassBrand(_CitationDocService_brand, _this5, _makeFormattingPositions).call(_this5, fields);
             for (var i = 0; i < fields.length; i++) {
                 var field = fields[i];
                 if (!field.InternalId) {
                     console.error("Field id is not defined");
                     continue;
                 }
-                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this4, _selectField).call(_this4, field.InternalId);
-                if (!selectFieldResult) continue;
-                var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this4, _selectFieldReference).call(_this4);
-                if (!isReferenceSelected) continue;
-                yield _assertClassBrand(_CitationDocService_brand, _this4, _removeSuperscript).call(_this4);
-                yield _assertClassBrand(_CitationDocService_brand, _this4, _removeSelectedContent).call(_this4);
-                yield _assertClassBrand(_CitationDocService_brand, _this4, _addContentControl).call(_this4, field);
-                var formatting = formats.get(field.InternalId);
-                if (!formatting) continue;
-                yield CslDocFormatter.formatAfterInsert(formatting.formatting);
-            }
-        })();
-    }
-    convertTextToNotes(fields, notesStyle) {
-        var _this5 = this;
-        return _asyncToGenerator(function*() {
-            var formats = _assertClassBrand(_CitationDocService_brand, _this5, _makeFormattingPositions).call(_this5, fields);
-            for (var i = 0; i < fields.length; i++) {
-                var field = fields[i];
-                if (!field.InternalId) continue;
                 var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this5, _selectField).call(_this5, field.InternalId);
                 if (!selectFieldResult) continue;
+                var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this5, _selectFieldReference).call(_this5);
+                if (!isReferenceSelected) continue;
+                yield _assertClassBrand(_CitationDocService_brand, _this5, _removeSuperscript).call(_this5);
                 yield _assertClassBrand(_CitationDocService_brand, _this5, _removeSelectedContent).call(_this5);
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _addNote).call(_this5, notesStyle);
                 yield _assertClassBrand(_CitationDocService_brand, _this5, _addContentControl).call(_this5, field);
                 var formatting = formats.get(field.InternalId);
                 if (!formatting) continue;
@@ -3155,10 +3179,28 @@ class CitationDocService {
             }
         })();
     }
-    convertNotesStyle(fields, notesStyle) {
+    convertTextToNotes(fields, notesStyle) {
         var _this6 = this;
         return _asyncToGenerator(function*() {
             var formats = _assertClassBrand(_CitationDocService_brand, _this6, _makeFormattingPositions).call(_this6, fields);
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i];
+                if (!field.InternalId) continue;
+                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectField).call(_this6, field.InternalId);
+                if (!selectFieldResult) continue;
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSelectedContent).call(_this6);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _addNote).call(_this6, notesStyle);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, field);
+                var formatting = formats.get(field.InternalId);
+                if (!formatting) continue;
+                yield CslDocFormatter.formatAfterInsert(formatting.formatting);
+            }
+        })();
+    }
+    convertNotesStyle(fields, notesStyle) {
+        var _this7 = this;
+        return _asyncToGenerator(function*() {
+            var formats = _assertClassBrand(_CitationDocService_brand, _this7, _makeFormattingPositions).call(_this7, fields);
             var editedFields = [];
             for (var i = 0; i < fields.length; i++) {
                 var field = fields[i];
@@ -3167,13 +3209,13 @@ class CitationDocService {
                     editedFields.push(field);
                     continue;
                 }
-                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectField).call(_this6, field.InternalId);
+                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectField).call(_this7, field.InternalId);
                 if (!selectFieldResult) continue;
-                var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectFieldReference).call(_this6);
+                var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectFieldReference).call(_this7);
                 if (!isReferenceSelected) continue;
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSelectedContent).call(_this6);
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _addNote).call(_this6, notesStyle);
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, field);
+                yield _assertClassBrand(_CitationDocService_brand, _this7, _removeSelectedContent).call(_this7);
+                yield _assertClassBrand(_CitationDocService_brand, _this7, _addNote).call(_this7, notesStyle);
+                yield _assertClassBrand(_CitationDocService_brand, _this7, _addContentControl).call(_this7, field);
                 var formatting = formats.get(field.InternalId);
                 if (!formatting) continue;
                 yield CslDocFormatter.formatAfterInsert(formatting.formatting);
@@ -4613,11 +4655,12 @@ function CSLCitation(itemsStartIndex, citationID) {
     this._itemsStartIndex = itemsStartIndex;
     this._citationItems = new Array;
     this._properties = {};
+    this._manualOverride = {};
     this._schema = "https://raw.githubusercontent.com/citation-style-language/schema/master/schemas/input/csl-citation.json";
 }
 
 CSLCitation.prototype.fillFromObject = function(citationObject) {
-    if (Object.hasOwnProperty.call(citationObject, "properties") || Object.hasOwnProperty.call(citationObject, "schema")) {
+    if (Object.hasOwnProperty.call(citationObject, "properties") || Object.hasOwnProperty.call(citationObject, "manualOverride") || Object.hasOwnProperty.call(citationObject, "schema")) {
         return this._fillFromCitationObject(citationObject);
     } else if (Object.hasOwnProperty.call(citationObject, "citationItems")) {
         return this._fillFromFlatCitationObject(citationObject);
@@ -4632,6 +4675,9 @@ CSLCitation.prototype._fillFromCitationObject = function(citationObject) {
     if (Object.hasOwnProperty.call(citationObject, "schema")) ;
     if (Object.hasOwnProperty.call(citationObject, "properties")) {
         this._setProperties(citationObject.properties);
+    }
+    if (Object.hasOwnProperty.call(citationObject, "manualOverride")) {
+        this._manualOverride = citationObject.manualOverride;
     }
     if (!Object.hasOwnProperty.call(citationObject, "citationItems")) {
         console.error("citationItems is empty");
@@ -4718,6 +4764,9 @@ CSLCitation.prototype.getDoNotUpdate = function() {
     if (Object.hasOwnProperty.call(this._properties, "dontUpdate")) {
         return !!this._properties.dontUpdate;
     }
+    if (Object.hasOwnProperty.call(this._manualOverride, "isManuallyOverridden")) {
+        return !!this._manualOverride.isManuallyOverridden;
+    }
     return false;
 };
 
@@ -4757,6 +4806,16 @@ CSLCitation.prototype.setPlainCitation = function(plainCitation) {
     this._setProperties({
         plainCitation: plainCitation
     });
+    return this;
+};
+
+CSLCitation.prototype.setManualOverride = function(citeprocText, manualOverrideText) {
+    var manualOverride = {
+        citeprocText: citeprocText,
+        isManuallyOverridden: manualOverrideText ? true : false,
+        manualOverrideText: manualOverrideText || ""
+    };
+    this._manualOverride = manualOverride;
     return this;
 };
 
@@ -4808,6 +4867,9 @@ CSLCitation.prototype.toJSON = function() {
     };
     if (this._properties && Object.keys(this._properties).length > 0) {
         result.properties = this._properties;
+    }
+    if (this._manualOverride && Object.keys(this._manualOverride).length > 0) {
+        result.manualOverride = this._manualOverride;
     }
     if (this._citationItems && this._citationItems.length > 0) {
         result.citationItems = this._citationItems.map(function(item) {
@@ -5169,16 +5231,13 @@ function _formatInsertLink(cslCitation) {
             self._formatter.updateItems(arrIds);
         }
     }).then(function() {
-        self._storage.forEach(function(item, id) {
-            console.warn(id, item);
-        });
         var fragment = document.createDocumentFragment();
         var tempElement = document.createElement("div");
         var htmlCitation = self._formatter.makeCitationCluster(keysL);
         htmlCitation = _assertClassBrand(_CitationService_brand, self, _unEscapeHtml).call(self, htmlCitation);
         fragment.appendChild(tempElement);
         tempElement.innerHTML = htmlCitation;
-        cslCitation.setPlainCitation(tempElement.innerText);
+        cslCitation.setManualOverride(tempElement.innerText);
         var notesStyle = null;
         if ("note" === self._cslStylesManager.getLastUsedFormat()) {
             notesStyle = self._cslStylesManager.getLastUsedNotesStyle();
@@ -5213,14 +5272,14 @@ function _makeBibliography() {
     }
 }
 
-function _extractField(field) {
+function _extractControl(control) {
     var citationObject;
-    if (field.Tag.indexOf(this._bibPrefixNew) !== -1) {
+    if (control.Tag.indexOf(this._bibPrefixNew) !== -1) {
         return {};
     }
-    var citationStartIndex = field.Tag.indexOf("_", this._citPrefixNew.length + 1) + 1;
+    var citationStartIndex = control.Tag.indexOf("_", this._citPrefixNew.length + 1) + 1;
     if (citationStartIndex > 0) {
-        var base64String = field.Tag.slice(citationStartIndex);
+        var base64String = control.Tag.slice(citationStartIndex);
         try {
             var binary = atob(base64String);
             var citationString;
@@ -5238,8 +5297,8 @@ function _extractField(field) {
             }
             citationObject = JSON.parse(citationString);
         } catch (e) {
+            console.error("Failed to extract citation", control);
             console.error(e);
-            console.log(field);
         }
     }
     return citationObject;
@@ -5250,12 +5309,11 @@ function _synchronizeStorageWithDocItems(updatedField) {
     return this.citationDocService.getAddinMendeleyControls().then(function(arrFields) {
         var numOfItems = 0;
         var bibFieldValue = " ";
-        console.warn(arrFields);
         var bibField = arrFields.find(function(field) {
             return field.Tag.indexOf(self._bibPrefixNew) !== -1;
         });
         if (bibField) {
-            var citationObject = _assertClassBrand(_CitationService_brand, self, _extractField).call(self, bibField);
+            var citationObject = _assertClassBrand(_CitationService_brand, self, _extractControl).call(self, bibField);
             if (typeof citationObject === "object" && Object.keys(citationObject).length > 0) {
                 bibFieldValue = JSON.stringify(citationObject);
             }
@@ -5264,7 +5322,7 @@ function _synchronizeStorageWithDocItems(updatedField) {
             return field.Tag.indexOf(self._citPrefixNew) !== -1;
         });
         var fieldsWithCitations = fields.map(function(field) {
-            var citationObject = _assertClassBrand(_CitationService_brand, self, _extractField).call(self, field);
+            var citationObject = _assertClassBrand(_CitationService_brand, self, _extractControl).call(self, field);
             var cslCitation = new CSLCitation(numOfItems);
             if (updatedField) {
                 numOfItems += cslCitation.fillFromObject(updatedField);
@@ -5347,16 +5405,16 @@ function _getUpdatedFields2() {
             }
             if (bHardRefresh) {
                 field.PlaceHolderText = htmlCitation;
-                cslCitation.setPlainCitation(newContent);
+                cslCitation.setManualOverride(newContent);
             } else if (oldContent !== newContent) {
                 var text = "<p>" + translate("You have modified this citation since Zotero generated it. Do you want to keep your modifications and prevent future updates?") + "</p>" + "<p>" + translate("Clicking „Yes“ will prevent Zotero from updating this citation if you add additional citations, switch styles, or modify the item to which it refers. Clicking „No“ will erase your changes.") + "</p>" + "<p>" + translate("Original:") + " " + newContent + "</p>" + "<p>" + translate("Modified:") + " " + oldContent + "</p>";
                 var bNeedSaveUserInput = yield _classPrivateFieldGet2(_additionalWindow, this).show("Saving custom edits", text);
                 if (bNeedSaveUserInput) {
-                    cslCitation.setDoNotUpdate();
+                    cslCitation.setManualOverride(newContent, oldContent);
                     delete field.PlaceHolderText;
                 } else {
                     field.PlaceHolderText = htmlCitation;
-                    cslCitation.setPlainCitation(newContent);
+                    cslCitation.setManualOverride(newContent);
                 }
             }
             if (cslCitation) {
