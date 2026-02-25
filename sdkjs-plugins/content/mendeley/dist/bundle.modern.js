@@ -4821,7 +4821,10 @@ class AdditionalWindow {
             };
         });
     }
-    showWarningWindow(description, text) {
+    showInfoWindow(description, text, type) {
+        if (typeof type !== "string") {
+            type = "warning";
+        }
         _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
         var variation = {
             name: "Mendeley",
@@ -4840,7 +4843,7 @@ class AdditionalWindow {
             isDisplayedInViewer: false,
             isInsideMode: false
         };
-        _assertClassBrand(_AdditionalWindow_brand, this, _onShow).call(this, variation, window.Asc.plugin.tr(text), "warning");
+        _assertClassBrand(_AdditionalWindow_brand, this, _onShow).call(this, variation, window.Asc.plugin.tr(text), type);
         _classPrivateFieldGet2(_window, this).show(variation);
         return new Promise((resolve, reject) => {
             window.Asc.plugin.button = (buttonId, windowId) => {
@@ -4878,14 +4881,17 @@ function _onShow(variation, content, type) {
         if (type === "warning") {
             var _classPrivateFieldGet4;
             (_classPrivateFieldGet4 = _classPrivateFieldGet2(_window, this)) === null || _classPrivateFieldGet4 === void 0 || _classPrivateFieldGet4.command("onWarning", content);
-        } else {
+        } else if (type === "success") {
             var _classPrivateFieldGet5;
-            (_classPrivateFieldGet5 = _classPrivateFieldGet2(_window, this)) === null || _classPrivateFieldGet5 === void 0 || _classPrivateFieldGet5.command("onAttachedContent", content);
+            (_classPrivateFieldGet5 = _classPrivateFieldGet2(_window, this)) === null || _classPrivateFieldGet5 === void 0 || _classPrivateFieldGet5.command("onSuccess", content);
+        } else {
+            var _classPrivateFieldGet6;
+            (_classPrivateFieldGet6 = _classPrivateFieldGet2(_window, this)) === null || _classPrivateFieldGet6 === void 0 || _classPrivateFieldGet6.command("onAttachedContent", content);
         }
     });
     _classPrivateFieldGet2(_window, this).attachEvent("onUpdateHeight", height => {
-        var _classPrivateFieldGet6;
-        Asc.plugin.executeMethod("ResizeWindow", [ (_classPrivateFieldGet6 = _classPrivateFieldGet2(_window, this)) === null || _classPrivateFieldGet6 === void 0 ? void 0 : _classPrivateFieldGet6.id, [ variation.size[0] - 2, height ] ], () => {});
+        var _classPrivateFieldGet7;
+        Asc.plugin.executeMethod("ResizeWindow", [ (_classPrivateFieldGet7 = _classPrivateFieldGet2(_window, this)) === null || _classPrivateFieldGet7 === void 0 ? void 0 : _classPrivateFieldGet7.id, [ variation.size[0] - 2, height ] ], () => {});
     });
 }
 
@@ -4916,39 +4922,48 @@ class CitationService {
         _classPrivateFieldSet2(_additionalWindow, this, new AdditionalWindow);
     }
     saveAsText() {
-        return this.citationDocService.saveAsText();
-    }
-    insertSelectedCitations(items) {
         var _this = this;
         return _asyncToGenerator(function*() {
-            _this._storage.clear();
-            try {
-                yield _assertClassBrand(_CitationService_brand, _this, _synchronizeStorageWithDocItems).call(_this);
-                _assertClassBrand(_CitationService_brand, _this, _updateFormatter).call(_this);
-            } catch (e) {
-                throw e;
+            var isOk = yield _this.citationDocService.saveAsText();
+            if (!isOk) {
+                yield _classPrivateFieldGet2(_additionalWindow, _this).showInfoWindow("Success!", "All active Mendeley citations and Bibliography have been replaced.", "success");
+            } else {
+                yield _classPrivateFieldGet2(_additionalWindow, _this).showInfoWindow("Warning!", "Replace all active Mendeley citations and Bibliography failed", "warning");
             }
-            var cslCitation = new CSLCitation(_this._storage.size, "");
-            for (var citationID in items) {
-                var item = items[citationID];
-                cslCitation.fillFromObject(item);
-            }
-            return _assertClassBrand(_CitationService_brand, _this, _formatInsertLink).call(_this, cslCitation);
+            return isOk;
         })();
     }
-    insertBibliography() {
+    insertSelectedCitations(items) {
         var _this2 = this;
         return _asyncToGenerator(function*() {
             _this2._storage.clear();
             try {
-                var {controlsWithCitations: controlsWithCitations, bibFieldValue: bibFieldValue, bibField: bibField} = yield _assertClassBrand(_CitationService_brand, _this2, _synchronizeStorageWithDocItems).call(_this2);
-                var bNoHaveFields = controlsWithCitations.length === 0;
+                yield _assertClassBrand(_CitationService_brand, _this2, _synchronizeStorageWithDocItems).call(_this2);
                 _assertClassBrand(_CitationService_brand, _this2, _updateFormatter).call(_this2);
+            } catch (e) {
+                throw e;
+            }
+            var cslCitation = new CSLCitation(_this2._storage.size, "");
+            for (var citationID in items) {
+                var item = items[citationID];
+                cslCitation.fillFromObject(item);
+            }
+            return _assertClassBrand(_CitationService_brand, _this2, _formatInsertLink).call(_this2, cslCitation);
+        })();
+    }
+    insertBibliography() {
+        var _this3 = this;
+        return _asyncToGenerator(function*() {
+            _this3._storage.clear();
+            try {
+                var {controlsWithCitations: controlsWithCitations, bibFieldValue: bibFieldValue, bibField: bibField} = yield _assertClassBrand(_CitationService_brand, _this3, _synchronizeStorageWithDocItems).call(_this3);
+                var bNoHaveFields = controlsWithCitations.length === 0;
+                _assertClassBrand(_CitationService_brand, _this3, _updateFormatter).call(_this3);
                 if (bibField) {
-                    var updatedFields = [ yield _assertClassBrand(_CitationService_brand, _this2, _updateBibliography).call(_this2, bNoHaveFields, bibField) ];
-                    return _this2.citationDocService.updateContentControls(updatedFields);
+                    var updatedFields = [ yield _assertClassBrand(_CitationService_brand, _this3, _updateBibliography).call(_this3, bNoHaveFields, bibField) ];
+                    return _this3.citationDocService.updateContentControls(updatedFields);
                 } else {
-                    return _assertClassBrand(_CitationService_brand, _this2, _addBibliography).call(_this2, bNoHaveFields, bibFieldValue);
+                    return _assertClassBrand(_CitationService_brand, _this3, _addBibliography).call(_this3, bNoHaveFields, bibFieldValue);
                 }
             } catch (e) {
                 throw e;
@@ -4956,42 +4971,26 @@ class CitationService {
         })();
     }
     updateCslItems(bHardRefresh) {
-        var _this3 = this;
+        var _this4 = this;
         return _asyncToGenerator(function*() {
-            _this3._storage.clear();
+            _this4._storage.clear();
             try {
-                var {controlsWithCitations: controlsWithCitations, bibField: bibField} = yield _assertClassBrand(_CitationService_brand, _this3, _synchronizeStorageWithDocItems).call(_this3);
+                var {controlsWithCitations: controlsWithCitations, bibField: bibField} = yield _assertClassBrand(_CitationService_brand, _this4, _synchronizeStorageWithDocItems).call(_this4);
                 var bNoHaveFields = controlsWithCitations.length === 0;
-                _assertClassBrand(_CitationService_brand, _this3, _updateFormatter).call(_this3);
+                _assertClassBrand(_CitationService_brand, _this4, _updateFormatter).call(_this4);
                 var updatedFields = [];
                 if (typeof bHardRefresh === "undefined") {
-                    var format = _this3._cslStylesManager.getLastUsedFormat();
+                    var format = _this4._cslStylesManager.getLastUsedFormat();
                     if (format === "numeric") {
                         bHardRefresh = true;
                     }
                 }
                 if (typeof bHardRefresh === "boolean") {
-                    updatedFields = yield _assertClassBrand(_CitationService_brand, _this3, _getUpdatedControls).call(_this3, controlsWithCitations, bHardRefresh);
+                    updatedFields = yield _assertClassBrand(_CitationService_brand, _this4, _getUpdatedControls).call(_this4, controlsWithCitations, bHardRefresh);
                 }
                 if (bibField) {
-                    updatedFields.push(yield _assertClassBrand(_CitationService_brand, _this3, _updateBibliography).call(_this3, bNoHaveFields, bibField));
+                    updatedFields.push(yield _assertClassBrand(_CitationService_brand, _this4, _updateBibliography).call(_this4, bNoHaveFields, bibField));
                 }
-                if (updatedFields && updatedFields.length) {
-                    return _this3.citationDocService.updateContentControls(updatedFields);
-                }
-            } catch (e) {
-                throw e;
-            }
-        })();
-    }
-    updateItem(updatedField) {
-        var _this4 = this;
-        return _asyncToGenerator(function*() {
-            _this4._storage.clear();
-            try {
-                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this4, _synchronizeStorageWithDocItems).call(_this4, updatedField);
-                _assertClassBrand(_CitationService_brand, _this4, _updateFormatter).call(_this4);
-                var updatedFields = yield _assertClassBrand(_CitationService_brand, _this4, _getUpdatedControls).call(_this4, controlsWithCitations, true);
                 if (updatedFields && updatedFields.length) {
                     return _this4.citationDocService.updateContentControls(updatedFields);
                 }
@@ -5000,7 +4999,7 @@ class CitationService {
             }
         })();
     }
-    updateItemInNotes(updatedField, notesStyle) {
+    updateItem(updatedField) {
         var _this5 = this;
         return _asyncToGenerator(function*() {
             _this5._storage.clear();
@@ -5009,7 +5008,23 @@ class CitationService {
                 _assertClassBrand(_CitationService_brand, _this5, _updateFormatter).call(_this5);
                 var updatedFields = yield _assertClassBrand(_CitationService_brand, _this5, _getUpdatedControls).call(_this5, controlsWithCitations, true);
                 if (updatedFields && updatedFields.length) {
-                    yield _this5.citationDocService.convertNotesStyle(updatedFields, notesStyle);
+                    return _this5.citationDocService.updateContentControls(updatedFields);
+                }
+            } catch (e) {
+                throw e;
+            }
+        })();
+    }
+    updateItemInNotes(updatedField, notesStyle) {
+        var _this6 = this;
+        return _asyncToGenerator(function*() {
+            _this6._storage.clear();
+            try {
+                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this6, _synchronizeStorageWithDocItems).call(_this6, updatedField);
+                _assertClassBrand(_CitationService_brand, _this6, _updateFormatter).call(_this6);
+                var updatedFields = yield _assertClassBrand(_CitationService_brand, _this6, _getUpdatedControls).call(_this6, controlsWithCitations, true);
+                if (updatedFields && updatedFields.length) {
+                    yield _this6.citationDocService.convertNotesStyle(updatedFields, notesStyle);
                 }
             } catch (e) {
                 throw e;
@@ -5017,29 +5032,29 @@ class CitationService {
         })();
     }
     switchingBetweenNotesAndText(notesStyle) {
-        var _this6 = this;
+        var _this7 = this;
         return _asyncToGenerator(function*() {
             var editorVersion = window.Asc.scope.editorVersion;
             if (editorVersion && editorVersion < 9003e3) {
-                yield _classPrivateFieldGet2(_additionalWindow, _this6).showWarningWindow("Something went wrong", "Update your editor to use this feature.");
+                yield _classPrivateFieldGet2(_additionalWindow, _this7).showInfoWindow("Something went wrong", "Update your editor to use this feature.");
                 return;
             }
-            _this6._storage.clear();
+            _this7._storage.clear();
             try {
-                var {controlsWithCitations: controlsWithCitations, bibField: bibField} = yield _assertClassBrand(_CitationService_brand, _this6, _synchronizeStorageWithDocItems).call(_this6);
+                var {controlsWithCitations: controlsWithCitations, bibField: bibField} = yield _assertClassBrand(_CitationService_brand, _this7, _synchronizeStorageWithDocItems).call(_this7);
                 var bNoHaveFields = controlsWithCitations.length === 0;
-                _assertClassBrand(_CitationService_brand, _this6, _updateFormatter).call(_this6);
-                var updatedFields = yield _assertClassBrand(_CitationService_brand, _this6, _getUpdatedControls).call(_this6, controlsWithCitations, true);
+                _assertClassBrand(_CitationService_brand, _this7, _updateFormatter).call(_this7);
+                var updatedFields = yield _assertClassBrand(_CitationService_brand, _this7, _getUpdatedControls).call(_this7, controlsWithCitations, true);
                 if (updatedFields && updatedFields.length) {
                     if (notesStyle) {
-                        yield _this6.citationDocService.convertTextToNotes(updatedFields, notesStyle);
+                        yield _this7.citationDocService.convertTextToNotes(updatedFields, notesStyle);
                     } else {
-                        yield _this6.citationDocService.convertNotesToText(updatedFields);
+                        yield _this7.citationDocService.convertNotesToText(updatedFields);
                     }
                 }
                 if (bibField) {
-                    var bibFields = [ yield _assertClassBrand(_CitationService_brand, _this6, _updateBibliography).call(_this6, bNoHaveFields, bibField) ];
-                    yield _this6.citationDocService.updateContentControls(bibFields);
+                    var bibFields = [ yield _assertClassBrand(_CitationService_brand, _this7, _updateBibliography).call(_this7, bNoHaveFields, bibField) ];
+                    yield _this7.citationDocService.updateContentControls(bibFields);
                 }
             } catch (e) {
                 throw e;
@@ -5047,20 +5062,20 @@ class CitationService {
         })();
     }
     convertNotesStyle(notesStyle) {
-        var _this7 = this;
+        var _this8 = this;
         return _asyncToGenerator(function*() {
             var editorVersion = window.Asc.scope.editorVersion;
             if (editorVersion && editorVersion < 9003e3) {
-                yield _classPrivateFieldGet2(_additionalWindow, _this7).showWarningWindow("Something went wrong", "Update your editor to use this feature.");
+                yield _classPrivateFieldGet2(_additionalWindow, _this8).showInfoWindow("Something went wrong", "Update your editor to use this feature.");
                 return;
             }
-            _this7._storage.clear();
+            _this8._storage.clear();
             try {
-                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this7, _synchronizeStorageWithDocItems).call(_this7, false, notesStyle);
-                _assertClassBrand(_CitationService_brand, _this7, _updateFormatter).call(_this7);
-                var updatedFields = yield _assertClassBrand(_CitationService_brand, _this7, _getUpdatedControls).call(_this7, controlsWithCitations, false, true);
+                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this8, _synchronizeStorageWithDocItems).call(_this8, false, notesStyle);
+                _assertClassBrand(_CitationService_brand, _this8, _updateFormatter).call(_this8);
+                var updatedFields = yield _assertClassBrand(_CitationService_brand, _this8, _getUpdatedControls).call(_this8, controlsWithCitations, false, true);
                 if (!updatedFields || !updatedFields.length) return;
-                yield _this7.citationDocService.convertNotesStyle(updatedFields, notesStyle);
+                yield _this8.citationDocService.convertNotesStyle(updatedFields, notesStyle);
             } catch (e) {
                 throw e;
             }
