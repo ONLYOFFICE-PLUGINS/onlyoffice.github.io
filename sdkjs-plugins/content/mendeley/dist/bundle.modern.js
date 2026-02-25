@@ -6301,7 +6301,6 @@ SearchFilterComponents.prototype._addEventListeners = function() {
                 if (e.detail.originalEvent) {
                     e.detail.originalEvent.stopPropagation();
                 }
-                self._librarySelectList.openDropdown();
             }
         }
     });
@@ -6359,12 +6358,9 @@ SearchFilterComponents.prototype.addGroups = function(groups) {
 };
 
 SearchFilterComponents.prototype._getSelectedGroups = function() {
-    var self = this;
     var ids = this._librarySelectList.getSelectedValues();
     if (Array.isArray(ids) === false || ids.length === 0) {
-        setTimeout(function() {
-            self._librarySelectList.openDropdown();
-        }, 500);
+        setTimeout(function() {}, 500);
     }
     if (ids === null || typeof ids === "string") {
         return [];
