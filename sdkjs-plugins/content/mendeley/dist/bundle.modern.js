@@ -2877,7 +2877,7 @@ class CitationDocService {
                 Lock: 3,
                 PlaceHolderText: ""
             };
-            yield _assertClassBrand(_CitationDocService_brand, _this, _addContentControl).call(_this, control);
+            yield _assertClassBrand(_CitationDocService_brand, _this, _addContentControl).call(_this, control, 1);
             yield new Promise(function(resolve) {
                 window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
             });
@@ -3107,9 +3107,11 @@ class CitationDocService {
     }
 }
 
-function _addContentControl(field) {
+function _addContentControl(field, type) {
     return new Promise(function(resolve) {
-        var type = 2;
+        if (typeof type !== "number") {
+            type = 2;
+        }
         window.Asc.plugin.executeMethod("AddContentControl", [ type, field ], resolve);
     });
 }
