@@ -4787,7 +4787,7 @@ class AdditionalWindow {
     show(description, text) {
         _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
         var variation = {
-            name: "Zotero",
+            name: "Mendeley",
             url: "info-window.html",
             description: window.Asc.plugin.tr(description),
             isVisual: true,
@@ -4822,7 +4822,7 @@ class AdditionalWindow {
     showWarningWindow(description, text) {
         _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
         var variation = {
-            name: "Zotero",
+            name: "Mendeley",
             url: "info-window.html",
             description: window.Asc.plugin.tr(description),
             isVisual: true,
@@ -5264,7 +5264,7 @@ function _getUpdatedControls2() {
                 field.PlaceHolderText = htmlCitation;
                 cslCitation.setManualOverride(newContent);
             } else if (oldContent !== newContent) {
-                var text = "<p>" + translate("You have modified this citation since Zotero generated it. Do you want to keep your modifications and prevent future updates?") + "</p>" + "<p>" + translate("Clicking „Yes“ will prevent Zotero from updating this citation if you add additional citations, switch styles, or modify the item to which it refers. Clicking „No“ will erase your changes.") + "</p>" + "<p>" + translate("Original:") + " " + newContent + "</p>" + "<p>" + translate("Modified:") + " " + oldContent + "</p>";
+                var text = "<p>" + translate("You have modified this citation since Mendeley generated it. Do you want to keep your modifications and prevent future updates?") + "</p>" + "<p>" + translate("Clicking „Yes“ will prevent Mendeley from updating this citation if you add additional citations, switch styles, or modify the item to which it refers. Clicking „No“ will erase your changes.") + "</p>" + "<p>" + translate("Original:") + " " + newContent + "</p>" + "<p>" + translate("Modified:") + " " + oldContent + "</p>";
                 var bNeedSaveUserInput = yield _classPrivateFieldGet2(_additionalWindow, this).show("Saving custom edits", text);
                 if (bNeedSaveUserInput) {
                     cslCitation.setManualOverride(newContent, oldContent);
@@ -5498,7 +5498,7 @@ function CslStylesManager() {
     this._STYLES_JSON_LOCAL = "./resources/csl/styles.json";
     this._STYLES_URL = "https://www.zotero.org/styles/";
     this._STYLES_LOCAL = "./resources/csl/styles/";
-    this._lastStyleKey = "zoteroStyleId";
+    this._lastStyleKey = "mendStyleId";
     this._lastNotesStyleKey = "zoteroNotesStyleId";
     this._lastFormatKey = "zoteroFormatId";
     this._lastUsedStyleContainBibliographyKey = "zoteroContainBibliography";
