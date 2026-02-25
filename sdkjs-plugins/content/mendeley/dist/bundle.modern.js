@@ -2855,153 +2855,6 @@ function translate(message) {
     return window.Asc.plugin.tr(message);
 }
 
-class CslHtmlParser {
-    static parseHtmlFormatting(htmlString) {
-        var result = {
-            text: "",
-            formatting: []
-        };
-        var stack = [];
-        var textPosition = 0;
-        var i = 0;
-        while (i < htmlString.length) {
-            if (htmlString[i] === "<" && i + 1 < htmlString.length) {
-                var isClosingTag = htmlString[i + 1] === "/";
-                var tagEnd = htmlString.indexOf(">", i);
-                if (tagEnd === -1) {
-                    result.text += htmlString[i];
-                    i++;
-                    continue;
-                }
-                var tag = htmlString.substring(isClosingTag ? i + 2 : i + 1, tagEnd).trim();
-                var tagParts = tag.split(" ");
-                if (tagParts.length === 0) {
-                    result.text += htmlString[i];
-                    i++;
-                    continue;
-                }
-                var loverCaseTagName = tagParts[0].toLowerCase();
-                if (loverCaseTagName === "br") {
-                    result.text += "\n";
-                    i = tagEnd + 1;
-                    continue;
-                }
-                var styleTag = loverCaseTagName;
-                if (tag.indexOf("font-variant:small-caps") !== -1) {
-                    styleTag = "sc";
-                } else if (tag.indexOf("text-decoration:underline") !== -1) {
-                    styleTag = "u";
-                }
-                if (_assertClassBrand(CslHtmlParser, this, _allowedTags)._.has(loverCaseTagName)) {
-                    if (isClosingTag) {
-                        for (var j = stack.length - 1; j >= 0; j--) {
-                            if (stack[j].tag === loverCaseTagName) {
-                                var {start: start, styleTag: _styleTag} = stack.splice(j, 1)[0];
-                                result.formatting.push({
-                                    type: _styleTag,
-                                    start: start,
-                                    end: textPosition
-                                });
-                                break;
-                            }
-                        }
-                    } else {
-                        stack.push({
-                            tag: loverCaseTagName,
-                            start: textPosition,
-                            styleTag: styleTag
-                        });
-                    }
-                }
-                i = tagEnd + 1;
-            } else {
-                result.text += htmlString[i];
-                textPosition++;
-                i++;
-            }
-        }
-        result.formatting.sort((a, b) => {
-            if (a.start === b.start) {
-                return b.end - a.end;
-            }
-            return a.start - b.start;
-        });
-        return result;
-    }
-}
-
-var _allowedTags = {
-    _: new Set([ "i", "u", "b", "sc", "sup", "sub", "em", "div", "span" ])
-};
-
-class CslDocFormatter {
-    static formatAfterInsert(positions) {
-        return new Promise(function(resolve) {
-            var isCalc = true;
-            var isClose = false;
-            Asc.scope.formatting = positions;
-            Asc.plugin.callCommand(function() {
-                var doc = Api.GetDocument();
-                var run = doc.GetCurrentRun();
-                for (var i = Asc.scope.formatting.length - 1; i >= 0; i--) {
-                    var pos = Asc.scope.formatting[i];
-                    var range = run.GetRange(pos.start, pos.end);
-                    if (!range) continue;
-                    if ("sup" === pos.type) {
-                        range.SetVertAlign("superscript");
-                    } else if ("sub" === pos.type) {
-                        range.SetVertAlign("subscript");
-                    } else if ("sc" === pos.type) {
-                        range.SetSmallCaps(true);
-                    } else if ("u" === pos.type) {
-                        range.SetUnderline(true);
-                    } else if ("b" === pos.type) {
-                        range.SetBold(true);
-                    } else if ("i" === pos.type || "em" === pos.type) {
-                        range.SetItalic(true);
-                    }
-                }
-            }, isClose, isCalc, resolve);
-        });
-    }
-    static formatAfterUpdate(fieldId, formattingPositions) {
-        var isCalc = true;
-        var isClose = false;
-        Asc.scope.fieldId = fieldId;
-        Asc.scope.text = formattingPositions.text;
-        Asc.scope.formatting = formattingPositions.formatting;
-        return new Promise(function(resolve) {
-            Asc.plugin.callCommand(function() {
-                var doc = Api.GetDocument();
-                var selRange = doc.GetRangeBySelect();
-                if (!selRange) {
-                    return;
-                }
-                doc.MoveCursorToPos(selRange.GetEndPos() - Asc.scope.text.length);
-                var run = doc.GetCurrentRun();
-                for (var i = Asc.scope.formatting.length - 1; i >= 0; i--) {
-                    var pos = Asc.scope.formatting[i];
-                    var range = run.GetRange(pos.start, pos.end);
-                    if (!range) continue;
-                    if ("sup" === pos.type) {
-                        range.SetVertAlign("superscript");
-                    } else if ("sub" === pos.type) {
-                        range.SetVertAlign("subscript");
-                    } else if ("sc" === pos.type) {
-                        range.SetSmallCaps(true);
-                    } else if ("u" === pos.type) {
-                        range.SetUnderline(true);
-                    } else if ("b" === pos.type) {
-                        range.SetBold(true);
-                    } else if ("i" === pos.type || "em" === pos.type) {
-                        range.SetItalic(true);
-                    }
-                }
-            }, isClose, isCalc, resolve);
-        });
-    }
-}
-
 var _citPrefix = new WeakMap;
 
 var _bibPrefix = new WeakMap;
@@ -3047,16 +2900,16 @@ class CitationDocService {
             });
         })();
     }
-    getAddinMendeleyControls() {
+    getAddinMendeleyControls(notesStyle) {
         var _this3 = this;
         return _asyncToGenerator(function*() {
             var self = _this3;
             try {
-                var arrFields = yield _assertClassBrand(_CitationDocService_brand, self, _getAllContentControls).call(self);
+                var arrControls = yield _assertClassBrand(_CitationDocService_brand, self, _getAllContentControls).call(self);
                 var filteredFields = [];
                 var internalIds = [];
-                for (var i = 0; i < arrFields.length; i++) {
-                    var field = arrFields[i];
+                for (var i = 0; i < arrControls.length; i++) {
+                    var field = arrControls[i];
                     var bHasCitPrefix = field.Tag.indexOf(_classPrivateFieldGet2(_citPrefix, self)) !== -1;
                     var bHasBibPrefix = field.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, self)) !== -1;
                     if (bHasCitPrefix || bHasBibPrefix) {
@@ -3065,15 +2918,22 @@ class CitationDocService {
                     }
                 }
                 Asc.scope.internalIds = internalIds;
+                Asc.scope.useParagraph = !!notesStyle;
                 var placeholderTexts = yield new Promise(resolve => Asc.plugin.callCommand(() => {
                     var placeholderTexts = [];
                     var doc = Api.GetDocument();
-                    doc.GetAllContentControls().forEach(control => {
+                    var controls = doc.GetAllContentControls();
+                    controls.forEach(control => {
                         var id = control.GetInternalId();
                         var index = Asc.scope.internalIds.indexOf(id);
                         if (index !== -1) {
-                            var range = control.GetRange(0, Number.MAX_SAFE_INTEGER);
-                            var text = range.GetText();
+                            var element;
+                            if (Asc.scope.useParagraph) {
+                                element = control.GetParentParagraph();
+                            } else {
+                                element = control.GetRange(0, Number.MAX_SAFE_INTEGER);
+                            }
+                            var text = element.GetText();
                             if (text.lastIndexOf("\n") === text.length - 1) {
                                 text = text.slice(0, -1);
                             }
@@ -3157,52 +3017,67 @@ class CitationDocService {
             }
         })();
     }
-    convertNotesToText(fields) {
+    convertNotesToText(controls) {
         var _this5 = this;
         return _asyncToGenerator(function*() {
-            var formats = _assertClassBrand(_CitationDocService_brand, _this5, _makeFormattingPositions).call(_this5, fields);
-            for (var i = 0; i < fields.length; i++) {
-                var field = fields[i];
-                if (!field.InternalId) {
+            var _loop2 = function* _loop2() {
+                var control = controls[i];
+                if (!control.InternalId) {
                     console.error("Field id is not defined");
-                    continue;
+                    return 0;
                 }
-                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this5, _selectControl).call(_this5, field.InternalId);
-                if (!selectFieldResult) continue;
+                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this5, _selectControl).call(_this5, control.InternalId);
+                if (!selectFieldResult) return 0;
                 var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this5, _selectFieldReference).call(_this5);
-                if (!isReferenceSelected) continue;
+                if (!isReferenceSelected) return 0;
                 yield _assertClassBrand(_CitationDocService_brand, _this5, _removeSuperscript).call(_this5);
                 yield _assertClassBrand(_CitationDocService_brand, _this5, _removeSelectedContent).call(_this5);
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _addContentControl).call(_this5, field);
-                var formatting = formats.get(field.InternalId);
-                if (!formatting) continue;
-                yield CslDocFormatter.formatAfterInsert(formatting.formatting);
+                var text = control.PlaceHolderText;
+                control.PlaceHolderText = "";
+                if (control.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, _this5)) !== 0) {
+                    control.Tag = _classPrivateFieldGet2(_citPrefix, _this5) + "_v3_" + _assertClassBrand(_CitationDocService_brand, _this5, _base64Encode).call(_this5, control.Tag);
+                }
+                yield _assertClassBrand(_CitationDocService_brand, _this5, _addContentControl).call(_this5, control);
+                yield new Promise(function(resolve) {
+                    window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
+                });
+            }, _ret2;
+            for (var i = 0; i < controls.length; i++) {
+                _ret2 = yield* _loop2();
+                if (_ret2 === 0) continue;
             }
         })();
     }
-    convertTextToNotes(fields, notesStyle) {
+    convertTextToNotes(controls, notesStyle) {
         var _this6 = this;
         return _asyncToGenerator(function*() {
-            var formats = _assertClassBrand(_CitationDocService_brand, _this6, _makeFormattingPositions).call(_this6, fields);
-            for (var i = 0; i < fields.length; i++) {
-                var field = fields[i];
-                if (!field.InternalId) continue;
-                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectControl).call(_this6, field.InternalId);
-                if (!selectFieldResult) continue;
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSelectedContent).call(_this6);
+            var _loop3 = function* _loop3() {
+                var control = controls[i];
+                if (!control.InternalId) return 0;
+                var selectFieldResult = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectControl).call(_this6, control.InternalId);
+                if (!selectFieldResult) return 0;
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _deleteControl).call(_this6, control.InternalId);
                 yield _assertClassBrand(_CitationDocService_brand, _this6, _addNote).call(_this6, notesStyle);
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, field);
-                var formatting = formats.get(field.InternalId);
-                if (!formatting) continue;
-                yield CslDocFormatter.formatAfterInsert(formatting.formatting);
+                var text = control.PlaceHolderText;
+                control.PlaceHolderText = "";
+                if (control.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, _this6)) !== 0) {
+                    control.Tag = _classPrivateFieldGet2(_citPrefix, _this6) + "_v3_" + _assertClassBrand(_CitationDocService_brand, _this6, _base64Encode).call(_this6, control.Tag);
+                }
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, control);
+                yield new Promise(function(resolve) {
+                    window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
+                });
+            }, _ret3;
+            for (var i = 0; i < controls.length; i++) {
+                _ret3 = yield* _loop3();
+                if (_ret3 === 0) continue;
             }
         })();
     }
     convertNotesStyle(controls, notesStyle) {
         var _this7 = this;
         return _asyncToGenerator(function*() {
-            _assertClassBrand(_CitationDocService_brand, _this7, _makeFormattingPositions).call(_this7, controls);
-            var _loop2 = function* _loop2() {
+            var _loop4 = function* _loop4() {
                 var control = controls[i];
                 if (!control.InternalId) return 0;
                 if (!control.PlaceHolderText) {
@@ -3223,10 +3098,10 @@ class CitationDocService {
                 yield new Promise(function(resolve) {
                     window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
                 });
-            }, _ret2;
+            }, _ret4;
             for (var i = 0; i < controls.length; i++) {
-                _ret2 = yield* _loop2();
-                if (_ret2 === 0) continue;
+                _ret4 = yield* _loop4();
+                if (_ret4 === 0) continue;
             }
         })();
     }
@@ -3259,17 +3134,19 @@ function _getAllContentControls() {
     });
 }
 
-function _makeFormattingPositions(fields) {
-    var formats = new Map;
-    fields.forEach(function(field) {
-        if (!field.PlaceHolderText) return;
-        var formattingPositions = CslHtmlParser.parseHtmlFormatting(field.PlaceHolderText);
-        field.PlaceHolderText = formattingPositions.text;
-        if (formattingPositions.formatting.length && field.InternalId) {
-            formats.set(field.InternalId, formattingPositions);
-        }
+function _deleteControl(internalId) {
+    return new Promise(resolve => {
+        Asc.scope.id = internalId;
+        Asc.plugin.callCommand(() => {
+            var doc = Api.GetDocument();
+            var controls = doc.GetAllContentControls();
+            var control = controls.find(c => c.GetInternalId() === Asc.scope.id);
+            if (control) {
+                return control.Delete(false);
+            }
+            return false;
+        }, false, false, resolve);
     });
-    return formats;
 }
 
 function _removeSelectedContent() {
@@ -5177,7 +5054,7 @@ class CitationService {
             }
             _this7._storage.clear();
             try {
-                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this7, _synchronizeStorageWithDocItems).call(_this7);
+                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this7, _synchronizeStorageWithDocItems).call(_this7, false, notesStyle);
                 _assertClassBrand(_CitationService_brand, _this7, _updateFormatter).call(_this7);
                 var updatedFields = yield _assertClassBrand(_CitationService_brand, _this7, _getUpdatedControls).call(_this7, controlsWithCitations, false, true);
                 if (!updatedFields || !updatedFields.length) return;
@@ -5284,9 +5161,9 @@ function _extractControl(control) {
     return citationObject;
 }
 
-function _synchronizeStorageWithDocItems(updatedField) {
+function _synchronizeStorageWithDocItems(updatedField, notesStyle) {
     var self = this;
-    return this.citationDocService.getAddinMendeleyControls().then(function(arrFields) {
+    return this.citationDocService.getAddinMendeleyControls(notesStyle).then(function(arrFields) {
         var numOfItems = 0;
         var bibFieldValue = " ";
         var bibField = arrFields.find(function(field) {
