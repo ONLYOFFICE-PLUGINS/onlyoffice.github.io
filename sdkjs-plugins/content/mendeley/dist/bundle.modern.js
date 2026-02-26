@@ -5435,6 +5435,29 @@ function _synchronizeStorageBeforeUpgrade2() {
         var bibField = arrFields.find(field => field.Value.indexOf("Mendeley Bibliography") === 0);
         var fieldsWithCitations = arrFields.filter(field => !bibField || bibField.FieldId !== field.FieldId).map(field => {
             var citationObject = _assertClassBrand(_CitationService_brand, this, _extractField).call(this, field);
+            if (citationObject && citationObject.citationItems) {
+                citationObject.citationItems.forEach(function(item) {
+                    if (item.uris && item.uris.length) {
+                        var id = item.id;
+                        item.uris.some(uri => {
+                            var sign = "?uuid=";
+                            var index = uri.indexOf(sign);
+                            if (index === -1) {
+                                return false;
+                            }
+                            var lastIndex = uri.indexOf("&", index + sign.length);
+                            if (lastIndex === -1) {
+                                id = uri.slice(index + sign.length);
+                                return true;
+                            }
+                            id = uri.slice(index + sign.length, lastIndex);
+                            return true;
+                        });
+                        item.id = id;
+                        item.itemData.id = id;
+                    }
+                });
+            }
             var cslCitation = new CSLCitation(numOfItems);
             numOfItems += cslCitation.fillFromObject(citationObject);
             cslCitation.setManualOverride(field.Content);
