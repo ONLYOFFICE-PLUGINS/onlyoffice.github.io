@@ -5163,7 +5163,8 @@ class CitationService {
                     field: field.field,
                     newValue: JSON.stringify(field.cslCitation.toJSON())
                 }));
-                _this8.citationDocService.upgradeCslItems(infoForUpgrade, bibField);
+                yield _this8.citationDocService.upgradeCslItems(infoForUpgrade, bibField);
+                _classPrivateFieldGet2(_additionalWindow, _this8).showInfoWindow("Update complete", translate("Your document has been updated to use Mendeley Cite.") + " " + translate("Please select the citation style and language for future citation formatting."), "success");
             } else {
                 Asc.plugin.executeCommand("close", "");
             }
@@ -5939,10 +5940,6 @@ LocalesManager.prototype.setRestApiAvailable = function(isApiAvailable) {
 function SettingsPage(router, displayNoneClass) {
     this._router = router;
     this._displayNoneClass = displayNoneClass;
-    this._openSettingsBtn = new Button("settingsBtn", {
-        variant: "icon-only",
-        size: "small"
-    });
     this._saveBtn = new Button("saveSettingsBtn", {
         variant: "primary"
     });
@@ -6035,12 +6032,6 @@ SettingsPage.prototype.setRestApiAvailable = function(isAvailable) {
 
 SettingsPage.prototype._addEventListeners = function() {
     var self = this;
-    this._openSettingsBtn.subscribe(function(event) {
-        if (event.type !== "button:click") {
-            return;
-        }
-        self._show();
-    });
     this._saveBtn.subscribe(function(event) {
         if (event.type !== "button:click") {
             return;
@@ -6177,7 +6168,7 @@ SettingsPage.prototype._hide = function() {
     this._router.openMain();
 };
 
-SettingsPage.prototype._show = function() {
+SettingsPage.prototype.show = function() {
     this._stateSettings = {
         language: this._localesManager.getLastUsedLanguage(),
         style: this._cslStylesManager.getLastUsedStyleIdOrDefault(),
@@ -7057,6 +7048,7 @@ SelectCitationsComponent.prototype.count = function() {
     var selectCitation;
     var saveAsTextBtn;
     var insertLinkBtn;
+    var openSettingsBtn;
     var insertBibBtn;
     var refreshBtn;
     var libLoader = new Loader("libLoader", translate("Loading..."));
@@ -7077,6 +7069,10 @@ SelectCitationsComponent.prototype.count = function() {
         });
         insertLinkBtn = new Button("insertLinkBtn", {
             disabled: true
+        });
+        openSettingsBtn = new Button("settingsBtn", {
+            variant: "icon-only",
+            size: "small"
         });
         insertBibBtn = new Button("insertBibBtn", {
             variant: "secondary"
@@ -7117,7 +7113,12 @@ SelectCitationsComponent.prototype.count = function() {
             if (isInit) return;
             isInit = true;
             Loader.show();
-            Promise.all([ loadGroups(), settings.init(), citationService.checkOldVersion(), showCitationsAtTheStartFromMyLibrary() ]).catch(function(error) {
+            Promise.all([ loadGroups(), settings.init(), citationService.checkOldVersion(), showCitationsAtTheStartFromMyLibrary() ]).then(function(_ref) {
+                var [g, s, isUpdateOldVersion, c] = _ref;
+                if (isUpdateOldVersion) {
+                    settings.show();
+                }
+            }).catch(function(error) {
                 console.error(error.message);
             }).finally(function() {
                 Loader.hide();
@@ -7197,7 +7198,7 @@ SelectCitationsComponent.prototype.count = function() {
             });
         });
         refreshBtn.subscribe(function() {
-            var _ref = _asyncToGenerator(function*(event) {
+            var _ref2 = _asyncToGenerator(function*(event) {
                 if (event.type !== "button:click") {
                     return;
                 }
@@ -7225,7 +7226,7 @@ SelectCitationsComponent.prototype.count = function() {
                 });
             });
             return function(_x) {
-                return _ref.apply(this, arguments);
+                return _ref2.apply(this, arguments);
             };
         }());
         insertBibBtn.subscribe(function(event) {
@@ -7285,6 +7286,12 @@ SelectCitationsComponent.prototype.count = function() {
                 CursorService.setCursorPosition(cursorPos);
             });
         });
+        openSettingsBtn.subscribe(function(event) {
+            if (event.type !== "button:click") {
+                return;
+            }
+            settings.show();
+        });
         saveAsTextBtn.subscribe(function(event) {
             if (event.type !== "button:click") {
                 return;
@@ -7295,7 +7302,7 @@ SelectCitationsComponent.prototype.count = function() {
             });
         });
         settings.onChangeState(function() {
-            var _ref2 = _asyncToGenerator(function*(newState, oldState) {
+            var _ref3 = _asyncToGenerator(function*(newState, oldState) {
                 var cursorPos = yield CursorService.getCursorPosition();
                 if ([ newState.styleFormat, oldState.styleFormat ].includes("note")) {
                     if (newState.styleFormat !== oldState.styleFormat) {
@@ -7315,7 +7322,7 @@ SelectCitationsComponent.prototype.count = function() {
                 yield CursorService.setCursorPosition(cursorPos);
             });
             return function(_x2, _x3) {
-                return _ref2.apply(this, arguments);
+                return _ref3.apply(this, arguments);
             };
         }());
     }
