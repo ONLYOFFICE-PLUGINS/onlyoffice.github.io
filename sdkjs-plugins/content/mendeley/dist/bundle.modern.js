@@ -2029,6 +2029,7 @@ class SelectBox {
         this._options = Object.assign(_options, {
             placeholder: _options.placeholder || "Select...",
             searchable: _options.searchable || false,
+            sortable: _options.sortable || false,
             multiple: _options.multiple || false,
             description: _options.description || ""
         });
@@ -2110,6 +2111,9 @@ class SelectBox {
                 text: text,
                 selected: selected
             });
+            if (this._options.sortable) {
+                this._items.sort((a, b) => !!a && !!b ? a.text.localeCompare(b.text) : !!a ? -1 : !!b ? 1 : 0);
+            }
         }
         if (selected) {
             if (this._options.multiple) {
@@ -2852,7 +2856,12 @@ var _mainLoaderContainer = {
 };
 
 function translate(message) {
-    return window.Asc.plugin.tr(message);
+    try {
+        return window.Asc.plugin.tr(message);
+    } catch (e) {
+        console.error(e);
+        return message;
+    }
 }
 
 var _citPrefix = new WeakMap;
@@ -2878,9 +2887,7 @@ class CitationDocService {
                 PlaceHolderText: ""
             };
             yield _assertClassBrand(_CitationDocService_brand, _this, _addContentControl).call(_this, control, 1);
-            yield new Promise(function(resolve) {
-                window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
-            });
+            yield _assertClassBrand(_CitationDocService_brand, _this, _pasteHtml).call(_this, text);
         })();
     }
     addCitation(text, value, notesStyle) {
@@ -2896,9 +2903,7 @@ class CitationDocService {
                 yield _assertClassBrand(_CitationDocService_brand, _this2, _selectCurrentContentControl).call(_this2);
                 yield _assertClassBrand(_CitationDocService_brand, _this2, _addNote).call(_this2, notesStyle);
             }
-            yield new Promise(function(resolve) {
-                window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
-            });
+            yield _assertClassBrand(_CitationDocService_brand, _this2, _pasteHtml).call(_this2, text);
         })();
     }
     getAddinMendeleyControls(notesStyle) {
@@ -3062,16 +3067,16 @@ class CitationDocService {
     convertNotesToText(controls) {
         var _this7 = this;
         return _asyncToGenerator(function*() {
-            var _loop2 = function* _loop2() {
+            for (var i = 0; i < controls.length; i++) {
                 var control = controls[i];
                 if (!control.InternalId) {
                     console.error("Control id is not defined");
-                    return 0;
+                    continue;
                 }
                 var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectControl).call(_this7, control.InternalId);
-                if (!selectControlResult) return 0;
+                if (!selectControlResult) continue;
                 var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectControlReference).call(_this7);
-                if (!isReferenceSelected) return 0;
+                if (!isReferenceSelected) continue;
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _removeSuperscript).call(_this7);
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _removeSelectedContent).call(_this7);
                 var text = control.PlaceHolderText;
@@ -3080,24 +3085,18 @@ class CitationDocService {
                     control.Tag = _assertClassBrand(_CitationDocService_brand, _this7, _makeContentControlTag).call(_this7, control.Tag);
                 }
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _addContentControl).call(_this7, control);
-                yield new Promise(function(resolve) {
-                    window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
-                });
-            }, _ret2;
-            for (var i = 0; i < controls.length; i++) {
-                _ret2 = yield* _loop2();
-                if (_ret2 === 0) continue;
+                yield _assertClassBrand(_CitationDocService_brand, _this7, _pasteHtml).call(_this7, text);
             }
         })();
     }
     convertTextToNotes(controls, notesStyle) {
         var _this8 = this;
         return _asyncToGenerator(function*() {
-            var _loop3 = function* _loop3() {
+            for (var i = 0; i < controls.length; i++) {
                 var control = controls[i];
-                if (!control.InternalId) return 0;
+                if (!control.InternalId) continue;
                 var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this8, _selectControl).call(_this8, control.InternalId);
-                if (!selectControlResult) return 0;
+                if (!selectControlResult) continue;
                 yield _assertClassBrand(_CitationDocService_brand, _this8, _deleteControl).call(_this8, control.InternalId);
                 yield _assertClassBrand(_CitationDocService_brand, _this8, _addNote).call(_this8, notesStyle);
                 var text = control.PlaceHolderText;
@@ -3106,29 +3105,23 @@ class CitationDocService {
                     control.Tag = _assertClassBrand(_CitationDocService_brand, _this8, _makeContentControlTag).call(_this8, control.Tag);
                 }
                 yield _assertClassBrand(_CitationDocService_brand, _this8, _addContentControl).call(_this8, control);
-                yield new Promise(function(resolve) {
-                    window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
-                });
-            }, _ret3;
-            for (var i = 0; i < controls.length; i++) {
-                _ret3 = yield* _loop3();
-                if (_ret3 === 0) continue;
+                yield _assertClassBrand(_CitationDocService_brand, _this8, _pasteHtml).call(_this8, text);
             }
         })();
     }
     convertNotesStyle(controls, notesStyle) {
         var _this9 = this;
         return _asyncToGenerator(function*() {
-            var _loop4 = function* _loop4() {
+            for (var i = 0; i < controls.length; i++) {
                 var control = controls[i];
-                if (!control.InternalId) return 0;
+                if (!control.InternalId) continue;
                 if (!control.PlaceHolderText) {
-                    return 0;
+                    continue;
                 }
                 var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this9, _selectControl).call(_this9, control.InternalId);
-                if (!selectControlResult) return 0;
+                if (!selectControlResult) continue;
                 var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this9, _selectControlReference).call(_this9);
-                if (!isReferenceSelected) return 0;
+                if (!isReferenceSelected) continue;
                 yield _assertClassBrand(_CitationDocService_brand, _this9, _removeSelectedContent).call(_this9);
                 yield _assertClassBrand(_CitationDocService_brand, _this9, _addNote).call(_this9, notesStyle);
                 var text = control.PlaceHolderText;
@@ -3137,13 +3130,7 @@ class CitationDocService {
                     control.Tag = _assertClassBrand(_CitationDocService_brand, _this9, _makeContentControlTag).call(_this9, control.Tag);
                 }
                 yield _assertClassBrand(_CitationDocService_brand, _this9, _addContentControl).call(_this9, control);
-                yield new Promise(function(resolve) {
-                    window.Asc.plugin.executeMethod("PasteHtml", [ text ], resolve);
-                });
-            }, _ret4;
-            for (var i = 0; i < controls.length; i++) {
-                _ret4 = yield* _loop4();
-                if (_ret4 === 0) continue;
+                yield _assertClassBrand(_CitationDocService_brand, _this9, _pasteHtml).call(_this9, text);
             }
         })();
     }
@@ -3207,6 +3194,12 @@ function _deleteControl(internalId) {
             }
             return false;
         }, false, false, resolve);
+    });
+}
+
+function _pasteHtml(html) {
+    return new Promise(function(resolve) {
+        window.Asc.plugin.executeMethod("PasteHtml", [ html ], resolve);
     });
 }
 
@@ -5220,8 +5213,9 @@ function _makeBibliography() {
             var citationId = bibObject[0].entry_ids[i][0];
             var citationIndex = this._storage.getIndex(citationId);
             var bibText = _assertClassBrand(_CitationService_brand, this, _unEscapeHtml).call(this, bibObject[1][i]);
-            while (bibText.indexOf("\n") !== bibText.lastIndexOf("\n")) {
-                bibText = bibText.replace(/\n/, "");
+            bibText = bibText.replaceAll(/\n/g, "").trim();
+            if (bibText.slice(0, 4) === "<div" || bibText.slice(-5) === "</div>") {
+                bibText = "<p" + bibText.slice(4, -5) + "</p>";
             }
             bibItems.push(bibText);
         }
@@ -5666,7 +5660,7 @@ function CslStylesManager(lastStyleKey) {
     this._lastNotesStyleKey = "zoteroNotesStyleId";
     this._lastFormatKey = "zoteroFormatId";
     this._lastUsedStyleContainBibliographyKey = "zoteroContainBibliography";
-    this._defaultStyles = [ "american-medical-association", "american-political-science-association", "apa", "american-sociological-association", "chicago-author-date-17th-edition", "harvard-cite-them-right-10th-edition", "ieee", "modern-language-association-8th-edition", "nature" ];
+    this._defaultStyles = [ "american-anthropological-association", "american-medical-association", "american-political-science-association", "american-sociological-association", "apa", "chicago-author-date", "chicago-notes-bibliography", "harvard-cite-them-right", "ieee", "modern-language-association", "nature" ];
     this._cache = {};
 }
 
@@ -5744,6 +5738,8 @@ CslStylesManager.prototype.getStyle = function(styleName) {
         var url = self._STYLES_LOCAL + styleName + ".csl";
         if (self._isOnlineAvailable) {
             url = self._STYLES_URL + styleName;
+        } else if (self._defaultStyles.indexOf(styleName) === -1) {
+            throw "The style is not available in the local version of the plugin.";
         }
         return fetch(url).then(function(resp) {
             return resp.text();
@@ -5785,11 +5781,7 @@ CslStylesManager.prototype.getStylesInfo = function() {
             });
         }
         customStyles.forEach(function(style) {
-            if (lastStyle === style.name) {
-                resultStyles.unshift(style);
-            } else {
-                resultStyles.push(style);
-            }
+            resultStyles.push(style);
             if (self._defaultStyles.indexOf(style.name) === -1) {
                 self._defaultStyles.push(style.name);
             }
@@ -5798,12 +5790,9 @@ CslStylesManager.prototype.getStylesInfo = function() {
             if (resultStyleNames.indexOf(style.name) !== -1) {
                 return;
             }
-            if (lastStyle === style.name) {
-                resultStyles.unshift(style);
-            } else {
-                resultStyles.push(style);
-            }
+            resultStyles.push(style);
         });
+        resultStyles.sort((a, b) => a.name.localeCompare(b.name));
         return resultStyles;
     });
 };
@@ -5894,7 +5883,10 @@ LocalesManager.prototype.loadLocale = function(langTag) {
         return Promise.resolve(this._cache[langTag]);
     }
     var url = this._getLocalesUrl() + "locales-" + langTag + ".xml";
-    return fetch(url).then(function(response) {
+    return fetch(url).catch(function(err) {
+        console.error("Failed to load locale:", err);
+        return fetch(self._LOCALES_PATH + "locales-" + langTag + ".xml");
+    }).then(function(response) {
         return response.text();
     }).then(function(text) {
         self._cache[langTag] = text;
@@ -5947,7 +5939,8 @@ function SettingsPage(router, displayNoneClass) {
         variant: "secondary"
     });
     this._styleSelect = new SelectBox("styleSelectList", {
-        placeholder: "Enter style name"
+        placeholder: "Enter style name",
+        sortable: true
     });
     this._styleSelectListOther = new SelectBox("styleSelectedListOther", {
         placeholder: "Enter style name",
@@ -6232,6 +6225,7 @@ SettingsPage.prototype._onStyleChange = function(styleName, isClick) {
             self._styleMessage.show(translate(err));
         }
         isClick && self._hideLoader();
+        throw err;
     });
 };
 
@@ -7113,7 +7107,16 @@ SelectCitationsComponent.prototype.count = function() {
             if (isInit) return;
             isInit = true;
             Loader.show();
-            Promise.all([ loadGroups(), settings.init(), citationService.checkOldVersion(), showCitationsAtTheStartFromMyLibrary() ]).then(function(_ref) {
+            var loadGroupsPromise = loadGroups().catch(e => {
+                console.error(e);
+                showError(translate("An error occurred while loading library groups. Try restarting the plugin."));
+            });
+            var initSettingsPromise = settings.init().catch(e => {
+                console.error(e);
+                showError(translate("An error occurred while loading settings. Try restarting the plugin."));
+                settings.show();
+            });
+            Promise.all([ loadGroupsPromise, initSettingsPromise, citationService.checkOldVersion(), showCitationsAtTheStartFromMyLibrary() ]).then(function(_ref) {
                 var [g, s, isUpdateOldVersion, c] = _ref;
                 if (isUpdateOldVersion) {
                     settings.show();
@@ -7138,12 +7141,14 @@ SelectCitationsComponent.prototype.count = function() {
             delete res.next;
             return res;
         });
-        loadLibrary(promise, false).then(res => {
+        return loadLibrary(promise, false).then(res => {
             if (res > 0) {
                 updateHeaderText("started");
             } else {
                 updateHeaderText("empty");
             }
+        }).catch(e => {
+            console.error(e);
         }).finally(() => {
             libLoader.hide();
         });
