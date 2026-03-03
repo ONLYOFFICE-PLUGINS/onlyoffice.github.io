@@ -144,3 +144,9 @@
 
 ## 3.0.6
 * Fix bugs with external providers/models.
+
+## 3.0.7
+* Bug fix.
+
+## 3.0.8
+* Fix bug with external fetch error.
