@@ -3099,48 +3099,80 @@ class CitationDocService {
     convertNotesToText(controls) {
         var _this6 = this;
         return _asyncToGenerator(function*() {
-            for (var i = 0; i < controls.length; i++) {
+            var _loop2 = function* _loop2() {
                 var control = controls[i];
                 if (!control.InternalId) {
                     console.error("Control id is not defined");
-                    continue;
+                    return 0;
                 }
                 var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectControl).call(_this6, control.InternalId);
-                if (!selectControlResult) continue;
-                var isReferenceSelected = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectControlReference).call(_this6);
-                if (!isReferenceSelected) continue;
+                if (!selectControlResult) {
+                    console.error("Can not select content control with id: " + control.InternalId);
+                    return 0;
+                }
                 yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSuperscript).call(_this6);
+                yield new Promise(resolve => {
+                    Asc.scope.tag = control.Tag;
+                    Asc.plugin.callCommand(() => {
+                        var doc = Api.GetDocument();
+                        var control = doc.GetCurrentContentControl();
+                        if (control) {
+                            control.SetTag(Asc.scope.tag);
+                        } else {
+                            console.error("Can not find content control");
+                        }
+                    }, false, false, resolve);
+                });
                 yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSelectedContent).call(_this6);
                 var text = control.PlaceHolderText;
-                control.PlaceHolderText = "";
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, control);
                 yield _assertClassBrand(_CitationDocService_brand, _this6, _pasteHtml).call(_this6, text);
+            }, _ret2;
+            for (var i = 0; i < controls.length; i++) {
+                _ret2 = yield* _loop2();
+                if (_ret2 === 0) continue;
             }
         })();
     }
     convertTextToNotes(controls, notesStyle) {
         var _this7 = this;
         return _asyncToGenerator(function*() {
-            for (var i = 0; i < controls.length; i++) {
+            var _loop3 = function* _loop3() {
                 var control = controls[i];
-                if (!control.InternalId) continue;
+                if (!control.InternalId) return 0;
                 var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectControl).call(_this7, control.InternalId);
-                if (!selectControlResult) continue;
-                yield _assertClassBrand(_CitationDocService_brand, _this7, _deleteControl).call(_this7, control.InternalId);
+                if (!selectControlResult) return 0;
+                yield new Promise(resolve => {
+                    Asc.scope.tag = control.Tag;
+                    Asc.plugin.callCommand(() => {
+                        var doc = Api.GetDocument();
+                        var control = doc.GetCurrentContentControl();
+                        if (control) {
+                            control.SetTag(Asc.scope.tag);
+                        } else {
+                            console.error("Can not find content control");
+                        }
+                    }, false, false, resolve);
+                });
+                yield _assertClassBrand(_CitationDocService_brand, _this7, _removeSelectedContent).call(_this7);
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _addNote).call(_this7, notesStyle);
                 var text = control.PlaceHolderText;
-                control.PlaceHolderText = "";
-                yield _assertClassBrand(_CitationDocService_brand, _this7, _addContentControl).call(_this7, control);
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _pasteHtml).call(_this7, text);
+            }, _ret3;
+            for (var i = 0; i < controls.length; i++) {
+                _ret3 = yield* _loop3();
+                if (_ret3 === 0) continue;
             }
         })();
     }
     convertNotesStyle(controls, notesStyle) {
         var _this8 = this;
         return _asyncToGenerator(function*() {
-            var _loop2 = function* _loop2() {
+            var _loop4 = function* _loop4() {
                 var control = controls[i];
-                if (!control.InternalId) return 0;
+                if (!control.InternalId) {
+                    console.error("Control id is not defined");
+                    return 0;
+                }
                 var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this8, _selectControl).call(_this8, control.InternalId);
                 if (!selectControlResult) {
                     console.error("Can not select content control with id: " + control.InternalId);
@@ -3163,10 +3195,10 @@ class CitationDocService {
                     yield _assertClassBrand(_CitationDocService_brand, _this8, _addNote).call(_this8, notesStyle);
                     yield _assertClassBrand(_CitationDocService_brand, _this8, _pasteHtml).call(_this8, control.PlaceHolderText);
                 }
-            }, _ret2;
+            }, _ret4;
             for (var i = 0; i < controls.length; i++) {
-                _ret2 = yield* _loop2();
-                if (_ret2 === 0) continue;
+                _ret4 = yield* _loop4();
+                if (_ret4 === 0) continue;
             }
         })();
     }
@@ -3218,21 +3250,6 @@ function _getAllContentControls() {
     });
 }
 
-function _deleteControl(internalId) {
-    return new Promise(resolve => {
-        Asc.scope.id = internalId;
-        Asc.plugin.callCommand(() => {
-            var doc = Api.GetDocument();
-            var controls = doc.GetAllContentControls();
-            var control = controls.find(c => c.GetInternalId() === Asc.scope.id);
-            if (control) {
-                return control.Delete(false);
-            }
-            return false;
-        }, false, false, resolve);
-    });
-}
-
 function _pasteHtml(html) {
     return new Promise(function(resolve) {
         window.Asc.plugin.executeMethod("PasteHtml", [ html ], resolve);
@@ -3275,26 +3292,6 @@ function _selectControl(internalId) {
             }
             return false;
         }, false, false, resolve);
-    });
-}
-
-function _selectControlReference() {
-    return new Promise(resolve => {
-        var isCalc = true;
-        var isClose = false;
-        var editorVersion = window.Asc.scope.editorVersion;
-        if (editorVersion && editorVersion < 9003e3) {
-            console.error("Cannot select addin control reference.");
-            console.error("Editor version is less than 9.3.0");
-            resolve(false);
-        }
-        Asc.plugin.callCommand(() => {
-            var doc = Api.GetDocument();
-            var note = doc.GetCurrentFootEndnote();
-            if (!note) return;
-            var reference = note.SelectNoteReference();
-            if (!reference) return;
-        }, isClose, isCalc, () => resolve(true));
     });
 }
 
@@ -5175,23 +5172,21 @@ class CitationService {
             }
         })();
     }
-    switchingBetweenNotesAndText(notesStyle) {
+    switchingBetweenNotesAndText(newNotesStyle, oldNotesStyle) {
         var _this7 = this;
         return _asyncToGenerator(function*() {
-            var editorVersion = window.Asc.scope.editorVersion;
-            if (editorVersion && editorVersion < 9003e3) {
-                yield _classPrivateFieldGet2(_additionalWindow, _this7).showInfoWindow("Something went wrong", "Update your editor to use this feature.");
-                return;
-            }
             try {
                 var {controlsWithCitations: controlsWithCitations, bibControl: bibControl} = yield _assertClassBrand(_CitationService_brand, _this7, _synchronizeStorageWithDocItems).call(_this7);
                 var bNoHaveControls = controlsWithCitations.length === 0;
                 _assertClassBrand(_CitationService_brand, _this7, _updateFormatter).call(_this7);
+                if (oldNotesStyle) {
+                    yield _assertClassBrand(_CitationService_brand, _this7, _addFootnotesTextToControls).call(_this7, controlsWithCitations, oldNotesStyle);
+                }
                 var updatedControls = yield _assertClassBrand(_CitationService_brand, _this7, _getUpdatedControls).call(_this7, controlsWithCitations, true);
                 if (updatedControls && updatedControls.length) {
-                    if (notesStyle) {
-                        yield _this7.citationDocService.convertTextToNotes(updatedControls, notesStyle);
-                    } else {
+                    if (newNotesStyle) {
+                        yield _this7.citationDocService.convertTextToNotes(updatedControls, newNotesStyle);
+                    } else if (oldNotesStyle) {
                         yield _this7.citationDocService.convertNotesToText(updatedControls);
                     }
                 }
@@ -5204,20 +5199,16 @@ class CitationService {
             }
         })();
     }
-    convertNotesStyle(notesStyle) {
+    convertNotesStyle(newNotesStyle, oldNotesStyle) {
         var _this8 = this;
         return _asyncToGenerator(function*() {
-            var editorVersion = window.Asc.scope.editorVersion;
-            if (editorVersion && editorVersion < 9003e3) {
-                yield _classPrivateFieldGet2(_additionalWindow, _this8).showInfoWindow("Something went wrong", "Update your editor to use this feature.");
-                return;
-            }
             try {
-                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this8, _synchronizeStorageWithDocItems).call(_this8, undefined, notesStyle);
+                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this8, _synchronizeStorageWithDocItems).call(_this8, undefined, newNotesStyle);
                 _assertClassBrand(_CitationService_brand, _this8, _updateFormatter).call(_this8);
+                yield _assertClassBrand(_CitationService_brand, _this8, _addFootnotesTextToControls).call(_this8, controlsWithCitations, oldNotesStyle);
                 var updatedControls = yield _assertClassBrand(_CitationService_brand, _this8, _getUpdatedControls).call(_this8, controlsWithCitations, false, true);
                 if (!updatedControls || !updatedControls.length) return;
-                yield _this8.citationDocService.convertNotesStyle(updatedControls, notesStyle);
+                yield _this8.citationDocService.convertNotesStyle(updatedControls, newNotesStyle);
             } catch (e) {
                 throw e;
             }
@@ -5299,13 +5290,19 @@ function _makeBibliography() {
         var bibObject = this._formatter.makeBibliography();
         for (var i = 0; i < bibObject[0].entry_ids.length; i++) {
             var bibText = _assertClassBrand(_CitationService_brand, this, _unEscapeHtml).call(this, bibObject[1][i]);
-            bibText = bibText.trim();
-            if (bibText.slice(0, 4) === "<div" || bibText.slice(-5) === "</div>") {
-                bibText = "<p" + bibText.slice(4, -5) + "</p>";
+            bibText = bibText.replaceAll("\n", "").replaceAll("\r", "").replace(/\s+/g, " ").trim();
+            var paragraphStart = '<div class="csl-entry">';
+            var paragraphEnd = "</div>";
+            if (!bibObject[0]["second-field-align"]) {
+                bibText = bibText.replace(/<\/?div[^>]*>/g, "");
+                bibText = "<p>" + bibText + "</p>";
+            } else if (bibText.indexOf(paragraphStart) === 0 && bibText.endsWith(paragraphEnd)) {
+                bibText = paragraphStart + bibText.substring(paragraphStart.length, bibText.length - paragraphEnd.length).trim() + paragraphEnd;
             }
             bibItems.push(bibText);
         }
-        var htmlBibliography = bibItems.join("");
+        var htmlBibliography = bibItems.join("").trim();
+        Asc.scope.bibStyle = bibObject[0];
         return htmlBibliography;
     } catch (e) {
         if (false === this._cslStylesManager.isLastUsedStyleContainBibliography()) {
@@ -5614,31 +5611,20 @@ class CursorService {
             var isCalc = false;
             var isClose = false;
             Asc.plugin.callCommand(() => {
-                var _doc$GetCurrentParagr, _doc$GetCurrentRun;
                 var doc = Api.GetDocument();
+                var pos = 0;
                 if (!doc) {
-                    return 0;
+                    return pos;
                 }
-                var canSelectWord = doc.SelectCurrentWord();
-                var selectedRange = doc.GetRangeBySelect();
-                if (!selectedRange) {
-                    return 0;
+                var currentRun = doc.GetCurrentRun();
+                if (!currentRun) {
+                    return pos;
                 }
-                var endPos = selectedRange.GetEndPos();
-                if (canSelectWord) {
-                    doc.RemoveSelection();
-                    return endPos;
+                var range = currentRun.GetRange(0, 0);
+                if (range) {
+                    return range.GetEndPos();
                 }
-                var currentParagraphText = doc === null || doc === void 0 || (_doc$GetCurrentParagr = doc.GetCurrentParagraph()) === null || _doc$GetCurrentParagr === void 0 ? void 0 : _doc$GetCurrentParagr.GetText();
-                var runText = doc === null || doc === void 0 || (_doc$GetCurrentRun = doc.GetCurrentRun()) === null || _doc$GetCurrentRun === void 0 ? void 0 : _doc$GetCurrentRun.GetText();
-                if (runText && currentParagraphText.indexOf(runText) !== -1) {
-                    return endPos + currentParagraphText.indexOf(runText);
-                }
-                var sentenceText = doc === null || doc === void 0 ? void 0 : doc.GetCurrentSentence();
-                if (sentenceText && currentParagraphText.indexOf(sentenceText) !== -1) {
-                    return endPos + currentParagraphText.indexOf(sentenceText);
-                }
-                return endPos;
+                return pos;
             }, isClose, isCalc, resolve);
         });
     }
@@ -7359,7 +7345,7 @@ SelectCitationsComponent.prototype.count = function() {
                     showError(translate("Language is not selected"));
                     return;
                 }
-                showLoader();
+                yield startAction("Mendeley (" + translate("Updating citations") + ")");
                 var cursorPos = yield CursorService.getCursorPosition();
                 var updateFn = citationService.updateCslItems.bind(citationService, false);
                 var styleManager = settings.getStyleManager();
@@ -7374,7 +7360,7 @@ SelectCitationsComponent.prototype.count = function() {
                     }
                     showError(message);
                 }).finally(function() {
-                    hideLoader();
+                    endAction("Mendeley (" + translate("Updating citations") + ")");
                     CursorService.setCursorPosition(cursorPos);
                 });
             });
@@ -7382,100 +7368,115 @@ SelectCitationsComponent.prototype.count = function() {
                 return _ref2.apply(this, arguments);
             };
         }());
-        insertBibBtn.subscribe(function(event) {
-            if (event.type !== "button:click") {
-                return;
-            }
-            if (!settings.getLastUsedStyleId()) {
-                showError(translate("Style is not selected"));
-                return;
-            }
-            if (!settings.getLocale()) {
-                showError(translate("Language is not selected"));
-                return;
-            }
-            showLoader();
-            citationService.insertBibliography().catch(function(error) {
-                console.error(error);
-                var message = translate("Failed to insert bibliography");
-                if (typeof error === "string") {
-                    message += ". " + translate(error);
+        insertBibBtn.subscribe(function() {
+            var _ref3 = _asyncToGenerator(function*(event) {
+                if (event.type !== "button:click") {
+                    return;
                 }
-                showError(message);
-            }).finally(function() {
-                hideLoader();
-            });
-        });
-        insertLinkBtn.subscribe(function(event) {
-            if (event.type !== "button:click") {
-                return;
-            }
-            if (!settings.getLastUsedStyleId()) {
-                showError(translate("Style is not selected"));
-                return;
-            }
-            if (!settings.getLocale()) {
-                showError(translate("Language is not selected"));
-                return;
-            }
-            showLoader();
-            var items = selectCitation.getSelectedItems();
-            var cursorPos;
-            CursorService.getCursorPosition().then(function(pos) {
-                cursorPos = pos;
-                return citationService.insertSelectedCitations(items);
-            }).then(function(keys) {
-                selectCitation.removeItems(keys);
-                return citationService.updateCslItems();
-            }).catch(function(error) {
-                console.error(error);
-                var message = translate("Failed to insert citation");
-                if (typeof error === "string") {
-                    message += ". " + translate(error);
+                if (!settings.getLastUsedStyleId()) {
+                    showError(translate("Style is not selected"));
+                    return;
                 }
-                showError(message);
-            }).finally(function() {
-                hideLoader();
-                CursorService.setCursorPosition(cursorPos);
+                if (!settings.getLocale()) {
+                    showError(translate("Language is not selected"));
+                    return;
+                }
+                yield startAction("Mendeley (" + translate("Inserting bibliography") + ")");
+                citationService.insertBibliography().catch(function(error) {
+                    console.error(error);
+                    var message = translate("Failed to insert bibliography");
+                    if (typeof error === "string") {
+                        message += ". " + translate(error);
+                    }
+                    showError(message);
+                }).finally(function() {
+                    endAction("Mendeley (" + translate("Inserting bibliography") + ")");
+                });
             });
-        });
+            return function(_x2) {
+                return _ref3.apply(this, arguments);
+            };
+        }());
+        insertLinkBtn.subscribe(function() {
+            var _ref4 = _asyncToGenerator(function*(event) {
+                if (event.type !== "button:click") {
+                    return;
+                }
+                if (!settings.getLastUsedStyleId()) {
+                    showError(translate("Style is not selected"));
+                    return;
+                }
+                if (!settings.getLocale()) {
+                    showError(translate("Language is not selected"));
+                    return;
+                }
+                yield startAction("Mendeley (" + translate("Inserting citation") + ")");
+                var items = selectCitation.getSelectedItems();
+                var cursorPos;
+                CursorService.getCursorPosition().then(function(pos) {
+                    cursorPos = pos;
+                    return citationService.insertSelectedCitations(items);
+                }).then(function(keys) {
+                    selectCitation.removeItems(keys);
+                    return citationService.updateCslItems();
+                }).catch(function(error) {
+                    console.error(error);
+                    var message = translate("Failed to insert citation");
+                    if (typeof error === "string") {
+                        message += ". " + translate(error);
+                    }
+                    showError(message);
+                }).finally(function() {
+                    endAction("Zotero (" + translate("Inserting citation") + ")");
+                    CursorService.setCursorPosition(cursorPos);
+                });
+            });
+            return function(_x3) {
+                return _ref4.apply(this, arguments);
+            };
+        }());
         openSettingsBtn.subscribe(function(event) {
             if (event.type !== "button:click") {
                 return;
             }
             settings.show();
         });
-        saveAsTextBtn.subscribe(function(event) {
-            if (event.type !== "button:click") {
-                return;
-            }
-            showLoader();
-            citationService.saveAsText().then(function() {
-                hideLoader();
+        saveAsTextBtn.subscribe(function() {
+            var _ref5 = _asyncToGenerator(function*(event) {
+                if (event.type !== "button:click") {
+                    return;
+                }
+                yield startAction("Mendeley (" + translate("Saving as text") + ")");
+                citationService.saveAsText().then(function() {
+                    endAction("Mendeley (" + translate("Saving as text") + ")");
+                });
             });
-        });
+            return function(_x4) {
+                return _ref5.apply(this, arguments);
+            };
+        }());
         settings.onChangeState(function() {
-            var _ref3 = _asyncToGenerator(function*(newState, oldState) {
+            var _ref6 = _asyncToGenerator(function*(newState, oldState) {
                 var cursorPos = yield CursorService.getCursorPosition();
                 if ([ newState.styleFormat, oldState.styleFormat ].includes("note")) {
                     if (newState.styleFormat !== oldState.styleFormat) {
                         if (newState.styleFormat === "note") {
-                            yield citationService.switchingBetweenNotesAndText(newState.notesStyle);
+                            yield citationService.switchingBetweenNotesAndText(newState.notesStyle, null);
                         } else {
-                            yield citationService.switchingBetweenNotesAndText();
+                            yield citationService.switchingBetweenNotesAndText(null, oldState.notesStyle);
                         }
                     } else if (newState.notesStyle !== oldState.notesStyle) {
-                        yield citationService.convertNotesStyle(newState.notesStyle);
+                        yield citationService.convertNotesStyle(newState.notesStyle, oldState.notesStyle);
                     } else {
-                        yield citationService.updateCslItems(true);
+                        yield citationService.updateCslItemsInNotes(newState.notesStyle);
                     }
                 } else {
                     yield citationService.updateCslItems(true);
                 }
                 yield CursorService.setCursorPosition(cursorPos);
             });
-            return function(_x2, _x3) {
-                return _ref3.apply(this, arguments);
+            return function(_x5, _x6) {
+                return _ref6.apply(this, arguments);
             };
         }());
     }
@@ -7540,15 +7541,27 @@ SelectCitationsComponent.prototype.count = function() {
             window.onclick = null;
         }
     }
-    function showLoader() {
-        insertBibBtn.disable();
-        refreshBtn.disable();
-        insertLinkBtn.disable();
+    function startAction(_x7) {
+        return _startAction.apply(this, arguments);
     }
-    function hideLoader() {
-        insertBibBtn.enable();
-        refreshBtn.enable();
-        checkSelected();
+    function _startAction() {
+        _startAction = _asyncToGenerator(function*(preloaderMessage) {
+            insertBibBtn.disable();
+            refreshBtn.disable();
+            insertLinkBtn.disable();
+        });
+        return _startAction.apply(this, arguments);
+    }
+    function endAction(_x8) {
+        return _endAction.apply(this, arguments);
+    }
+    function _endAction() {
+        _endAction = _asyncToGenerator(function*(preloaderMessage) {
+            insertBibBtn.enable();
+            refreshBtn.enable();
+            checkSelected();
+        });
+        return _endAction.apply(this, arguments);
     }
     function switchClass(el, className, add) {
         if (add) {
