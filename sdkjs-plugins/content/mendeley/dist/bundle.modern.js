@@ -2886,7 +2886,8 @@ class CitationDocService {
                 Lock: 3,
                 PlaceHolderText: ""
             };
-            yield _assertClassBrand(_CitationDocService_brand, _this, _pasteContentControlWithHtml).call(_this, control, text);
+            yield _assertClassBrand(_CitationDocService_brand, _this, _addContentControl).call(_this, control, 1);
+            yield _assertClassBrand(_CitationDocService_brand, _this, _pasteContentControlHtml).call(_this, text);
         })();
     }
     addCitation(text, tag, notesStyle) {
@@ -2938,12 +2939,6 @@ class CitationDocService {
                                 element = control.GetRange(0, Number.MAX_SAFE_INTEGER);
                             }
                             var text = element.GetText();
-                            if (text.lastIndexOf("\n") === text.length - 1) {
-                                text = text.slice(0, -1);
-                            }
-                            if (text.lastIndexOf("\r") === text.length - 1) {
-                                text = text.slice(0, -1);
-                            }
                             text = text.trim();
                             placeholderTexts[index] = text;
                         }
@@ -3031,13 +3026,30 @@ class CitationDocService {
         });
     }
     updateContentControls(controls) {
+        var _this5 = this;
         return _asyncToGenerator(function*() {
+            var bibControls = controls.filter(control => control.Tag && control.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, _this5)) === 0);
+            if (bibControls.length) {
+                controls = controls.filter(control => control.Tag && control.Tag.indexOf(_classPrivateFieldGet2(_bibPrefix, _this5)) !== 0);
+                var control = bibControls[0];
+                var id = control.InternalId;
+                if (id) {
+                    yield new Promise(function(resolve) {
+                        window.Asc.plugin.executeMethod("SelectContentControl", [ id ], resolve);
+                    });
+                }
+                var text = control.PlaceHolderText || "";
+                yield _assertClassBrand(_CitationDocService_brand, _this5, _pasteContentControlHtml).call(_this5, text);
+            }
             var _loop = function* _loop(i) {
                 var id = controls[i].InternalId;
                 if (!id) {
+                    console.error("Content control without ID found");
                     return 0;
                 }
-                yield window.Asc.plugin.executeMethod("SelectContentControl", [ id ]);
+                yield new Promise(function(resolve) {
+                    window.Asc.plugin.executeMethod("SelectContentControl", [ id ], resolve);
+                });
                 var tag = controls[i].Tag;
                 yield new Promise(resolve => {
                     Asc.scope.tag = tag;
@@ -3045,22 +3057,21 @@ class CitationDocService {
                     Asc.scope.placeholderText = controls[i].PlaceHolderText;
                     Asc.plugin.callCommand(() => {
                         var doc = Api.GetDocument();
-                        var controls = doc.GetAllContentControls();
-                        var control = controls.find(c => c.GetInternalId() === Asc.scope.id);
+                        var control = doc.GetCurrentContentControl();
                         if (control) {
                             control.SetTag(Asc.scope.tag);
                             if (Asc.scope.placeholderText) {
                                 control.SetPlaceholderText("");
                             }
+                        } else {
+                            console.error("Content control not found for ID:", Asc.scope.id);
                         }
                     }, false, false, resolve);
                 });
                 if (!controls[i].PlaceHolderText) {
                     return 0;
                 }
-                yield new Promise(function(resolve) {
-                    window.Asc.plugin.executeMethod("PasteHtml", [ controls[i].PlaceHolderText ], resolve);
-                });
+                yield _assertClassBrand(_CitationDocService_brand, _this5, _pasteHtml).call(_this5, controls[i].PlaceHolderText);
             }, _ret;
             for (var i = 0; i < controls.length; i++) {
                 _ret = yield* _loop(i);
@@ -3069,34 +3080,34 @@ class CitationDocService {
         })();
     }
     upgradeCslItems(fieldsWithCitations, bibField) {
-        var _this5 = this;
+        var _this6 = this;
         return _asyncToGenerator(function*() {
             for (var i = 0; i < fieldsWithCitations.length; i++) {
                 var field = fieldsWithCitations[i].field;
                 var newValue = fieldsWithCitations[i].newValue;
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _selectField).call(_this5, field.FieldId);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _selectField).call(_this6, field.FieldId);
                 var control = {
                     Tag: newValue,
                     Lock: 3,
                     PlaceHolderText: ""
                 };
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _addContentControl).call(_this5, control);
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _removeFieldWrapper).call(_this5, field.FieldId);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, control);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeFieldWrapper).call(_this6, field.FieldId);
             }
             if (bibField) {
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _selectField).call(_this5, bibField.FieldId);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _selectField).call(_this6, bibField.FieldId);
                 var _control = {
-                    Tag: _classPrivateFieldGet2(_bibPrefix, _this5),
+                    Tag: _classPrivateFieldGet2(_bibPrefix, _this6),
                     Lock: 3,
                     PlaceHolderText: ""
                 };
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _addContentControl).call(_this5, _control, 1);
-                yield _assertClassBrand(_CitationDocService_brand, _this5, _removeFieldWrapper).call(_this5, bibField.FieldId);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _addContentControl).call(_this6, _control, 1);
+                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeFieldWrapper).call(_this6, bibField.FieldId);
             }
         })();
     }
     convertNotesToText(controls) {
-        var _this6 = this;
+        var _this7 = this;
         return _asyncToGenerator(function*() {
             var _loop2 = function* _loop2() {
                 var control = controls[i];
@@ -3104,42 +3115,12 @@ class CitationDocService {
                     console.error("Control id is not defined");
                     return 0;
                 }
-                var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this6, _selectControl).call(_this6, control.InternalId);
+                var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectControl).call(_this7, control.InternalId);
                 if (!selectControlResult) {
                     console.error("Can not select content control with id: " + control.InternalId);
                     return 0;
                 }
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSuperscript).call(_this6);
-                yield new Promise(resolve => {
-                    Asc.scope.tag = control.Tag;
-                    Asc.plugin.callCommand(() => {
-                        var doc = Api.GetDocument();
-                        var control = doc.GetCurrentContentControl();
-                        if (control) {
-                            control.SetTag(Asc.scope.tag);
-                        } else {
-                            console.error("Can not find content control");
-                        }
-                    }, false, false, resolve);
-                });
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _removeSelectedContent).call(_this6);
-                var text = control.PlaceHolderText;
-                yield _assertClassBrand(_CitationDocService_brand, _this6, _pasteHtml).call(_this6, text);
-            }, _ret2;
-            for (var i = 0; i < controls.length; i++) {
-                _ret2 = yield* _loop2();
-                if (_ret2 === 0) continue;
-            }
-        })();
-    }
-    convertTextToNotes(controls, notesStyle) {
-        var _this7 = this;
-        return _asyncToGenerator(function*() {
-            var _loop3 = function* _loop3() {
-                var control = controls[i];
-                if (!control.InternalId) return 0;
-                var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this7, _selectControl).call(_this7, control.InternalId);
-                if (!selectControlResult) return 0;
+                yield _assertClassBrand(_CitationDocService_brand, _this7, _removeSuperscript).call(_this7);
                 yield new Promise(resolve => {
                     Asc.scope.tag = control.Tag;
                     Asc.plugin.callCommand(() => {
@@ -3153,9 +3134,39 @@ class CitationDocService {
                     }, false, false, resolve);
                 });
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _removeSelectedContent).call(_this7);
-                yield _assertClassBrand(_CitationDocService_brand, _this7, _addNote).call(_this7, notesStyle);
                 var text = control.PlaceHolderText;
                 yield _assertClassBrand(_CitationDocService_brand, _this7, _pasteHtml).call(_this7, text);
+            }, _ret2;
+            for (var i = 0; i < controls.length; i++) {
+                _ret2 = yield* _loop2();
+                if (_ret2 === 0) continue;
+            }
+        })();
+    }
+    convertTextToNotes(controls, notesStyle) {
+        var _this8 = this;
+        return _asyncToGenerator(function*() {
+            var _loop3 = function* _loop3() {
+                var control = controls[i];
+                if (!control.InternalId) return 0;
+                var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this8, _selectControl).call(_this8, control.InternalId);
+                if (!selectControlResult) return 0;
+                yield new Promise(resolve => {
+                    Asc.scope.tag = control.Tag;
+                    Asc.plugin.callCommand(() => {
+                        var doc = Api.GetDocument();
+                        var control = doc.GetCurrentContentControl();
+                        if (control) {
+                            control.SetTag(Asc.scope.tag);
+                        } else {
+                            console.error("Can not find content control");
+                        }
+                    }, false, false, resolve);
+                });
+                yield _assertClassBrand(_CitationDocService_brand, _this8, _removeSelectedContent).call(_this8);
+                yield _assertClassBrand(_CitationDocService_brand, _this8, _addNote).call(_this8, notesStyle);
+                var text = control.PlaceHolderText;
+                yield _assertClassBrand(_CitationDocService_brand, _this8, _pasteHtml).call(_this8, text);
             }, _ret3;
             for (var i = 0; i < controls.length; i++) {
                 _ret3 = yield* _loop3();
@@ -3164,7 +3175,7 @@ class CitationDocService {
         })();
     }
     convertNotesStyle(controls, notesStyle) {
-        var _this8 = this;
+        var _this9 = this;
         return _asyncToGenerator(function*() {
             var _loop4 = function* _loop4() {
                 var control = controls[i];
@@ -3172,7 +3183,7 @@ class CitationDocService {
                     console.error("Control id is not defined");
                     return 0;
                 }
-                var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this8, _selectControl).call(_this8, control.InternalId);
+                var selectControlResult = yield _assertClassBrand(_CitationDocService_brand, _this9, _selectControl).call(_this9, control.InternalId);
                 if (!selectControlResult) {
                     console.error("Can not select content control with id: " + control.InternalId);
                     return 0;
@@ -3190,9 +3201,9 @@ class CitationDocService {
                     }, false, false, resolve);
                 });
                 if (control.PlaceHolderText) {
-                    yield _assertClassBrand(_CitationDocService_brand, _this8, _removeSelectedContent).call(_this8);
-                    yield _assertClassBrand(_CitationDocService_brand, _this8, _addNote).call(_this8, notesStyle);
-                    yield _assertClassBrand(_CitationDocService_brand, _this8, _pasteHtml).call(_this8, control.PlaceHolderText);
+                    yield _assertClassBrand(_CitationDocService_brand, _this9, _removeSelectedContent).call(_this9);
+                    yield _assertClassBrand(_CitationDocService_brand, _this9, _addNote).call(_this9, notesStyle);
+                    yield _assertClassBrand(_CitationDocService_brand, _this9, _pasteHtml).call(_this9, control.PlaceHolderText);
                 }
             }, _ret4;
             for (var i = 0; i < controls.length; i++) {
@@ -3307,13 +3318,12 @@ function _removeSuperscript() {
     });
 }
 
-function _pasteContentControlWithHtml(_x, _x2) {
-    return _pasteContentControlWithHtml2.apply(this, arguments);
+function _pasteContentControlHtml(_x) {
+    return _pasteContentControlHtml2.apply(this, arguments);
 }
 
-function _pasteContentControlWithHtml2() {
-    _pasteContentControlWithHtml2 = _asyncToGenerator(function*(control, html) {
-        yield _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, control, 1);
+function _pasteContentControlHtml2() {
+    _pasteContentControlHtml2 = _asyncToGenerator(function*(html) {
         var parser = new DOMParser;
         var doc = parser.parseFromString(html, "text/html");
         var paragraphs = doc.querySelectorAll(".csl-entry");
@@ -3326,11 +3336,16 @@ function _pasteContentControlWithHtml2() {
                 numbers[index] = margin.textContent.trim();
                 margin.remove();
             }
+            if (p.parentNode) {
+                var newP = document.createElement("p");
+                newP.innerHTML = p.innerHTML;
+                p.parentNode.replaceChild(newP, p);
+            }
         });
         html = doc.body.innerHTML;
         yield _assertClassBrand(_CitationDocService_brand, this, _pasteHtml).call(this, html);
         return new Promise(resolve => {
-            var isCalc = false;
+            var isCalc = true;
             var isClose = false;
             Asc.scope.numbers = numbers;
             Asc.plugin.callCommand(() => {
@@ -3372,7 +3387,7 @@ function _pasteContentControlWithHtml2() {
             Asc.scope.bibStyle = null;
         });
     });
-    return _pasteContentControlWithHtml2.apply(this, arguments);
+    return _pasteContentControlHtml2.apply(this, arguments);
 }
 
 var _items = new WeakMap;
