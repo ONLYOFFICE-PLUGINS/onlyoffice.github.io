@@ -2886,8 +2886,7 @@ class CitationDocService {
                 Lock: 3,
                 PlaceHolderText: ""
             };
-            yield _assertClassBrand(_CitationDocService_brand, _this, _addContentControl).call(_this, control, 1);
-            yield _assertClassBrand(_CitationDocService_brand, _this, _pasteHtml).call(_this, text);
+            yield _assertClassBrand(_CitationDocService_brand, _this, _pasteContentControlWithHtml).call(_this, control, text);
         })();
     }
     addCitation(text, tag, notesStyle) {
@@ -3306,6 +3305,74 @@ function _removeSuperscript() {
             selRange.SetVertAlign("baseline");
         }, isClose, isCalc, resolve);
     });
+}
+
+function _pasteContentControlWithHtml(_x, _x2) {
+    return _pasteContentControlWithHtml2.apply(this, arguments);
+}
+
+function _pasteContentControlWithHtml2() {
+    _pasteContentControlWithHtml2 = _asyncToGenerator(function*(control, html) {
+        yield _assertClassBrand(_CitationDocService_brand, this, _addContentControl).call(this, control, 1);
+        var parser = new DOMParser;
+        var doc = parser.parseFromString(html, "text/html");
+        var paragraphs = doc.querySelectorAll(".csl-entry");
+        var numbers = new Array(paragraphs.length);
+        paragraphs.forEach((p, index) => {
+            var margin = p.querySelector(".csl-left-margin");
+            var right = p.querySelector(".csl-right-inline");
+            right === null || right === void 0 || right.replaceWith(...right.childNodes);
+            if (margin) {
+                numbers[index] = margin.textContent.trim();
+                margin.remove();
+            }
+        });
+        html = doc.body.innerHTML;
+        yield _assertClassBrand(_CitationDocService_brand, this, _pasteHtml).call(this, html);
+        return new Promise(resolve => {
+            var isCalc = false;
+            var isClose = false;
+            Asc.scope.numbers = numbers;
+            Asc.plugin.callCommand(() => {
+                var doc = Api.GetDocument();
+                var control = doc.GetCurrentContentControl();
+                var range = control.GetRange(0, Number.MAX_SAFE_INTEGER);
+                if (!range) return;
+                var style = Asc.scope.bibStyle;
+                if (!style) {
+                    return;
+                }
+                var paragraphs = range.GetAllParagraphs();
+                paragraphs.forEach((paragraph, index) => {
+                    var text = paragraph.GetText().trim();
+                    if (text === "") {
+                        return;
+                    }
+                    if (typeof style.linespacing === "number") {
+                        paragraph.SetSpacingLine(240 * style.linespacing, "exact");
+                    }
+                    if (typeof style.entryspacing === "number") {
+                        paragraph.SetSpacingAfter(240 * style.entryspacing);
+                    }
+                    if (style["second-field-align"]) {
+                        var margin = Api.CreateRun();
+                        margin.AddText(Asc.scope.numbers[index]);
+                        margin.AddTabStop();
+                        var elementIndex = 0;
+                        paragraph.AddElement(margin, elementIndex);
+                        paragraph.SetIndLeft(style.maxoffset * 120);
+                        paragraph.SetIndFirstLine(-(style.maxoffset * 120));
+                    } else if (style.hangingindent) {
+                        paragraph.SetIndLeft(720);
+                        paragraph.SetIndFirstLine(-720);
+                    }
+                });
+            }, isClose, isCalc, resolve);
+        }).then(() => {
+            Asc.scope.bibStyle = null;
+        });
+    });
+    return _pasteContentControlWithHtml2.apply(this, arguments);
 }
 
 var _items = new WeakMap;
