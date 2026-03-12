@@ -5042,6 +5042,55 @@ class AdditionalWindow {
             };
         });
     }
+    showEditWindow(content) {
+        var _this = this;
+        _classPrivateFieldSet2(_window, this, new window.Asc.PluginWindow);
+        var variation = {
+            name: "Mendeley",
+            url: "edit-window.html",
+            description: window.Asc.plugin.tr("Edit citation"),
+            isVisual: true,
+            buttons: [ {
+                text: window.Asc.plugin.tr("Save"),
+                primary: true,
+                isViewer: false
+            }, {
+                text: window.Asc.plugin.tr("Cancel"),
+                primary: false
+            } ],
+            isModal: false,
+            EditorsSupport: [ "word" ],
+            size: [ 380, 150 ],
+            isViewer: true,
+            isDisplayedInViewer: false,
+            isInsideMode: false
+        };
+        _assertClassBrand(_AdditionalWindow_brand, this, _onShow).call(this, variation, content, "default");
+        _classPrivateFieldGet2(_window, this).show(variation);
+        return new Promise((resolve, reject) => {
+            window.Asc.plugin.button = function() {
+                var _ref = _asyncToGenerator(function*(buttonId, windowId) {
+                    var element = yield new Promise(resolve => {
+                        if (!_classPrivateFieldGet2(_window, _this)) {
+                            resolve(null);
+                            return;
+                        }
+                        _classPrivateFieldGet2(_window, _this).attachEvent("onSaveFields", resolve);
+                        _classPrivateFieldGet2(_window, _this).command("onClickSave");
+                    });
+                    if (buttonId === 0) {
+                        resolve(element);
+                    } else {
+                        resolve(null);
+                    }
+                    _assertClassBrand(_AdditionalWindow_brand, _this, _hide).call(_this);
+                });
+                return function(_x, _x2) {
+                    return _ref.apply(this, arguments);
+                };
+            }();
+        });
+    }
     showInfoWindow(description, text, type) {
         if (typeof type !== "string") {
             type = "warning";
@@ -5239,13 +5288,24 @@ class CitationService {
             }
         })();
     }
-    updateItem(updatedControl) {
+    updateItem(updatedControl, notesStyle) {
         var _this6 = this;
         return _asyncToGenerator(function*() {
             try {
-                var {controlsWithCitations: controlsWithCitations} = yield _assertClassBrand(_CitationService_brand, _this6, _synchronizeStorageWithDocItems).call(_this6, updatedControl);
+                var {controlsWithCitations: controlsWithCitations, bibControl: bibControl} = yield _assertClassBrand(_CitationService_brand, _this6, _synchronizeStorageWithDocItems).call(_this6, updatedControl);
+                var bNoHaveControls = controlsWithCitations.length === 0;
                 _assertClassBrand(_CitationService_brand, _this6, _updateFormatter).call(_this6);
+                if (notesStyle) {
+                    yield _assertClassBrand(_CitationService_brand, _this6, _addFootnotesTextToControls).call(_this6, controlsWithCitations, notesStyle);
+                }
                 var updatedControls = yield _assertClassBrand(_CitationService_brand, _this6, _getUpdatedControls).call(_this6, controlsWithCitations, true);
+                if (notesStyle && updatedControls && updatedControls.length) {
+                    yield _this6.citationDocService.convertNotesStyle(updatedControls, notesStyle);
+                    updatedControls = [];
+                }
+                if (bibControl) {
+                    updatedControls.push(yield _assertClassBrand(_CitationService_brand, _this6, _updateBibliography).call(_this6, bNoHaveControls, bibControl));
+                }
                 if (updatedControls && updatedControls.length) {
                     return _this6.citationDocService.updateContentControls(updatedControls);
                 }
@@ -5320,6 +5380,18 @@ class CitationService {
                 Asc.plugin.executeCommand("close", "");
             }
             return isUserAgree;
+        })();
+    }
+    showEditCitationWindow(controlTag) {
+        var _this0 = this;
+        return _asyncToGenerator(function*() {
+            if (!controlTag) return null;
+            var citationObject = _assertClassBrand(_CitationService_brand, _this0, _extractControlTag).call(_this0, controlTag);
+            var updatedObject = yield _classPrivateFieldGet2(_additionalWindow, _this0).showEditWindow(citationObject);
+            if (!updatedObject) {
+                return null;
+            }
+            return updatedObject;
         })();
     }
 }
@@ -5397,14 +5469,14 @@ function _makeBibliography() {
     }
 }
 
-function _extractControl(control) {
+function _extractControlTag(controlTag) {
     var citationObject;
-    if (control.Tag.indexOf(this._bibPrefixNew) !== -1) {
+    if (controlTag.indexOf(this._bibPrefixNew) !== -1) {
         return {};
     }
-    var citationStartIndex = control.Tag.indexOf("_", this._citPrefixNew.length + 1) + 1;
+    var citationStartIndex = controlTag.indexOf("_", this._citPrefixNew.length + 1) + 1;
     if (citationStartIndex > 0) {
-        var base64String = control.Tag.slice(citationStartIndex);
+        var base64String = controlTag.slice(citationStartIndex);
         try {
             var binary = atob(base64String);
             var citationString;
@@ -5422,7 +5494,7 @@ function _extractControl(control) {
             }
             citationObject = JSON.parse(citationString);
         } catch (e) {
-            console.error("Failed to extract citation", control);
+            console.error("Failed to extract citation", controlTag);
             console.error(e);
         }
     }
@@ -5453,7 +5525,7 @@ function _synchronizeStorageWithDocItems(updatedControl, notesStyle) {
             return control.Tag.indexOf(self._citPrefixNew) !== -1;
         });
         var controlsWithCitations = controls.map(function(control) {
-            var citationObject = _assertClassBrand(_CitationService_brand, self, _extractControl).call(self, control);
+            var citationObject = _assertClassBrand(_CitationService_brand, self, _extractControlTag).call(self, control.Tag);
             var citationID = citationObject.citationID || "";
             var cslCitation = new CSLCitation(citationID);
             if (updatedControl) {
@@ -7046,7 +7118,7 @@ SelectCitationsComponent.prototype._buildCitationParams = function(item) {
         placeholder: locatorPlaceholder
     });
     var omitAuthorInput = new Checkbox(omitAuthor, {
-        label: "Omit author"
+        label: translate("Omit author")
     });
     prefixInput.subscribe(function(event) {
         if (event.type !== "inputfield:input") {
@@ -7332,6 +7404,8 @@ SelectCitationsComponent.prototype.count = function() {
                 var [g, s, isUpdateOldVersion, c] = _ref;
                 if (isUpdateOldVersion) {
                     settings.show();
+                } else {
+                    addContextMenuButtons();
                 }
             }).catch(function(error) {
                 console.error(error.message);
@@ -7340,6 +7414,9 @@ SelectCitationsComponent.prototype.count = function() {
             });
         });
         window.Asc.plugin.onTranslate = applyTranslations;
+        getEditorVersion().then(editorVersion => {
+            window.Asc.scope.editorVersion = editorVersion;
+        });
     };
     window.OAuthError = function(error) {
         loginPage.onAuthCallback(error);
@@ -7509,7 +7586,7 @@ SelectCitationsComponent.prototype.count = function() {
                     }
                     showError(message);
                 }).finally(function() {
-                    endAction("Zotero (" + translate("Inserting citation") + ")");
+                    endAction("Mendeley (" + translate("Inserting citation") + ")");
                     CursorService.setCursorPosition(cursorPos);
                 });
             });
@@ -7770,6 +7847,70 @@ SelectCitationsComponent.prototype.count = function() {
                 insertLinkBtn.setText(translate("Insert Citation"));
             }
         }
+    }
+    function getEditorVersion() {
+        return _getEditorVersion.apply(this, arguments);
+    }
+    function _getEditorVersion() {
+        _getEditorVersion = _asyncToGenerator(function*() {
+            try {
+                var version = yield new Promise(resolve => {
+                    Asc.plugin.executeMethod("GetVersion", [], resolve);
+                });
+                if ("develop" == version) version = "99.99.99";
+                var arrVer = version.split(".");
+                while (3 > arrVer.length) arrVer.push("0");
+                return 1e6 * parseInt(arrVer[0]) + 1e3 * parseInt(arrVer[1]) + parseInt(arrVer[2]);
+            } catch (error) {
+                console.error(error);
+                return 99999999;
+            }
+        });
+        return _getEditorVersion.apply(this, arguments);
+    }
+    function addContextMenuButtons() {
+        var buttonMain = new Asc.ButtonContextMenu;
+        buttonMain.text = "Edit citation";
+        buttonMain.addCheckers("Target", "Selection");
+        buttonMain.attachOnClick(_asyncToGenerator(function*() {
+            var controlTag = yield new Promise(resolve => {
+                Asc.plugin.callCommand(() => {
+                    var doc = Api.GetDocument();
+                    var control = doc.GetCurrentContentControl();
+                    if (control) {
+                        return control.GetTag();
+                    } else {
+                        return null;
+                    }
+                }, false, false, resolve);
+            });
+            if (!controlTag || controlTag.indexOf("MENDELEY_CITATION") === -1) {
+                return;
+            }
+            var updatedObject = yield citationService.showEditCitationWindow(controlTag);
+            if (!updatedObject) {
+                return;
+            }
+            yield startAction("Mendeley (" + translate("Updating citations") + ")");
+            var cursorPos = yield CursorService.getCursorPosition();
+            var updateFn = citationService.updateItem.bind(citationService, updatedObject);
+            var styleManager = settings.getStyleManager();
+            if (styleManager.getLastUsedFormat() === "note") {
+                updateFn = citationService.updateItem.bind(citationService, updatedObject, styleManager.getLastUsedNotesStyle());
+            }
+            updateFn().catch(function(error) {
+                console.error(error);
+                var message = translate("Failed to insert citation");
+                if (typeof error === "string") {
+                    message += ". " + translate(error);
+                }
+                showError(message);
+            }).finally(function() {
+                endAction("Mendeley (" + translate("Updating citations") + ")");
+                CursorService.setCursorPosition(cursorPos);
+            });
+        }));
+        Asc.Buttons.registerContextMenu();
     }
 })();
 //# sourceMappingURL=bundle.modern.js.map
