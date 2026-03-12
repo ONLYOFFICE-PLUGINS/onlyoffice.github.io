@@ -2203,7 +2203,6 @@ var Theme = {
                 throw new Error("container is not initialized");
             }
             this._container = container;
-            this._field = null;
             this.citationObject = null;
             this.forms = [];
         }
@@ -2331,7 +2330,6 @@ var Theme = {
         }
         onAttachedContent(citationObject) {
             this.citationObject = citationObject;
-            console.warn(citationObject);
             if (!this.citationObject) {
                 return;
             }

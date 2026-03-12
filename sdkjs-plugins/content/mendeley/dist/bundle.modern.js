@@ -5303,9 +5303,6 @@ class CitationService {
                     yield _this6.citationDocService.convertNotesStyle(updatedControls, notesStyle);
                     updatedControls = [];
                 }
-                if (bibControl) {
-                    updatedControls.push(yield _assertClassBrand(_CitationService_brand, _this6, _updateBibliography).call(_this6, bNoHaveControls, bibControl));
-                }
                 if (updatedControls && updatedControls.length) {
                     return _this6.citationDocService.updateContentControls(updatedControls);
                 }
@@ -7708,6 +7705,9 @@ SelectCitationsComponent.prototype.count = function() {
             insertBibBtn.disable();
             refreshBtn.disable();
             insertLinkBtn.disable();
+            Asc.plugin.executeMethod("StartAction", [ "GroupActions", {
+                lockScroll: true
+            } ]);
         });
         return _startAction.apply(this, arguments);
     }
@@ -7719,6 +7719,9 @@ SelectCitationsComponent.prototype.count = function() {
             insertBibBtn.enable();
             refreshBtn.enable();
             checkSelected();
+            Asc.plugin.executeMethod("EndAction", [ "GroupActions", {
+                scrollToTarget: true
+            } ]);
         });
         return _endAction.apply(this, arguments);
     }
