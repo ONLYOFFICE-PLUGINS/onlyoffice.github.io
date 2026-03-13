@@ -5439,7 +5439,7 @@ function _makeBibliography() {
     try {
         var bibItems = new Array(this._storage.size);
         var bibObject = this._formatter.makeBibliography();
-        for (var i = 0; i < bibObject[0].entry_ids.length; i++) {
+        for (var i = 0; i < bibObject[1].length; i++) {
             var bibText = _assertClassBrand(_CitationService_brand, this, _unEscapeHtml).call(this, bibObject[1][i]);
             bibText = bibText.replaceAll("\n", "").replaceAll("\r", "").replace(/\s+/g, " ").trim();
             var paragraphStart = '<div class="csl-entry">';
@@ -5754,42 +5754,6 @@ function _synchronizeStorageBeforeUpgrade2() {
         };
     });
     return _synchronizeStorageBeforeUpgrade2.apply(this, arguments);
-}
-
-class CursorService {
-    static getCursorPosition() {
-        return new Promise(function(resolve) {
-            var isCalc = false;
-            var isClose = false;
-            Asc.plugin.callCommand(() => {
-                var doc = Api.GetDocument();
-                var pos = 0;
-                if (!doc) {
-                    return pos;
-                }
-                var currentRun = doc.GetCurrentRun();
-                if (!currentRun) {
-                    return pos;
-                }
-                var range = currentRun.GetRange(0, 0);
-                if (range) {
-                    return range.GetEndPos();
-                }
-                return pos;
-            }, isClose, isCalc, resolve);
-        });
-    }
-    static setCursorPosition(pos) {
-        return new Promise(function(resolve) {
-            var isCalc = false;
-            var isClose = false;
-            Asc.scope.pos = pos;
-            Asc.plugin.callCommand(function() {
-                var doc = Api.GetDocument();
-                doc.MoveCursorToPos(Asc.scope.pos);
-            }, isClose, isCalc, resolve);
-        });
-    }
 }
 
 var CslStylesParser = {
@@ -7501,8 +7465,7 @@ SelectCitationsComponent.prototype.count = function() {
                     showError(translate("Language is not selected"));
                     return;
                 }
-                yield startAction("Mendeley (" + translate("Updating citations") + ")");
-                var cursorPos = yield CursorService.getCursorPosition();
+                yield onStartAction(true, "Mendeley (" + translate("Updating citations") + ")");
                 var updateFn = citationService.updateCslItems.bind(citationService, false);
                 var styleManager = settings.getStyleManager();
                 if (styleManager.getLastUsedFormat() === "note") {
@@ -7516,8 +7479,7 @@ SelectCitationsComponent.prototype.count = function() {
                     }
                     showError(message);
                 }).finally(function() {
-                    endAction("Mendeley (" + translate("Updating citations") + ")");
-                    CursorService.setCursorPosition(cursorPos);
+                    onEndAction(false, "Mendeley (" + translate("Updating citations") + ")");
                 });
             });
             return function(_x) {
@@ -7537,7 +7499,7 @@ SelectCitationsComponent.prototype.count = function() {
                     showError(translate("Language is not selected"));
                     return;
                 }
-                yield startAction("Mendeley (" + translate("Inserting bibliography") + ")");
+                yield onStartAction(false, "Mendeley (" + translate("Inserting bibliography") + ")");
                 citationService.insertBibliography().catch(function(error) {
                     console.error(error);
                     var message = translate("Failed to insert bibliography");
@@ -7546,7 +7508,7 @@ SelectCitationsComponent.prototype.count = function() {
                     }
                     showError(message);
                 }).finally(function() {
-                    endAction("Mendeley (" + translate("Inserting bibliography") + ")");
+                    onEndAction(false, "Mendeley (" + translate("Inserting bibliography") + ")");
                 });
             });
             return function(_x2) {
@@ -7566,13 +7528,9 @@ SelectCitationsComponent.prototype.count = function() {
                     showError(translate("Language is not selected"));
                     return;
                 }
-                yield startAction("Mendeley (" + translate("Inserting citation") + ")");
+                yield onStartAction(true, "Mendeley (" + translate("Inserting citation") + ")");
                 var items = selectCitation.getSelectedItems();
-                var cursorPos;
-                CursorService.getCursorPosition().then(function(pos) {
-                    cursorPos = pos;
-                    return citationService.insertSelectedCitations(items);
-                }).then(function(keys) {
+                return citationService.insertSelectedCitations(items).then(function(keys) {
                     selectCitation.removeItems(keys);
                     return citationService.updateCslItems();
                 }).catch(function(error) {
@@ -7583,8 +7541,7 @@ SelectCitationsComponent.prototype.count = function() {
                     }
                     showError(message);
                 }).finally(function() {
-                    endAction("Mendeley (" + translate("Inserting citation") + ")");
-                    CursorService.setCursorPosition(cursorPos);
+                    onEndAction(false, "Mendeley (" + translate("Inserting citation") + ")");
                 });
             });
             return function(_x3) {
@@ -7602,9 +7559,9 @@ SelectCitationsComponent.prototype.count = function() {
                 if (event.type !== "button:click") {
                     return;
                 }
-                yield startAction("Mendeley (" + translate("Saving as text") + ")");
+                yield onStartAction(false, "Mendeley (" + translate("Saving as text") + ")");
                 citationService.saveAsText().then(function() {
-                    endAction("Mendeley (" + translate("Saving as text") + ")");
+                    onEndAction(false, "Mendeley (" + translate("Saving as text") + ")");
                 });
             });
             return function(_x4) {
@@ -7613,23 +7570,31 @@ SelectCitationsComponent.prototype.count = function() {
         }());
         settings.onChangeState(function() {
             var _ref6 = _asyncToGenerator(function*(newState, oldState) {
-                var cursorPos = yield CursorService.getCursorPosition();
+                yield onStartAction(true, "Mendeley (" + translate("Updating citations") + ")");
+                var updateFn = citationService.updateCslItems.bind(citationService, true);
                 if ([ newState.styleFormat, oldState.styleFormat ].includes("note")) {
                     if (newState.styleFormat !== oldState.styleFormat) {
                         if (newState.styleFormat === "note") {
-                            yield citationService.switchingBetweenNotesAndText(newState.notesStyle, null);
+                            updateFn = citationService.switchingBetweenNotesAndText.bind(citationService, newState.notesStyle, null);
                         } else {
-                            yield citationService.switchingBetweenNotesAndText(null, oldState.notesStyle);
+                            updateFn = citationService.switchingBetweenNotesAndText.bind(citationService, null, oldState.notesStyle);
                         }
                     } else if (newState.notesStyle !== oldState.notesStyle) {
-                        yield citationService.convertNotesStyle(newState.notesStyle, oldState.notesStyle);
+                        updateFn = citationService.convertNotesStyle.bind(citationService, newState.notesStyle, oldState.notesStyle);
                     } else {
-                        yield citationService.updateCslItemsInNotes(newState.notesStyle);
+                        updateFn = citationService.updateCslItemsInNotes.bind(citationService, newState.notesStyle);
                     }
-                } else {
-                    yield citationService.updateCslItems(true);
                 }
-                yield CursorService.setCursorPosition(cursorPos);
+                updateFn().catch(function(error) {
+                    console.error(error);
+                    var message = translate("Failed to refresh");
+                    if (typeof error === "string") {
+                        message += ". " + translate(error);
+                    }
+                    showError(message);
+                }).finally(function() {
+                    onEndAction(false, "Mendeley (" + translate("Updating citations") + ")");
+                });
             });
             return function(_x5, _x6) {
                 return _ref6.apply(this, arguments);
@@ -7697,33 +7662,38 @@ SelectCitationsComponent.prototype.count = function() {
             window.onclick = null;
         }
     }
-    function startAction(_x7) {
-        return _startAction.apply(this, arguments);
+    function onStartAction(_x7, _x8) {
+        return _onStartAction.apply(this, arguments);
     }
-    function _startAction() {
-        _startAction = _asyncToGenerator(function*(preloaderMessage) {
+    function _onStartAction() {
+        _onStartAction = _asyncToGenerator(function*(keepSelection, preloaderMessage) {
             insertBibBtn.disable();
             refreshBtn.disable();
             insertLinkBtn.disable();
-            Asc.plugin.executeMethod("StartAction", [ "GroupActions", {
-                lockScroll: true
-            } ]);
+            yield new Promise(resolve => {
+                Asc.plugin.executeMethod("StartAction", [ "GroupActions", {
+                    lockScroll: true,
+                    keepSelection: keepSelection
+                } ], resolve);
+            });
         });
-        return _startAction.apply(this, arguments);
+        return _onStartAction.apply(this, arguments);
     }
-    function endAction(_x8) {
-        return _endAction.apply(this, arguments);
+    function onEndAction(_x9, _x0) {
+        return _onEndAction.apply(this, arguments);
     }
-    function _endAction() {
-        _endAction = _asyncToGenerator(function*(preloaderMessage) {
+    function _onEndAction() {
+        _onEndAction = _asyncToGenerator(function*(scrollToTarget, preloaderMessage) {
             insertBibBtn.enable();
             refreshBtn.enable();
             checkSelected();
-            Asc.plugin.executeMethod("EndAction", [ "GroupActions", {
-                scrollToTarget: true
-            } ]);
+            yield new Promise(resolve => {
+                Asc.plugin.executeMethod("EndAction", [ "GroupActions", {
+                    scrollToTarget: scrollToTarget
+                } ], resolve);
+            });
         });
-        return _endAction.apply(this, arguments);
+        return _onEndAction.apply(this, arguments);
     }
     function switchClass(el, className, add) {
         if (add) {
@@ -7894,8 +7864,7 @@ SelectCitationsComponent.prototype.count = function() {
             if (!updatedObject) {
                 return;
             }
-            yield startAction("Mendeley (" + translate("Updating citations") + ")");
-            var cursorPos = yield CursorService.getCursorPosition();
+            yield onStartAction(false, "Mendeley (" + translate("Updating citations") + ")");
             var updateFn = citationService.updateItem.bind(citationService, updatedObject);
             var styleManager = settings.getStyleManager();
             if (styleManager.getLastUsedFormat() === "note") {
@@ -7909,8 +7878,7 @@ SelectCitationsComponent.prototype.count = function() {
                 }
                 showError(message);
             }).finally(function() {
-                endAction("Mendeley (" + translate("Updating citations") + ")");
-                CursorService.setCursorPosition(cursorPos);
+                onEndAction(false, "Mendeley (" + translate("Updating citations") + ")");
             });
         }));
         Asc.Buttons.registerContextMenu();
